@@ -654,14 +654,12 @@ const SUPA_URL = 'https://idxtbwzpodlvwjcslrfw.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkeHRid3pwb2RsdndqY3NscmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTM5NDUsImV4cCI6MjA5NzQyOTk0NX0.WV_C3BQifHjb0xAgKNA8T_bnXut924jZfG1HbXueVrU';
 let supaSyncing = false;
 
-function supaHeaders(write = false) {
-  const h = {
+function supaHeaders() {
+  return {
     'apikey': SUPA_KEY,
     'Authorization': `Bearer ${SUPA_KEY}`,
     'Content-Type': 'application/json'
   };
-  h[write ? 'Content-Profile' : 'Accept-Profile'] = 'crm';
-  return h;
 }
 
 // camelCase JS ↔ snake_case DB
@@ -715,9 +713,9 @@ async function pushToSupabase() {
   supaSyncing = true;
   setSyncStatus('syncing');
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/leads`, {
+    const res = await fetch(`${SUPA_URL}/rest/v1/crm_leads`, {
       method: 'POST',
-      headers: { ...supaHeaders(true), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      headers: { ...supaHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify(leads.map(toDb))
     });
     setSyncStatus(res.ok ? 'ok' : 'error');
@@ -732,8 +730,8 @@ async function pushToSupabase() {
 async function loadFromSupabase() {
   setSyncStatus('idle');
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/leads?select=*&order=id.asc`, {
-      headers: supaHeaders(false)
+    const res = await fetch(`${SUPA_URL}/rest/v1/crm_leads?select=*&order=id.asc`, {
+      headers: supaHeaders()
     });
     if (!res.ok) { setSyncStatus('error'); return false; }
     const rows = await res.json();
