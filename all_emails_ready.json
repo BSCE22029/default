@@ -1,0 +1,650 @@
+[
+  {
+    "wave": 1, "id": 1,
+    "to": "sanjit@samsara.com", "first_name": "Sanjit", "company": "Samsara", "category": "Embedded/IoT",
+    "subject": "Embedded Firmware & IoT Engineering Team — Available for Samsara",
+    "body": "<p>Hi Sanjit,</p><p>I've been following Samsara's growth in fleet IoT — the scale at which you're deploying sensor networks and edge firmware across hundreds of thousands of vehicles is genuinely impressive engineering.</p><p>I lead a specialized embedded systems team with deep experience in embedded C/C++ firmware for IoT devices, RTOS integration (FreeRTOS, Zephyr) for fleet-grade hardware, sensor fusion, edge computing pipelines, and hardware-software co-design for real-time systems.</p><p>We've helped companies in the connected vehicle and industrial IoT space ship firmware 30–40% faster through dedicated offshore team models — fully NDA-covered, with experience meeting ISO 26262 and IEC 61508 standards.</p><p>If Samsara has firmware development bandwidth bottlenecks or upcoming hardware programs where an expert embedded team would accelerate your roadmap, I'd welcome a 20-minute technical intro call.</p><p>Best regards,<br><strong>Moiz Ahmad</strong><br>IT Services & Embedded Systems Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 2,
+    "to": "jb@jobyaviation.com", "first_name": "JoeBen", "company": "Joby Aviation", "category": "FPGA/Avionics",
+    "subject": "FPGA & Avionics Firmware Engineering — Supporting Joby's eVTOL Roadmap",
+    "body": "<p>Hi JoeBen,</p><p>Joby Aviation is doing work that genuinely matters — bringing safe, certified eVTOL aircraft to market is one of the most technically demanding programs in aerospace right now.</p><p>I lead a specialized engineering team with hands-on experience in FPGA design and verification (Verilog/VHDL) for safety-critical avionics, RTOS-based embedded software with DO-178C awareness, hardware-in-the-loop (HIL) simulation and test automation, and flight control embedded C/C++ development.</p><p>We understand the rigor that DO-254 and DO-178C demand and are experienced working in environments where documentation, traceability, and formal verification are non-negotiable.</p><p>Happy to sign an NDA before any discussion. Would a 20-minute technical call next week work?</p><p>Best regards,<br><strong>Moiz Ahmad</strong><br>Embedded Systems & FPGA Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 3,
+    "to": "eric@tempus.com", "first_name": "Eric", "company": "Tempus AI", "category": "Healthcare ML/NLP",
+    "subject": "ML Engineering & Clinical NLP — Accelerating Tempus AI's Data Pipeline",
+    "body": "<p>Hi Eric,</p><p>Tempus is at the forefront of applying AI to oncology and precision medicine — the genomic data infrastructure you're building has real clinical impact at scale.</p><p>I lead an AI/ML engineering team specializing in clinical NLP pipelines (named entity recognition, ICD coding, report structuring), genomic data ML models and feature engineering, LLM fine-tuning for medical domain knowledge (HIPAA-aware environments), ETL pipelines for large-scale genomic and EHR datasets, and MLOps infrastructure.</p><p>We've built production ML systems for healthcare data companies and understand the compliance, data governance, and clinical validation requirements that come with this work.</p><p>Would a 25-minute technical intro call work this week or next?</p><p>Best regards,<br><strong>Moiz Ahmad</strong><br>AI/ML Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 4,
+    "to": "tom@zendesk.com", "first_name": "Tom", "company": "Zendesk", "category": "AI/LLM",
+    "subject": "LLM-Powered AI Support Agents — Built for Zendesk's Platform",
+    "body": "<p>Hi Tom,</p><p>The AI transformation happening in customer support is moving fast — and Zendesk is uniquely positioned to lead it.</p><p>I lead an AI engineering team that specializes in LLM integration and prompt engineering for support automation, RAG pipelines for knowledge-base-aware agents, AI agent orchestration (multi-step reasoning, tool use, escalation logic), fine-tuning open-source LLMs on domain-specific support data, and real-time sentiment analysis and intent classification.</p><p>We've deployed AI support agents that reduced first-response time by 60% and deflected 35% of tickets while maintaining CSAT scores above baseline.</p><p>Would a 20-minute conversation to explore fit make sense?</p><p>Best,<br><strong>Moiz Ahmad</strong><br>AI/ML Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 5,
+    "to": "patrick@sifive.com", "first_name": "Patrick", "company": "SiFive", "category": "RTL/FPGA",
+    "subject": "RTL Design & Verilog/VHDL Verification — Supporting SiFive's RISC-V IP",
+    "body": "<p>Hi Patrick,</p><p>SiFive's work on RISC-V IP cores is reshaping the semiconductor landscape — bringing a truly open ISA to silicon-proven production designs is a genuinely significant achievement.</p><p>I lead a digital design and verification engineering team with strong experience in RTL design in Verilog and SystemVerilog for RISC-V architectures, UVM-based functional verification and coverage-driven methodologies, FPGA prototyping and bring-up for pre-silicon validation, formal verification (Jasper, SymbiYosys), and DV automation and regression management.</p><p>We work with chip companies and IP providers to extend their verification bandwidth without the long ramp-up time of full-time hires and are experienced with Chisel/FIRRTL flow integration.</p><p>Would a 20-minute technical call next week work? Happy to share relevant work samples under NDA.</p><p>Best regards,<br><strong>Moiz Ahmad</strong><br>RTL Design & Verification Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 6,
+    "to": "orr@hailo.ai", "first_name": "Orr", "company": "Hailo Technologies", "category": "FPGA/AI Chips",
+    "subject": "FPGA Prototyping & AI Accelerator Bring-Up — Supporting Hailo's Chip Development",
+    "body": "<p>Hi Orr,</p><p>Hailo's edge AI inference chips are addressing one of the most critical bottlenecks in AI deployment — bringing neural network acceleration to constrained edge environments without cloud dependency is both technically impressive and commercially timely.</p><p>I lead an FPGA and digital design engineering team specializing in FPGA prototyping for ASIC pre-silicon validation (Xilinx UltraScale+, Intel Stratix), RTL bring-up and debug for AI accelerator architectures, SystemVerilog/UVM verification for DNN datapath, and post-silicon firmware development for AI inference engines.</p><p>We've supported deep tech semiconductor companies through FPGA prototype phases and early silicon bring-up. Happy to sign an NDA before any discussion.</p><p>Best regards,<br><strong>Moiz Ahmad</strong><br>FPGA & Silicon Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 7,
+    "to": "angus@ouster.com", "first_name": "Angus", "company": "Ouster", "category": "LiDAR FPGA",
+    "subject": "FPGA Design & LiDAR Firmware Engineering — For Ouster's Sensor Platform",
+    "body": "<p>Hi Angus,</p><p>Ouster's approach to digital LiDAR — unifying multiple sensor modes into a single architecture — is a compelling technical differentiator. The FPGA and embedded systems work behind that product is serious engineering.</p><p>I lead a team specializing in FPGA design for high-speed sensor data pipelines (Verilog/VHDL, Xilinx), embedded firmware for real-time point cloud processing, PCIe and Ethernet interface firmware, and sensor calibration and DSP pipeline development.</p><p>If Ouster has FPGA or firmware engineering capacity needs for existing or next-generation sensor programs, I'd welcome a focused technical conversation.</p><p>Best regards,<br><strong>Moiz Ahmad</strong><br>FPGA & Sensor Firmware Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 8,
+    "to": "john@astrobotic.com", "first_name": "John", "company": "Astrobotic", "category": "Space Embedded",
+    "subject": "Space-Grade FPGA & Radiation-Hardened Firmware — Supporting Astrobotic's Lunar Missions",
+    "body": "<p>Hi John,</p><p>Astrobotic is doing mission-critical work — delivering payloads to the lunar surface demands embedded systems that must work perfectly in one of the most hostile environments imaginable.</p><p>I lead an embedded systems and FPGA engineering team with experience in radiation-tolerant FPGA design (Microsemi ProASIC3, Xilinx Kintex), fault-tolerant embedded C/C++ for mission-critical RTOS environments, CCSDS communication protocol implementations, and FDIR (fault detection, isolation, recovery) system development.</p><p>We work under formal development processes with full documentation and requirements traceability — the rigor that space programs demand. NDA-first is fully acceptable.</p><p>Best regards,<br><strong>Moiz Ahmad</strong><br>Space Embedded Systems Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 9,
+    "to": "parker@rippling.com", "first_name": "Parker", "company": "Rippling", "category": "DevOps/Cloud",
+    "subject": "DevOps & Kubernetes Engineering — Scaling Rippling's Infrastructure",
+    "body": "<p>Hi Parker,</p><p>Rippling's compound product strategy — unifying HR, IT, and Finance on a single platform — is ambitious engineering. Scaling that kind of multi-product infrastructure reliably is one of the hardest problems in SaaS.</p><p>I lead a DevOps and cloud infrastructure team with deep expertise in Kubernetes cluster management and workload optimization (EKS, GKE, AKS), CI/CD pipeline engineering (GitHub Actions, ArgoCD, Tekton), Infrastructure as Code (Terraform, Pulumi, Helm), cloud cost optimization and multi-region architecture, and SOC 2 / ISO 27001 compliance automation.</p><p>We've helped SaaS companies at Rippling's growth stage reduce cloud spend by 25–40% and cut deployment times from hours to minutes through platform engineering practices.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>DevOps & Cloud Infrastructure Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 10,
+    "to": "peter@snyk.io", "first_name": "Peter", "company": "Snyk", "category": "DevSecOps",
+    "subject": "DevSecOps Engineering & Security Tooling — For Snyk's Platform Expansion",
+    "body": "<p>Hi Peter,</p><p>Snyk has defined the developer-first security category — making security scanning fast, accurate, and integrated into the workflow engineers already use is exactly the right approach.</p><p>I lead a DevSecOps engineering team specializing in security scanning pipeline integrations (SAST, DAST, SCA), CI/CD security gate development and policy enforcement, container and Kubernetes security hardening, custom security rule development for code analysis tools, and supply chain security (SBOM generation, dependency verification).</p><p>If Snyk has engineering capacity needs for platform feature development, integration ecosystem expansion, or customer-facing security tooling, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>DevSecOps Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 11,
+    "to": "george@fivetran.com", "first_name": "George", "company": "Fivetran", "category": "Data/ETL",
+    "subject": "ETL Connector Development & Data Engineering — Supporting Fivetran's Ecosystem",
+    "body": "<p>Hi George,</p><p>Fivetran's connector ecosystem is the backbone of modern data stacks — the reliability and breadth of your pipeline coverage is what enterprise data teams depend on every day.</p><p>I lead a data engineering team specializing in custom ETL connector development (REST, GraphQL, webhook-based sources), data warehouse optimization (Snowflake, BigQuery, Redshift), dbt model development and transformation layer engineering, and incremental sync logic and CDC implementations.</p><p>We've built production ETL pipelines for enterprise customers connecting niche SaaS tools, legacy ERP systems, and custom databases — the long-tail connectors that are hard to justify staffing internally.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Data Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 12,
+    "to": "tristan@getdbt.com", "first_name": "Tristan", "company": "dbt Labs", "category": "Data Engineering",
+    "subject": "dbt Model Development & Data Engineering — Extending dbt Labs' Ecosystem",
+    "body": "<p>Hi Tristan,</p><p>dbt has fundamentally changed how analytics engineering is done — the transformation from raw SQL chaos to version-controlled, tested, documented data models is a genuine step change for data teams everywhere.</p><p>I lead a data engineering team with deep dbt expertise: dbt Core and dbt Cloud project development, data warehouse modeling (Snowflake, BigQuery, Databricks), custom dbt package development and macro engineering, data quality testing frameworks (dbt tests, Elementary, Great Expectations), and semantic layer implementation.</p><p>If dbt Labs has professional services capacity needs or partner ecosystem initiatives where engineering expertise would be valuable, I'd love to connect.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Data Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 13,
+    "to": "kyle@glossier.com", "first_name": "Kyle", "company": "Glossier", "category": "Web/E-commerce",
+    "subject": "Shopify Headless Commerce & Mobile PWA — For Glossier's Next Chapter",
+    "body": "<p>Hi Kyle,</p><p>Glossier has built one of the most distinctive brand identities in beauty — and the digital experience deserves to match that reputation at every touchpoint.</p><p>I lead a web and e-commerce engineering team specializing in Shopify headless commerce (Hydrogen/Remix, Next.js storefronts), Progressive Web App (PWA) development for mobile-first experiences, Core Web Vitals optimization for maximum conversion, subscription commerce integration (Recharge, Ordergroove), and A/B testing infrastructure and personalization layers.</p><p>We've helped D2C beauty and lifestyle brands achieve 20–30% improvement in mobile conversion rates through performance-focused headless builds — completing initial migrations in 8–12 weeks.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>E-commerce & Web Development Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 14,
+    "to": "max@faire.com", "first_name": "Max", "company": "Faire", "category": "Web/Portal",
+    "subject": "B2B Marketplace Web Engineering — Vendor Portal & Platform for Faire",
+    "body": "<p>Hi Max,</p><p>Faire has built something genuinely valuable — connecting independent retailers with the brands they love at scale. The marketplace model you've built has network effects that are hard to replicate.</p><p>I lead a web engineering team specializing in B2B marketplace and portal development: vendor onboarding and management portals (React, Next.js), B2B search and discovery with faceted filtering and personalization, order management and inventory sync web applications, CMS development for brand storefronts, and performance optimization for catalog-heavy marketplace pages.</p><p>If Faire has web engineering capacity needs for the buyer or brand portal, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Web & Marketplace Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 15,
+    "to": "barry@onepeloton.com", "first_name": "Barry", "company": "Peloton", "category": "Mobile App",
+    "subject": "React Native / Flutter Mobile Engineering — For Peloton's App Roadmap",
+    "body": "<p>Hi Barry,</p><p>Peloton's mobile app is the primary interface for millions of members — every friction point in the experience directly impacts retention and lifetime value.</p><p>I lead a cross-platform mobile development team with expertise in React Native and Flutter for high-performance iOS/Android applications, wearable and Bluetooth device integration, live class streaming and real-time leaderboard architecture, offline content downloads and sync management, and app performance profiling and render optimization.</p><p>We've helped fitness and health app companies ship major mobile feature releases 35% faster through dedicated cross-platform teams that integrate directly with internal product squads.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 16,
+    "to": "eoghan@intercom.com", "first_name": "Eoghan", "company": "Intercom", "category": "AI Chatbot/NLP",
+    "subject": "AI Chatbot Engineering & NLP Fine-Tuning — For Intercom's Fin AI",
+    "body": "<p>Hi Eoghan,</p><p>Intercom's Fin AI agent is a genuinely compelling product — bringing reliable, accurate AI responses to customer support at scale is the right direction. The challenge of making LLMs consistent in production is one we spend a lot of time on.</p><p>I lead an AI engineering team specializing in LLM fine-tuning and RLHF for domain-specific response quality, RAG pipeline engineering for knowledge-base-grounded conversations, evaluation frameworks for AI response accuracy and hallucination reduction, multi-turn conversation state management and tool-use orchestration, and real-time NLP classifiers for intent detection and escalation routing.</p><p>We've helped conversational AI platforms improve response accuracy by 40% and reduce hallucination rates significantly through systematic fine-tuning and evaluation pipelines.</p><p>Best regards,<br><strong>Moiz Ahmad</strong><br>AI/NLP Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 17,
+    "to": "amit@gong.io", "first_name": "Amit", "company": "Gong.io", "category": "AI/NLP",
+    "subject": "NLP & Revenue Intelligence AI Engineering — For Gong's Call Analytics",
+    "body": "<p>Hi Amit,</p><p>Gong's revenue intelligence platform is one of the most compelling applications of NLP in enterprise sales — turning unstructured conversation data into actionable coaching and forecast signals is genuinely hard, and you've done it well.</p><p>I lead an NLP and AI engineering team specializing in large-scale speech-to-text pipeline optimization and speaker diarization, custom NLP models for sales conversation analysis (objection detection, sentiment), LLM-based call summarization and key moment extraction, predictive deal scoring models using conversation feature engineering, and real-time inference optimization for low-latency NLP at scale.</p><p>If there are AI/NLP engineering initiatives where additional specialized capacity would accelerate your roadmap, I'd value a focused technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>AI/NLP Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 18,
+    "to": "alex@deel.com", "first_name": "Alex", "company": "Deel", "category": "Cybersecurity",
+    "subject": "Security Audit & GDPR/SOC 2 Compliance — For Deel's Global Platform",
+    "body": "<p>Hi Alex,</p><p>Operating a global HR and payroll platform across 150+ countries means Deel sits at the intersection of some of the world's strictest data privacy regulations — GDPR, CCPA, local labor data laws. That's a significant compliance surface area.</p><p>I lead a cybersecurity and compliance engineering team specializing in SOC 2 Type II gap analysis and remediation roadmaps, GDPR/CCPA compliance audits and data mapping, penetration testing (web application, API, infrastructure), security architecture review for multi-region SaaS platforms, and employee data encryption and access control hardening.</p><p>We've helped global SaaS companies complete SOC 2 Type II certification in under 6 months and pass third-party security audits from enterprise customers.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cybersecurity & Compliance Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 19,
+    "to": "andrey@miro.com", "first_name": "Andrey", "company": "Miro", "category": "UI/UX Design",
+    "subject": "UI/UX Design System Engineering — For Miro's Collaboration Platform",
+    "body": "<p>Hi Andrey,</p><p>Miro has established itself as the go-to visual collaboration platform for product and engineering teams — the UX quality at the canvas level is exceptional, and clearly the result of deep design investment.</p><p>I lead a UI/UX design and frontend engineering team specializing in design system development and component library engineering (React, Storybook), accessibility (WCAG 2.1 AA) audits and remediation, user research and usability testing for B2B SaaS, mobile UX design for tablet collaboration experiences, and motion design and micro-interaction development.</p><p>If Miro's design team has upcoming workstreams where external design engineering support would be valuable, I'd love to share some relevant work.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>UI/UX Design & Frontend Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 20,
+    "to": "david@masterclass.com", "first_name": "David", "company": "MasterClass", "category": "Video Production",
+    "subject": "Video Production & Motion Graphics — For MasterClass's Content Pipeline",
+    "body": "<p>Hi David,</p><p>MasterClass has set the gold standard for premium video learning content — the production quality, cinematography, and storytelling are in a category of their own in the EdTech space.</p><p>I lead a video production and motion graphics team specializing in post-production editing for long-form and episodic course content, motion graphics and kinetic typography, brand-consistent lower-thirds and graphical overlays, color grading and audio mastering for premium streaming quality, and short-form trailer and promotional video editing for social distribution.</p><p>We work on retainer or project basis as an extension of internal creative teams. Could I share our portfolio?</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Video Production & Creative Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 1, "id": 21,
+    "to": "andrew@pathai.com", "first_name": "Andrew", "company": "PathAI", "category": "Medical AI/CV",
+    "subject": "Computer Vision & AI Pathology Engineering — For PathAI's Clinical Platform",
+    "body": "<p>Hi Andrew,</p><p>PathAI is solving one of the most important problems in oncology — making pathological diagnosis faster, more consistent, and more accurate through AI. The clinical impact of getting this right is profound.</p><p>I lead an AI engineering team specializing in medical computer vision: histopathology image analysis (WSI processing, tile extraction, stain normalization), deep learning for tissue classification and segmentation (U-Net, ViT), multi-instance learning (MIL) for slide-level prediction, MLOps for medical AI (model versioning, drift detection, clinical validation pipelines), and FDA 510(k)/De Novo pathway documentation support.</p><p>Would a 25-minute technical conversation make sense?</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Medical AI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 22,
+    "to": "ivan@makenotion.com", "first_name": "Ivan", "company": "Notion", "category": "SaaS Dev/AI",
+    "subject": "AI Workflow & SaaS Feature Engineering — For Notion's Platform",
+    "body": "<p>Hi Ivan,</p><p>Notion's evolution from a notes tool to a full team workspace — and now an AI-powered knowledge platform — is one of the more interesting product trajectories in SaaS right now.</p><p>I lead a software engineering team specializing in AI workflow integration (LLM-powered automation, AI agents in productivity tools), SaaS feature development (React, TypeScript, Node.js), API integration and third-party connector development, and performance optimization for document-heavy collaborative apps.</p><p>If Notion has engineering capacity needs for upcoming AI features or platform integrations, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Software Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 23,
+    "to": "roy@monday.com", "first_name": "Roy", "company": "Monday.com", "category": "SaaS/Integrations",
+    "subject": "Enterprise Integrations & Automation Engineering — For Monday.com's Platform",
+    "body": "<p>Hi Roy,</p><p>Monday.com's Work OS ambition — becoming the operating system for how teams run their businesses — requires deep, reliable integrations with every tool enterprises already use. That's a large and growing engineering surface area.</p><p>I lead a team specializing in enterprise SaaS integration development (Salesforce, SAP, ServiceNow, HubSpot connectors), workflow automation engine development, custom app development on the monday.com SDK, and API-first backend development for high-volume enterprise workflows.</p><p>If Monday.com has integration ecosystem or automation capacity needs, I'd welcome a 20-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>SaaS Integration Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 24,
+    "to": "lukas@wandb.ai", "first_name": "Lukas", "company": "Weights & Biases", "category": "MLOps",
+    "subject": "MLOps Engineering & ML Pipeline Development — For W&B's Platform",
+    "body": "<p>Hi Lukas,</p><p>Weights & Biases has built the experiment tracking and MLOps tooling that serious ML teams actually use — the product has become a standard in production ML workflows.</p><p>I lead an ML engineering team specializing in MLOps pipeline development (training, evaluation, deployment automation), ML experiment infrastructure and hyperparameter optimization, model registry and versioning system development, distributed training pipelines (PyTorch, JAX, multi-GPU), and custom W&B integration development for enterprise ML platforms.</p><p>If W&B has engineering capacity needs for platform features or customer integration work, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>MLOps & ML Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 25,
+    "to": "aidan@cohere.com", "first_name": "Aidan", "company": "Cohere", "category": "LLM Engineering",
+    "subject": "LLM Fine-Tuning & Enterprise RAG Engineering — For Cohere's Platform",
+    "body": "<p>Hi Aidan,</p><p>Cohere's focus on enterprise-grade LLMs — privacy-preserving, deployable on-prem or in private cloud — is exactly the right positioning for serious enterprise adoption.</p><p>I lead an AI engineering team with deep LLM expertise: enterprise RAG system architecture and implementation, LLM fine-tuning pipelines for domain-specific tasks, vector database engineering (Pinecone, Weaviate, pgvector), LLM evaluation frameworks and benchmark development, and production LLM serving optimization (vLLM, TensorRT-LLM).</p><p>If Cohere has engineering capacity needs for customer implementation, platform tooling, or fine-tuning infrastructure, I'd welcome a 20-minute technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>LLM/AI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 26,
+    "to": "jyoti@harness.io", "first_name": "Jyoti", "company": "Harness", "category": "CI/CD DevOps",
+    "subject": "CI/CD Platform Engineering & DevOps — For Harness's Delivery Platform",
+    "body": "<p>Hi Jyoti,</p><p>Harness has built a genuinely differentiated CI/CD and developer experience platform — the focus on AI-driven pipeline intelligence and cost management is a strong differentiator against legacy tooling.</p><p>I lead a DevOps engineering team specializing in CI/CD pipeline development and optimization, Kubernetes-native deployment automation (Helm, ArgoCD, Flux), feature flag implementation and canary deployment engineering, cloud cost visibility and optimization tooling, and Terraform and Pulumi infrastructure automation.</p><p>If Harness has platform engineering or ecosystem integration capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>DevOps & CI/CD Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 27,
+    "to": "henry@carta.com", "first_name": "Henry", "company": "Carta", "category": "Cloud/AWS",
+    "subject": "AWS Migration & Cloud Infrastructure Engineering — For Carta's Platform",
+    "body": "<p>Hi Henry,</p><p>Carta is managing cap tables, equity, and fund administration for thousands of companies — the infrastructure reliability and security demands of that kind of financial data platform are extremely high.</p><p>I lead a cloud infrastructure team specializing in AWS architecture and migration (multi-account, multi-region), Kubernetes (EKS) cluster engineering and workload management, financial data security (encryption, access control, audit logging), disaster recovery and business continuity engineering, and SOC 2 Type II compliance infrastructure automation.</p><p>If Carta has infrastructure or cloud security capacity needs, I'd welcome a 20-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cloud Infrastructure & Security Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 28,
+    "to": "henrique@brex.com", "first_name": "Henrique", "company": "Brex", "category": "Cloud Security",
+    "subject": "Cloud Security & DevOps Engineering — For Brex's Financial Infrastructure",
+    "body": "<p>Hi Henrique,</p><p>Building financial infrastructure that enterprises trust with their treasury and spend management means Brex operates under some of the highest security and reliability standards in SaaS.</p><p>I lead a cloud security and DevOps engineering team specializing in AWS/GCP security hardening (IAM, VPC, KMS, GuardDuty), PCI DSS compliance automation and audit preparation, zero-trust network architecture for financial SaaS, Kubernetes security (Pod Security Standards, OPA/Gatekeeper, Falco), and secret management and key rotation automation.</p><p>We've helped FinTech companies at Brex's scale pass PCI DSS Level 1 audits and SOC 2 Type II certifications. Would a 20-minute conversation make sense?</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cloud Security & DevOps Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 29,
+    "to": "michel@airbyte.com", "first_name": "Michel", "company": "Airbyte", "category": "ETL/Data",
+    "subject": "ETL Connector & Data Engineering — For Airbyte's Open-Source Ecosystem",
+    "body": "<p>Hi Michel,</p><p>Airbyte's open-source approach to data integration has made it the go-to choice for data teams who want flexibility and control — the connector ecosystem breadth is impressive.</p><p>I lead a data engineering team specializing in custom Airbyte connector development for niche SaaS and legacy systems, Python and Java connector SDK development, data pipeline testing and reliability engineering, incremental sync and CDC implementation for high-volume sources, and data quality monitoring and alerting frameworks.</p><p>If Airbyte has connector development capacity needs or customer professional services work, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Data Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 30,
+    "to": "vidit@meesho.com", "first_name": "Vidit", "company": "Meesho", "category": "Mobile App",
+    "subject": "Mobile App Engineering — For Meesho's Social Commerce Platform",
+    "body": "<p>Hi Vidit,</p><p>Meesho's reseller commerce model — enabling millions of entrepreneurs to build businesses on their phones — is a powerful platform play for India's next 500 million internet users.</p><p>I lead a mobile engineering team specializing in React Native and Flutter development for high-scale commerce apps, mobile performance optimization for low-end Android devices and 2G/3G networks, vernacular language UI/UX implementation, push notification and re-engagement system development, and in-app payment integration (UPI, wallets, BNPL).</p><p>If Meesho has mobile engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 31,
+    "to": "simon@rappi.com", "first_name": "Simón", "company": "Rappi", "category": "Mobile App",
+    "subject": "Flutter & React Native Engineering — For Rappi's Delivery Platform",
+    "body": "<p>Hi Simón,</p><p>Rappi's super-app ambition — covering delivery, payments, travel, and more across Latin America — requires a mobile platform that can scale across diverse markets with distinct UX needs.</p><p>I lead a cross-platform mobile team specializing in Flutter and React Native for delivery and commerce apps, real-time order tracking and GPS integration, multi-country payment gateway integrations, app performance optimization for varying network conditions, and driver and merchant app development.</p><p>If Rappi has mobile engineering capacity needs, I'd welcome a 20-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 32,
+    "to": "rick@locusrobotics.com", "first_name": "Rick", "company": "Locus Robotics", "category": "Robotics Firmware",
+    "subject": "Robotics Firmware & Embedded Systems Engineering — For Locus Robotics",
+    "body": "<p>Hi Rick,</p><p>Locus Robotics has built an impressive autonomous mobile robot platform for warehouse operations — the reliability demands of running hundreds of robots in live fulfillment centers require exceptionally robust embedded software.</p><p>I lead an embedded systems and firmware engineering team specializing in autonomous mobile robot (AMR) firmware in embedded C/C++, ROS/ROS2 integration and robotic middleware development, SLAM algorithm implementation and navigation firmware, real-time motor control and sensor fusion, and safety-rated embedded systems development (IEC 61508).</p><p>If Locus has firmware or embedded engineering capacity needs, I'd welcome a focused technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Embedded Systems & Robotics Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 33,
+    "to": "preveen@kinara.ai", "first_name": "Preveen", "company": "Kinara AI", "category": "Edge AI FPGA",
+    "subject": "FPGA Prototyping & Edge AI Firmware — For Kinara's AI Accelerator",
+    "body": "<p>Hi Preveen,</p><p>Kinara's approach to purpose-built edge AI inference hardware — delivering neural network performance in power-constrained environments — addresses a critical gap in the edge computing ecosystem.</p><p>I lead an FPGA and embedded AI engineering team specializing in FPGA prototyping for neural network accelerators (Xilinx, Intel), RTL design and verification for custom DNN datapaths, post-silicon bring-up firmware and diagnostics, custom neural network compiler and runtime development, and benchmark development for edge AI performance characterization.</p><p>If Kinara has FPGA or firmware engineering capacity needs for current or next-generation programs, I'd welcome a technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>FPGA & Edge AI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 34,
+    "to": "stl@nordicsemi.no", "first_name": "Svenn-Tore", "company": "Nordic Semiconductor", "category": "Embedded/BLE",
+    "subject": "Bluetooth & Wireless Firmware Engineering — For Nordic Semiconductor's Ecosystem",
+    "body": "<p>Hi Svenn-Tore,</p><p>Nordic Semiconductor's nRF series has become the de facto standard for BLE and low-power wireless IoT applications — the ecosystem of devices built on your silicon is remarkable in its breadth.</p><p>I lead an embedded firmware team specializing in BLE, Thread, Zigbee, and Matter firmware development on nRF52/nRF53/nRF91 series, Zephyr RTOS application development and porting, low-power optimization for battery-operated IoT devices, custom BLE profiles and GATT service development, and DFU/OTA update system implementation.</p><p>If Nordic has SDK development, reference design firmware, or customer enablement engineering needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Embedded Wireless Firmware Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 35,
+    "to": "mohan@semtech.com", "first_name": "Mohan", "company": "Semtech", "category": "IoT/LoRaWAN",
+    "subject": "LoRaWAN Firmware & IoT Embedded Engineering — For Semtech's Ecosystem",
+    "body": "<p>Hi Mohan,</p><p>Semtech's LoRa technology has become the dominant long-range, low-power wireless standard for IoT — the global LoRaWAN network built on your chips is a remarkable ecosystem achievement.</p><p>I lead an embedded IoT firmware team with strong LoRaWAN expertise: LoRaWAN stack development and integration (Class A/B/C devices), embedded C firmware for SX126x/SX127x/LR11xx series, network server and application server development, gateway firmware development and optimization, and end-to-end IoT solution development (sensor to cloud).</p><p>If Semtech has firmware engineering capacity needs for customer enablement or reference design development, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>IoT & LoRaWAN Firmware Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 36,
+    "to": "rj@matterport.com", "first_name": "RJ", "company": "Matterport", "category": "Embedded Vision",
+    "subject": "Embedded Vision & Sensor Fusion Engineering — For Matterport's Capture Platform",
+    "body": "<p>Hi RJ,</p><p>Matterport's 3D spatial capture technology — turning physical spaces into digital twins — sits at a fascinating intersection of embedded vision, sensor fusion, and cloud processing.</p><p>I lead an embedded engineering team specializing in embedded vision systems (camera ISP, depth sensor integration), sensor fusion for 3D reconstruction (LiDAR, structured light, RGB-D), real-time embedded image processing pipelines, embedded Linux BSP development and optimization, and ARM Cortex-A/M firmware for vision capture hardware.</p><p>If Matterport has embedded systems engineering capacity needs for camera hardware or next-generation capture devices, I'd welcome a technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Embedded Vision & Firmware Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 37,
+    "to": "peter@veeva.com", "first_name": "Peter", "company": "Veeva Systems", "category": "Healthcare AI",
+    "subject": "AI Engineering & Drug Discovery ML — For Veeva's Life Sciences Platform",
+    "body": "<p>Hi Peter,</p><p>Veeva's deep penetration into life sciences — from clinical data management to commercial CRM — puts you at the center of enormous opportunities to apply AI across the drug development pipeline.</p><p>I lead an AI/ML engineering team specializing in drug discovery ML models (molecular property prediction, ADMET modeling), clinical trial data analysis pipelines, regulatory submission document NLP (parsing, classification, summarization), life sciences data engineering (CDISC, HL7 FHIR), and AI-powered CRM features for pharma commercial teams.</p><p>If Veeva has AI engineering capacity needs for any of these domains, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Life Sciences AI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 38,
+    "to": "alexandr@scale.com", "first_name": "Alexandr", "company": "Scale AI", "category": "ML Pipelines",
+    "subject": "ML Data Pipeline Engineering — Supporting Scale AI's Infrastructure",
+    "body": "<p>Hi Alexandr,</p><p>Scale AI has built the data infrastructure layer that the entire AI industry depends on — the quality and scale of your data labeling and evaluation platform directly determines the quality of AI systems worldwide.</p><p>I lead a data engineering and ML infrastructure team specializing in large-scale data processing pipelines (Spark, Ray, Dask), ML data quality frameworks and validation systems, active learning and data selection algorithms, annotation workflow automation and tooling, and model evaluation and benchmarking pipeline development.</p><p>If Scale has data engineering or ML infrastructure capacity needs, I'd welcome a technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>ML Data Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 39,
+    "to": "florian@dataiku.com", "first_name": "Florian", "company": "Dataiku", "category": "AI Platform",
+    "subject": "AI/ML Platform Engineering — Supporting Dataiku's Enterprise Ecosystem",
+    "body": "<p>Hi Florian,</p><p>Dataiku's vision of making AI a collaborative, governed, enterprise-grade capability — rather than a data science department silo — is the right framing for how AI actually gets deployed at scale in large organizations.</p><p>I lead an AI/ML engineering team specializing in custom Dataiku plugin and recipe development, ML pipeline automation and orchestration, enterprise AI governance and model monitoring systems, MLflow and model registry integrations, and Python/R-based ML model development and deployment.</p><p>If Dataiku has engineering capacity needs for platform features, customer implementation, or partner ecosystem development, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>AI Platform Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 2, "id": 40,
+    "to": "josh@gusto.com", "first_name": "Josh", "company": "Gusto", "category": "Cloud/DevOps",
+    "subject": "Cloud Scaling & DevOps Engineering — For Gusto's HR/Payroll Platform",
+    "body": "<p>Hi Josh,</p><p>Gusto's mission — to create a world where work empowers a better life — requires payroll and HR infrastructure that never fails, scales reliably, and processes sensitive financial data with zero errors.</p><p>I lead a DevOps and cloud engineering team specializing in AWS infrastructure scaling for high-growth SaaS platforms, payroll processing pipeline reliability and performance engineering, database performance optimization (PostgreSQL, Aurora at scale), CI/CD pipeline engineering for compliance-sensitive deployments, and SOC 2 and IRS/state compliance automation.</p><p>If Gusto has infrastructure or DevOps capacity needs, I'd welcome a 20-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cloud & DevOps Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 41,
+    "to": "maxim@temporal.io", "first_name": "Maxim", "company": "Temporal.io", "category": "Cloud/DevOps",
+    "subject": "Workflow Orchestration & Cloud Engineering — For Temporal's Platform",
+    "body": "<p>Hi Maxim,</p><p>Temporal has solved one of the hardest problems in distributed systems — making long-running, fault-tolerant workflows easy to build and reason about. The developer experience is genuinely excellent.</p><p>I lead a cloud and backend engineering team specializing in Temporal workflow development for complex business processes, Kubernetes-native Temporal cluster management and scaling, microservices development with Temporal orchestration, distributed system reliability engineering, and Go and Java Temporal SDK application development.</p><p>If Temporal has engineering capacity needs for platform features or customer ecosystem development, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cloud & Distributed Systems Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 42,
+    "to": "job@remote.com", "first_name": "Job", "company": "Remote.com", "category": "Cloud Security",
+    "subject": "SOC 2 Compliance & Cloud Security — For Remote.com's Global Platform",
+    "body": "<p>Hi Job,</p><p>Remote.com is handling payroll, contracts, and compliance for distributed teams across 180+ countries — the security and data privacy demands of that kind of global HR infrastructure are exceptional.</p><p>I lead a cybersecurity and compliance team specializing in SOC 2 Type II audit preparation and evidence collection automation, GDPR data processing compliance and DPA frameworks, multi-jurisdictional data residency architecture, penetration testing for HR/payroll SaaS platforms, and third-party vendor security assessment frameworks.</p><p>If Remote.com has security or compliance engineering needs, I'd welcome a 20-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cybersecurity & Compliance Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 43,
+    "to": "spenser@amplitude.com", "first_name": "Spenser", "company": "Amplitude", "category": "Security Audit",
+    "subject": "Security Audit & Application Penetration Testing — For Amplitude",
+    "body": "<p>Hi Spenser,</p><p>Amplitude processes behavioral analytics for thousands of companies — the sensitivity of the product usage data you handle makes security a critical trust factor for enterprise customers.</p><p>I lead a cybersecurity team specializing in web application and API penetration testing, security architecture review for analytics SaaS platforms, enterprise customer security questionnaire response automation, SOC 2 Type II continuous compliance monitoring, and OWASP Top 10 vulnerability remediation.</p><p>If Amplitude has an upcoming security review, audit, or penetration testing cycle, I'd welcome a 30-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cybersecurity Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 44,
+    "to": "nikil@alchemy.com", "first_name": "Nikil", "company": "Alchemy", "category": "Web3/Blockchain",
+    "subject": "Smart Contract Development & Web3 Engineering — For Alchemy's Ecosystem",
+    "body": "<p>Hi Nikil,</p><p>Alchemy has become the infrastructure layer that serious Web3 developers rely on — the developer experience and reliability of your node infrastructure and APIs is what the ecosystem is built on.</p><p>I lead a blockchain engineering team specializing in Solidity smart contract development and formal verification, EVM-compatible chain development (Ethereum, Polygon, Base, Arbitrum), smart contract security auditing and exploit analysis, Web3 backend development (ethers.js, viem, wagmi), and custom blockchain indexing and event processing systems.</p><p>If Alchemy has engineering capacity needs for platform features or developer tooling, I'd welcome a technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Blockchain & Web3 Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 45,
+    "to": "devin@opensea.io", "first_name": "Devin", "company": "OpenSea", "category": "Web3/Blockchain",
+    "subject": "Smart Contract Audit & NFT Platform Engineering — For OpenSea",
+    "body": "<p>Hi Devin,</p><p>OpenSea operates the world's largest NFT marketplace — the security of the smart contracts powering billions in trading volume and the scalability of the platform infrastructure are both mission-critical concerns.</p><p>I lead a blockchain engineering team specializing in smart contract security auditing (Slither, Mythril, manual review), ERC-721/ERC-1155 marketplace contract development, cross-chain NFT bridging and multi-chain indexing, high-throughput NFT metadata and media processing pipelines, and fraud detection and wash-trading prevention systems.</p><p>If OpenSea has smart contract, security, or platform engineering needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Blockchain & Web3 Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 46,
+    "to": "ankur@teachable.com", "first_name": "Ankur", "company": "Teachable", "category": "Web/LMS",
+    "subject": "LMS Portal & Web Engineering — For Teachable's Course Platform",
+    "body": "<p>Hi Ankur,</p><p>Teachable has empowered thousands of creators to build real businesses around their knowledge — the platform infrastructure behind that creator economy is what keeps those businesses running.</p><p>I lead a web engineering team specializing in LMS and course platform development (React, Next.js), video streaming and CDN optimization for course content, creator analytics dashboards and reporting portals, subscription and payment integration (Stripe, multi-currency), and mobile-responsive course player and PWA development.</p><p>If Teachable has web engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Web Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 47,
+    "to": "greg@thinkific.com", "first_name": "Greg", "company": "Thinkific", "category": "Web/EdTech",
+    "subject": "Web Portal & CMS Engineering — For Thinkific's Learning Platform",
+    "body": "<p>Hi Greg,</p><p>Thinkific's mission — to revolutionize how people learn and earn online — requires a platform that scales gracefully for course creators from their first student to their ten-thousandth.</p><p>I lead a web engineering team specializing in EdTech platform development (React, TypeScript, Ruby on Rails), headless CMS integration for course content management, live learning and cohort-based course feature development, creator-facing analytics and revenue dashboard engineering, and marketplace and discovery feature development.</p><p>If Thinkific has web engineering capacity needs, I'd welcome a 20-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Web Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 48,
+    "to": "lauris@printful.com", "first_name": "Lauris", "company": "Printful", "category": "E-commerce API",
+    "subject": "E-commerce Integration & API Engineering — For Printful's Platform",
+    "body": "<p>Hi Lauris,</p><p>Printful has built a remarkable print-on-demand fulfillment network — the API integrations connecting you to Shopify, Etsy, WooCommerce, and dozens of other platforms are what make the business work at scale.</p><p>I lead a web and API engineering team specializing in e-commerce platform connector development (Shopify, WooCommerce, BigCommerce, Etsy), order management system integration and automation, product configurator and customization tool development, shipping and fulfillment API integration, and seller dashboard and analytics development.</p><p>If Printful has integration engineering or platform capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>E-commerce Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 49,
+    "to": "vlad@robinhood.com", "first_name": "Vlad", "company": "Robinhood", "category": "Mobile/FinTech",
+    "subject": "Mobile Trading & FinTech App Engineering — For Robinhood's Platform",
+    "body": "<p>Hi Vlad,</p><p>Robinhood democratized retail investing — and the mobile app is the product that millions of users interact with every day to manage their financial lives. That's an enormous responsibility and opportunity.</p><p>I lead a mobile engineering team specializing in React Native financial app development, real-time market data streaming and WebSocket integration, crypto wallet and Web3 feature development, biometric authentication and mobile security implementation, and high-performance charting and data visualization components.</p><p>If Robinhood has mobile engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 50,
+    "to": "daniel@lemonade.com", "first_name": "Daniel", "company": "Lemonade", "category": "Mobile/InsurTech",
+    "subject": "Mobile Insurance App Engineering — For Lemonade's Platform",
+    "body": "<p>Hi Daniel,</p><p>Lemonade's AI-first approach to insurance — instant claims, transparent pricing, and a delightful mobile experience — has genuinely disrupted a category that badly needed it.</p><p>I lead a mobile engineering team specializing in React Native insurance app development, AI-powered claims flow and document capture, ID verification and biometric integration, push notification and real-time policy update systems, and cross-platform mobile testing and QA automation.</p><p>If Lemonade has mobile engineering capacity needs, I'd welcome a 20-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 51,
+    "to": "joe@loom.com", "first_name": "Joe", "company": "Loom", "category": "UI/UX",
+    "subject": "Product Design & Mobile UX — For Loom's Video Communication Platform",
+    "body": "<p>Hi Joe,</p><p>Loom has made async video communication feel effortless — the product design decisions that made screen recording and sharing fast and low-friction are what drove adoption across millions of teams.</p><p>I lead a UI/UX design team specializing in video SaaS product design (desktop and mobile), design system development and component library maintenance, accessibility audit and WCAG 2.1 AA compliance, user research and usability testing for productivity tools, and motion design for onboarding and feature discovery flows.</p><p>If Loom has design capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>UI/UX Design Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 52,
+    "to": "joaquim@typeform.com", "first_name": "Joaquim", "company": "Typeform", "category": "UI/UX",
+    "subject": "UI Redesign & Design System Engineering — For Typeform",
+    "body": "<p>Hi Joaquim,</p><p>Typeform turned form-filling into an experience people actually enjoy — the conversational, one-question-at-a-time format is a design insight that the whole industry has taken note of.</p><p>I lead a UI/UX design and frontend team specializing in SaaS product UI redesign and design system development, form and survey experience design, conversion-optimized builder UI engineering (React, TypeScript), brand visual identity refresh and component library, and mobile-responsive redesign and performance optimization.</p><p>If Typeform has design or frontend engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>UI/UX & Frontend Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 53,
+    "to": "melanie@canva.com", "first_name": "Melanie", "company": "Canva", "category": "Design/Templates",
+    "subject": "Design Template Engineering & Visual Asset Development — For Canva",
+    "body": "<p>Hi Melanie,</p><p>Canva has democratized design for hundreds of millions of people worldwide — the template ecosystem, the drag-and-drop editor, and the quality of the visual assets are what keep users coming back.</p><p>I lead a design and development team specializing in professional graphic design template creation (social, marketing, print), brand kit and style guide development, custom illustration and icon set design, motion graphics and animated template development, and design system component creation for digital and print formats.</p><p>If Canva has template design or visual asset production capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Design & Creative Production Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 54,
+    "to": "kshitij@lottiefiles.com", "first_name": "Kshitij", "company": "LottieFiles", "category": "Motion/Animation",
+    "subject": "Motion Graphics & UI Animation Development — For LottieFiles",
+    "body": "<p>Hi Kshitij,</p><p>LottieFiles has made high-quality micro-animations accessible to every designer and developer — the platform is now the standard way teams ship delightful motion to their products.</p><p>I lead a motion design and animation team specializing in Lottie animation creation (After Effects + LottieFiles workflow), UI micro-interaction design and animation, loading state, onboarding, and empty state animation design, brand mascot and character animation, and interactive Lottie animation development (dotLottie, interactivity API).</p><p>If LottieFiles has animation production or motion design capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Motion Design & Animation Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 55,
+    "to": "jim@voxmedia.com", "first_name": "Jim", "company": "Vox Media", "category": "Video/Media",
+    "subject": "Video Production & Brand Animation — For Vox Media's Content Studio",
+    "body": "<p>Hi Jim,</p><p>Vox Media has built some of the most trusted editorial brands on the internet — The Verge, Vox, Polygon, Eater — and the video content across those properties demands consistent production quality at significant scale.</p><p>I lead a video production and motion graphics team specializing in branded explainer and documentary-style video editing, motion graphics and animated title sequences, social-optimized video reformatting (Reels, TikTok, YouTube Shorts), brand-consistent visual package development, and sponsored content and branded video production.</p><p>If Vox Media has video production capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Video Production & Creative Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 56,
+    "to": "alex@morningbrew.com", "first_name": "Alex", "company": "Morning Brew", "category": "Video/YouTube",
+    "subject": "YouTube Video Editing & Motion Graphics — For Morning Brew",
+    "body": "<p>Hi Alex,</p><p>Morning Brew has become one of the most-read business newsletters in the world — and the expansion into video and multimedia content is the natural next step for such a strong editorial brand.</p><p>I lead a video production team specializing in YouTube long-form and short-form video editing, business and finance explainer animation and motion graphics, talking-head interview production and color grading, podcast video production and audiogram creation, and thumbnail design and YouTube SEO asset creation.</p><p>If Morning Brew has video production capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Video Production Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 57,
+    "to": "oscar@epidemicsound.com", "first_name": "Oscar", "company": "Epidemic Sound", "category": "Brand Video",
+    "subject": "Brand Animation & Promotional Video — For Epidemic Sound",
+    "body": "<p>Hi Oscar,</p><p>Epidemic Sound has become the go-to royalty-free music platform for content creators worldwide — and the brand itself deserves video and animation content that matches the creative quality of the music you license.</p><p>I lead a creative production team specializing in brand identity animation and motion design, promotional video production for SaaS and music platforms, social media video content and Reels/TikTok optimization, artist and creator spotlight video production, and subscription acquisition video ad creative.</p><p>If Epidemic Sound has creative production capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Brand Video & Animation Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 58,
+    "to": "girish@freshworks.com", "first_name": "Girish", "company": "Freshworks", "category": "SaaS/AI",
+    "subject": "AI Features & Automation Testing — For Freshworks' Product Suite",
+    "body": "<p>Hi Girish,</p><p>Freshworks' mission to democratize great software for businesses globally has produced an impressive suite of CRM, support, and ITSM products — and the AI layer being added across that suite is a significant competitive opportunity.</p><p>I lead a software engineering team specializing in AI chatbot and virtual agent development for customer support, automation testing frameworks (Selenium, Playwright, Cypress) for SaaS products, CRM workflow automation and integration development, and API development for third-party ecosystem integrations.</p><p>If Freshworks has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Software & AI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 59,
+    "to": "dominic@pipedrive.com", "first_name": "Dominic", "company": "Pipedrive", "category": "CRM/AI",
+    "subject": "AI-Driven CRM Features & Mobile Enhancement — For Pipedrive",
+    "body": "<p>Hi Dominic,</p><p>Pipedrive has built one of the most sales-rep-friendly CRMs on the market — the pipeline-first interface and focus on activity-based selling resonates deeply with sales teams who want to spend time selling, not managing software.</p><p>I lead an engineering team specializing in AI-powered sales automation features (deal scoring, next-action suggestions, email intelligence), CRM mobile app enhancement (React Native), third-party integration development (Slack, Gmail, LinkedIn), and custom CRM dashboard and reporting development.</p><p>If Pipedrive has engineering capacity needs, I'd welcome a 20-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>CRM & AI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 60,
+    "to": "tope@calendly.com", "first_name": "Tope", "company": "Calendly", "category": "Security/Compliance",
+    "subject": "Penetration Testing & Security Compliance — For Calendly",
+    "body": "<p>Hi Tope,</p><p>Calendly is trusted by millions of professionals and enterprises to manage their most sensitive scheduling data — calendar access, meeting details, and contact information. Security and compliance are critical trust factors for enterprise customers.</p><p>I lead a cybersecurity team specializing in web application and API penetration testing, OAuth security review and authorization flow auditing, enterprise SSO and SCIM security implementation review, GDPR and CCPA compliance assessment, and SOC 2 Type II preparation and evidence automation.</p><p>If Calendly has an upcoming security review cycle, I'd welcome a 30-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cybersecurity Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 61,
+    "to": "yamini@hubspot.com", "first_name": "Yamini", "company": "HubSpot", "category": "Security/SOC",
+    "subject": "Application Security & SOC Services — For HubSpot's Platform",
+    "body": "<p>Hi Yamini,</p><p>HubSpot powers the marketing, sales, and service operations of hundreds of thousands of companies — the security of that customer data is foundational to the trust you've built in the market.</p><p>I lead a cybersecurity team specializing in application security review and OWASP Top 10 remediation, marketplace app security review and certification support, enterprise customer security questionnaire and audit support, SOC 2 continuous compliance monitoring, and third-party vendor security assessment.</p><p>If HubSpot has security engineering or compliance capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Application Security Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 62,
+    "to": "armand@brevo.com", "first_name": "Armand", "company": "Brevo", "category": "Marketing Automation",
+    "subject": "Marketing Automation & CRM Integration Engineering — For Brevo",
+    "body": "<p>Hi Armand,</p><p>Brevo's evolution from Sendinblue into a full marketing automation and CRM platform is an impressive strategic move — and the engineering complexity of supporting email, SMS, WhatsApp, and CRM in a unified platform is real.</p><p>I lead an engineering team specializing in marketing automation workflow development, CRM integration engineering (HubSpot, Salesforce, Pipedrive connectors), email deliverability infrastructure and reputation management, SMS and WhatsApp messaging API development, and marketing analytics and attribution system development.</p><p>If Brevo has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Marketing Technology Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 63,
+    "to": "colin@customer.io", "first_name": "Colin", "company": "Customer.io", "category": "CRM/Automation",
+    "subject": "CRM Integration & Marketing Automation Engineering — For Customer.io",
+    "body": "<p>Hi Colin,</p><p>Customer.io has built a powerful behavioral messaging platform — the ability to trigger precisely targeted messages based on real-time user actions is what modern product-led growth requires.</p><p>I lead an engineering team specializing in Customer.io workflow development and campaign automation, data pipeline integration (Segment, Rudderstack, custom CDP), mobile push notification SDK integration and optimization, behavioral analytics implementation and event taxonomy design, and A/B testing and experimentation infrastructure.</p><p>If Customer.io has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Marketing Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 64,
+    "to": "manish@poshmark.com", "first_name": "Manish", "company": "Poshmark", "category": "Mobile/Social Commerce",
+    "subject": "Social Commerce Mobile App Engineering — For Poshmark",
+    "body": "<p>Hi Manish,</p><p>Poshmark has built a social commerce community that millions of sellers use to build real income — the mobile app is the product, and its performance and feature set directly determine seller and buyer engagement.</p><p>I lead a mobile engineering team specializing in social commerce app development (React Native, Swift, Kotlin), AI-powered visual search and product recommendation features, in-app live selling and streaming feature development, seller analytics and inventory management app features, and payment and shipping integration optimization.</p><p>If Poshmark has mobile engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 65,
+    "to": "david@calm.com", "first_name": "David", "company": "Calm", "category": "Mobile/Wellness",
+    "subject": "iOS/Android App Engineering & Wearable Integration — For Calm",
+    "body": "<p>Hi David,</p><p>Calm has built one of the most widely-used mental wellness apps in the world — the meditation, sleep, and mindfulness content is exceptional, and the app experience needs to match that quality at every interaction.</p><p>I lead a mobile engineering team specializing in iOS and Android app development for wellness applications, Apple Watch and WearOS integration for sleep and meditation tracking, background audio playback and offline content delivery, subscription management and in-app purchase optimization, and app performance profiling and battery usage optimization.</p><p>If Calm has mobile engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 66,
+    "to": "zeb@clickup.com", "first_name": "Zeb", "company": "ClickUp", "category": "Mobile/SaaS",
+    "subject": "Mobile Performance & Flutter Engineering — For ClickUp",
+    "body": "<p>Hi Zeb,</p><p>ClickUp's ambition to be the one app to replace them all is extraordinarily demanding from a product and engineering standpoint — especially on mobile, where users expect the full desktop feature set to work flawlessly.</p><p>I lead a mobile engineering team specializing in Flutter cross-platform development for feature-rich productivity apps, mobile performance profiling and render optimization, offline sync and conflict resolution systems, complex drag-and-drop and gesture interaction development, and push notification and real-time collaboration features.</p><p>If ClickUp has mobile engineering capacity needs, I'd welcome a 20-minute conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 67,
+    "to": "jack@lattice.com", "first_name": "Jack", "company": "Lattice", "category": "HR SaaS/AI",
+    "subject": "AI-Driven HR Features & Mobile Engineering — For Lattice",
+    "body": "<p>Hi Jack,</p><p>Lattice has built the performance management platform that modern HR teams actually want to use — and the opportunity to layer AI-driven insights across performance, engagement, and compensation data is significant.</p><p>I lead an engineering team specializing in AI-powered performance analytics and coaching recommendations, HR data pipeline and people analytics development, mobile app engineering for HR and manager tools (React Native), OKR tracking and goal alignment feature development, and compensation benchmarking and pay equity analytics engineering.</p><p>If Lattice has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>HR Tech & AI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 68,
+    "to": "shishir@coda.io", "first_name": "Shishir", "company": "Coda.io", "category": "SaaS/Mobile",
+    "subject": "Mobile Offline & AI Workflow Engineering — For Coda.io",
+    "body": "<p>Hi Shishir,</p><p>Coda's vision of a doc that works like an app — combining the flexibility of a document with the power of a database and automation engine — is an ambitious and well-executed product direction.</p><p>I lead an engineering team specializing in mobile offline editing and sync systems (Flutter, React Native), AI-powered document and workflow automation (LLM integration, formula generation), third-party integration and pack development, collaborative real-time editing infrastructure, and mobile performance optimization for document-heavy applications.</p><p>If Coda has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Software & Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 69,
+    "to": "howie@airtable.com", "first_name": "Howie", "company": "Airtable", "category": "SaaS/ERP",
+    "subject": "ERP Connectors & Automation Workflow Engineering — For Airtable",
+    "body": "<p>Hi Howie,</p><p>Airtable's no-code database platform has become the operational backbone for thousands of teams — and the demand for deep ERP and enterprise system integrations is a natural extension of that value proposition.</p><p>I lead a software engineering team specializing in custom Airtable integration development (Salesforce, SAP, NetSuite, HubSpot), automation workflow engineering and scripting, enterprise API connector development for the Airtable platform, custom app and extension development using the Airtable SDK, and data migration and ETL engineering for Airtable implementations.</p><p>If Airtable has integration engineering or platform capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Integration & Platform Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 70,
+    "to": "david@retool.com", "first_name": "David", "company": "Retool", "category": "Data/Internal Tools",
+    "subject": "Internal Tools & Data Application Engineering — For Retool",
+    "body": "<p>Hi David,</p><p>Retool has dramatically lowered the barrier to building internal tools — giving engineering teams a way to ship admin panels, dashboards, and internal apps in hours instead of weeks.</p><p>I lead an engineering team specializing in Retool application development for complex internal operations tools, database integration and query optimization for Retool backends, custom Retool component development, data warehouse integration (Snowflake, BigQuery, Redshift) for operational analytics, and internal tool migration from legacy systems to Retool.</p><p>If Retool has engineering capacity needs for customer implementation or platform features, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Internal Tools Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 71,
+    "to": "sameer@metabase.com", "first_name": "Sameer", "company": "Metabase", "category": "BI/Analytics",
+    "subject": "BI Dashboard & SQL Optimization Engineering — For Metabase",
+    "body": "<p>Hi Sameer,</p><p>Metabase has made business intelligence genuinely accessible to non-technical business users — the ability for a marketing manager or operations lead to self-serve their own data questions without writing SQL is a real capability shift.</p><p>I lead a data engineering team specializing in Metabase dashboard development and performance optimization, SQL query optimization and database tuning for Metabase backends, custom Metabase visualization and plugin development, data modeling and dimensional schema design for BI consumption, and Metabase embedding integration for customer-facing analytics.</p><p>If Metabase has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Data & BI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 72,
+    "to": "boris@getcensus.com", "first_name": "Boris", "company": "Census", "category": "Data/ETL",
+    "subject": "Reverse ETL & Data Activation Engineering — For Census",
+    "body": "<p>Hi Boris,</p><p>Census has defined the reverse ETL category — making it easy to activate warehouse data in the SaaS tools where go-to-market teams actually work is a genuinely valuable capability.</p><p>I lead a data engineering team specializing in reverse ETL pipeline development and custom Census connector engineering, data warehouse modeling for operational analytics (dbt + Census workflows), CRM data sync and enrichment pipeline development, customer segmentation and cohort analysis pipeline engineering, and data quality and sync monitoring framework development.</p><p>If Census has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Data Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 73,
+    "to": "maxime@preset.io", "first_name": "Maxime", "company": "Preset", "category": "BI/Superset",
+    "subject": "BI Dashboard Engineering & Superset Development — For Preset",
+    "body": "<p>Hi Maxime,</p><p>Preset's managed Apache Superset offering makes enterprise-grade open-source BI accessible without the operational overhead — and the growing demand for self-serve analytics across every industry makes this a well-timed product.</p><p>I lead a data engineering team specializing in Apache Superset dashboard and chart development, custom Superset visualization plugin development, data source connector and database integration engineering, SQL Lab query optimization and caching strategy, and Superset embedding integration for product analytics features.</p><p>If Preset has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>BI & Data Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 74,
+    "to": "davis@cotopaxi.com", "first_name": "Davis", "company": "Cotopaxi", "category": "Web/Shopify",
+    "subject": "Shopify Headless Commerce — For Cotopaxi's D2C Platform",
+    "body": "<p>Hi Davis,</p><p>Cotopaxi has built a distinctive outdoor brand with a purpose-driven identity — the gear is excellent, the story is compelling, and the digital experience should match the quality of the brand at every touchpoint.</p><p>I lead a web engineering team specializing in Shopify headless storefronts (Hydrogen/Remix, Next.js), page speed and Core Web Vitals optimization for outdoor retail, outdoor gear product configurator and variant selector UX, international multi-currency and multi-language storefronts, and loyalty program and subscription integration.</p><p>If Cotopaxi has web engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>E-commerce Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 75,
+    "to": "katerina@ritual.com", "first_name": "Katerina", "company": "Ritual", "category": "Web/Subscription",
+    "subject": "Subscription Platform & CMS Engineering — For Ritual",
+    "body": "<p>Hi Katerina,</p><p>Ritual has built a premium supplement brand with a refreshingly transparent approach to ingredients and supply chain — and the subscription commerce model requires a digital platform that makes renewing and managing subscriptions as frictionless as possible.</p><p>I lead a web engineering team specializing in subscription commerce platform development (Recharge, Ordergroove), headless CMS development for health and wellness brands, customer portal and account management UI engineering, subscription retention and win-back flow development, and mobile-first e-commerce performance optimization.</p><p>If Ritual has web engineering needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>E-commerce Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 76,
+    "to": "tyler@outdoorvoices.com", "first_name": "Tyler", "company": "Outdoor Voices", "category": "Web/E-commerce",
+    "subject": "E-commerce Rebuild & Web Platform Engineering — For Outdoor Voices",
+    "body": "<p>Hi Tyler,</p><p>Outdoor Voices has a genuinely differentiated position in the activewear market — the community-first, activity-over-performance ethos resonates deeply with a growing audience who are tired of the traditional athletic brand posturing.</p><p>I lead a web engineering team specializing in Shopify platform rebuild and migration, mobile-first e-commerce performance optimization, community and UGC feature development, loyalty and referral program engineering, and email and SMS marketing technology integration.</p><p>If Outdoor Voices has web engineering needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>E-commerce Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 77,
+    "to": "michael@strava.com", "first_name": "Michael", "company": "Strava", "category": "Mobile/Flutter",
+    "subject": "Flutter Migration & Wearable Integration — For Strava's Mobile Platform",
+    "body": "<p>Hi Michael,</p><p>Strava has become the social network for athletes — the GPS tracking, segment leaderboards, and activity feeds are what millions of runners and cyclists open first thing after every workout.</p><p>I lead a mobile engineering team specializing in Flutter cross-platform migration for fitness apps, Apple Watch, Garmin, and Wahoo wearable integration, real-time GPS tracking and route mapping features, Bluetooth sensor integration (heart rate, power, cadence), and offline activity recording and background sync systems.</p><p>If Strava has mobile engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 78,
+    "to": "jonathan@maze.co", "first_name": "Jonathan", "company": "Maze", "category": "UX/Design",
+    "subject": "UX Research & Product Design — For Maze's Research Platform",
+    "body": "<p>Hi Jonathan,</p><p>Maze has built an excellent rapid testing and UX research platform — making user research accessible at every stage of the product development process is genuinely changing how product teams make decisions.</p><p>I lead a UI/UX design team specializing in user research study design and facilitation, usability testing and heuristic evaluation for SaaS products, product design for research and analytics tools, design system development and accessibility audit, and conversion-optimized onboarding flow design.</p><p>If Maze has design capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>UI/UX Research & Design Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 79,
+    "to": "karri@linear.app", "first_name": "Karri", "company": "Linear", "category": "Design System",
+    "subject": "Design System & Product Design Engineering — For Linear",
+    "body": "<p>Hi Karri,</p><p>Linear has set a new standard for developer tools design — the speed, keyboard-first navigation, and visual clarity of the product are a direct result of extremely high design standards applied consistently.</p><p>I lead a UI/UX design and frontend engineering team specializing in design system development and component library engineering (React, Radix UI), dark mode and theming system implementation, keyboard accessibility and focus management engineering, design token system development, and animation and transition micro-interaction development.</p><p>If Linear has design or frontend engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Design Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 80,
+    "to": "kevin@rally.io", "first_name": "Kevin", "company": "Rally.io", "category": "Web3/Tokens",
+    "subject": "Web3 Platform & Smart Contract Engineering — For Rally.io",
+    "body": "<p>Hi Kevin,</p><p>Rally's creator token platform — giving creators their own branded social currency — is an innovative model for monetizing community and rewarding fan engagement on-chain.</p><p>I lead a blockchain engineering team specializing in ERC-20 creator token contract development and auditing, web3 wallet integration and onboarding flow engineering, NFT and token reward system development, cross-chain token bridge implementation, and creator analytics and token economics dashboard development.</p><p>If Rally has blockchain or web3 engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Web3 Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 81,
+    "to": "jim@chorus.ai", "first_name": "Jim", "company": "Chorus.ai", "category": "AI/Conversation",
+    "subject": "Conversation AI & NLP Engineering — For Chorus.ai",
+    "body": "<p>Hi Jim,</p><p>Chorus.ai captures and analyzes sales conversations to give revenue teams the intelligence they need to replicate top performers and coach reps more effectively — exactly the kind of AI application that creates measurable business impact.</p><p>I lead an NLP and AI engineering team specializing in speech-to-text pipeline engineering and speaker diarization, sales conversation NLP (topic detection, talk-time analysis, objection classification), real-time call coaching AI development, meeting intelligence and CRM sync automation, and LLM-based call summary and highlight extraction.</p><p>If Chorus.ai has AI/NLP engineering capacity needs, I'd welcome a technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>AI/NLP Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 82,
+    "to": "alex@clearbit.com", "first_name": "Alex", "company": "Clearbit", "category": "AI/Sales Intelligence",
+    "subject": "Predictive Analytics & AI Data Enrichment — For Clearbit",
+    "body": "<p>Hi Alex,</p><p>Clearbit's B2B data enrichment platform gives go-to-market teams the real-time company and contact intelligence they need to prioritize and personalize at scale — the data quality and API reliability are what serious revenue teams depend on.</p><p>I lead an AI/data engineering team specializing in predictive lead scoring model development, ML-based company data classification and enrichment, NLP for job title normalization and intent signal extraction, data pipeline engineering for real-time API enrichment at scale, and firmographic data modeling and segmentation system development.</p><p>If Clearbit has AI or data engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>AI & Data Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 83,
+    "to": "vineet@egnyte.com", "first_name": "Vineet", "company": "Egnyte", "category": "AI/Document",
+    "subject": "AI Document Classification & Content Intelligence — For Egnyte",
+    "body": "<p>Hi Vineet,</p><p>Egnyte's content governance platform — giving enterprises control over their unstructured data across cloud storage, collaboration, and compliance — sits at the intersection of some genuinely hard AI and security problems.</p><p>I lead an AI/ML engineering team specializing in document classification and content categorization (LLM + fine-tuned classifiers), sensitive data detection and PII/PHI identification (NLP-based), content lifecycle automation and governance workflow engineering, and enterprise search and knowledge retrieval system development.</p><p>If Egnyte has AI engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>AI & Document Intelligence Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 84,
+    "to": "saeju@noom.com", "first_name": "Saeju", "company": "Noom", "category": "AI/Health Mobile",
+    "subject": "Health AI & Mobile App Engineering — For Noom's Coaching Platform",
+    "body": "<p>Hi Saeju,</p><p>Noom's psychology-based approach to weight management — combining behavioral science with technology — has produced measurable health outcomes for millions of users. The AI coaching layer is what scales that human expertise.</p><p>I lead an AI and mobile engineering team specializing in AI health coaching chatbot development (LLM-powered), behavioral change recommendation systems, food logging and nutrition ML model development, mobile app engineering (React Native, iOS, Android) for health behavior tracking, and personalization engine development for adaptive coaching programs.</p><p>If Noom has AI or mobile engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Health AI & Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 85,
+    "to": "luis@duolingo.com", "first_name": "Luis", "company": "Duolingo", "category": "AI/EdTech Mobile",
+    "subject": "AI Lesson Features & Mobile Gamification Engineering — For Duolingo",
+    "body": "<p>Hi Luis,</p><p>Duolingo has made language learning genuinely habit-forming — the gamification mechanics, adaptive learning system, and AI-powered lesson personalization have built the most-used language education platform in the world.</p><p>I lead an AI and mobile engineering team specializing in adaptive learning algorithm development and personalization, generative AI lesson content creation (GPT-4, Claude), speech recognition and pronunciation assessment integration, gamification system engineering (streaks, XP, leaderboards, achievements), and mobile app development (React Native, Flutter) for edtech applications.</p><p>If Duolingo has AI or mobile engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>AI & Mobile Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 86,
+    "to": "b.altan@mynaric.com", "first_name": "Bulent", "company": "Mynaric", "category": "FPGA/Laser Comms",
+    "subject": "FPGA Design & Laser Communications Firmware — For Mynaric",
+    "body": "<p>Hi Bulent,</p><p>Mynaric's laser communication terminals for space and airborne applications represent some of the most demanding FPGA and firmware engineering in the industry — high-speed optical links in dynamic platforms require extremely precise real-time control systems.</p><p>I lead an FPGA and embedded systems team specializing in high-speed FPGA design for optical communication systems (Xilinx Ultrascale+), real-time digital signal processing (DSP) in FPGA for laser link control, embedded C/C++ for laser terminal control and pointing-acquisition-tracking (PAT), hardware-software co-design for space-grade laser terminals, and FPGA-based LDPC/turbo codec implementation for optical communications.</p><p>NDA-first approach is fully acceptable. Would a technical intro call be feasible?</p><p>Best regards,<br><strong>Moiz Ahmad</strong><br>FPGA & Laser Systems Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 87,
+    "to": "teo@espressif.com", "first_name": "Teo", "company": "Espressif Systems", "category": "Embedded/IoT",
+    "subject": "Embedded C/C++ & IoT SDK Engineering — For Espressif's Ecosystem",
+    "body": "<p>Hi Teo,</p><p>Espressif's ESP32 series has become the backbone of the DIY IoT and connected product industry — the developer ecosystem you've built around the ESP-IDF and Arduino frameworks is remarkable in its breadth and depth.</p><p>I lead an embedded firmware team specializing in ESP-IDF application development (FreeRTOS, ESP32-S3, ESP32-C6), Matter and Thread protocol implementation on ESP32, Wi-Fi provisioning and cloud connectivity firmware, low-power optimization for battery-operated ESP32 devices, and OTA update system development and secure boot implementation.</p><p>If Espressif has SDK engineering, reference design firmware, or developer enablement capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Embedded & IoT Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 88,
+    "to": "tal@wiliot.com", "first_name": "Tal", "company": "Wiliot", "category": "IoT Edge",
+    "subject": "IoT Edge Sensing & Ambient Computing Firmware — For Wiliot",
+    "body": "<p>Hi Tal,</p><p>Wiliot's ambient IoT sensing platform — batteryless tags that harvest energy from the environment — is a genuinely novel approach to the connectivity problem for billions of everyday objects.</p><p>I lead an embedded and IoT engineering team specializing in ultra-low-power embedded firmware for energy-harvesting IoT devices, BLE advertising and ambient backscatter protocol implementation, cloud IoT platform integration (AWS IoT, Azure IoT Hub), sensor data processing and edge analytics firmware, and supply chain and cold chain IoT application development.</p><p>If Wiliot has firmware or IoT platform engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>IoT & Embedded Systems Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 89,
+    "to": "t.piguet@innovitro.com", "first_name": "Thierry", "company": "InnoVitro", "category": "Biotech IoT",
+    "subject": "Lab IoT Sensors & Embedded Systems — For InnoVitro",
+    "body": "<p>Hi Thierry,</p><p>InnoVitro's work at the intersection of biotechnology and connected lab systems represents a genuinely specialized embedded engineering challenge — precision sensing, real-time data logging, and lab environment compliance all in one.</p><p>I lead an embedded and IoT engineering team specializing in precision sensor firmware for laboratory instruments, real-time data acquisition and logging systems, lab-grade IoT connectivity (LoRaWAN, cellular, BLE) for remote monitoring, calibration and self-diagnostic firmware development, and cloud integration for lab data management systems.</p><p>If InnoVitro has embedded systems or IoT engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Embedded Systems & IoT Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 90,
+    "to": "eric@ondas.com", "first_name": "Eric", "company": "Ondas Holdings", "category": "Drone/FPGA",
+    "subject": "Drone Firmware & FPGA Engineering — For Ondas Holdings",
+    "body": "<p>Hi Eric,</p><p>Ondas Holdings' portfolio across drone systems, autonomous rail, and industrial wireless positions you at the leading edge of industrial automation — and the embedded systems engineering demands across those verticals are significant.</p><p>I lead an embedded systems and FPGA team specializing in UAV/drone flight controller firmware (embedded C/C++, PX4/ArduPilot), FPGA-based RF and signal processing for industrial wireless systems, real-time autonomous navigation and path planning firmware, mission-critical embedded Linux development for drone computing platforms, and hardware-software integration for industrial automation systems.</p><p>If Ondas has embedded or FPGA engineering capacity needs, I'd welcome a technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Drone & Embedded Systems Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 91,
+    "to": "assaf@wiz.io", "first_name": "Assaf", "company": "Wiz", "category": "Cloud Security",
+    "subject": "Cloud Security Engineering — Supporting Wiz's Security Platform",
+    "body": "<p>Hi Assaf,</p><p>Wiz has achieved remarkable market penetration by making cloud security risk visible and actionable across the entire cloud stack without agents — the graph-based approach to cloud security posture is genuinely innovative.</p><p>I lead a cloud security engineering team specializing in cloud security posture management (CSPM) tool development and integration, Kubernetes and container security scanning and remediation, infrastructure-as-code security analysis (Terraform, CloudFormation), cloud threat detection and incident response automation, and security benchmark compliance automation (CIS, NIST, SOC 2).</p><p>If Wiz has platform engineering or customer enablement capacity needs, I'd welcome a technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cloud Security Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 92,
+    "to": "waseem@pilot.com", "first_name": "Waseem", "company": "Pilot.com", "category": "Cloud/Azure",
+    "subject": "Azure Migration & Cloud Security — For Pilot.com's Accounting Platform",
+    "body": "<p>Hi Waseem,</p><p>Pilot.com is handling the financial bookkeeping and accounting for thousands of startups and growing companies — the security, reliability, and compliance of that financial data infrastructure is foundational to your customers' trust.</p><p>I lead a cloud infrastructure and security team specializing in Azure migration and infrastructure modernization for SaaS accounting platforms, financial data security (encryption at rest and in transit, access control), SOC 2 Type II cloud infrastructure compliance, database performance optimization (PostgreSQL, Azure SQL) for financial workloads, and disaster recovery and business continuity engineering.</p><p>If Pilot.com has cloud engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cloud Infrastructure & Security Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 93,
+    "to": "kenneth@opslevel.com", "first_name": "Kenneth", "company": "OpsLevel", "category": "DevOps",
+    "subject": "Developer Portal & Platform Engineering — For OpsLevel",
+    "body": "<p>Hi Kenneth,</p><p>OpsLevel's internal developer portal — giving engineering teams a unified view of service ownership, maturity, and on-call responsibility — addresses a real pain point for platform engineering teams managing complex microservices environments.</p><p>I lead a platform engineering team specializing in internal developer portal development and customization (Backstage, OpsLevel), service catalog and dependency mapping tooling, developer experience (DX) tooling and golden path template development, GitOps workflow automation and infrastructure self-service portal engineering, and service health scoring and maturity framework implementation.</p><p>If OpsLevel has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Platform & Developer Experience Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 94,
+    "to": "mike@sigmacomputing.com", "first_name": "Mike", "company": "Sigma Computing", "category": "Cloud BI",
+    "subject": "Cloud BI & Data Analytics Engineering — For Sigma Computing",
+    "body": "<p>Hi Mike,</p><p>Sigma Computing's browser-based cloud analytics platform — giving business users the power of SQL without writing SQL — has found a compelling niche between traditional BI tools and code-first analytics.</p><p>I lead a data engineering team specializing in Sigma workbook and dashboard development for enterprise analytics, Snowflake and BigQuery data modeling for Sigma consumption, custom Sigma input table and write-back workflow development, BI migration engineering (Tableau, Looker, Power BI to Sigma), and data governance and access control implementation for Sigma deployments.</p><p>If Sigma has engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cloud BI & Data Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 95,
+    "to": "justin@starburst.io", "first_name": "Justin", "company": "Starburst Data", "category": "Data/SQL",
+    "subject": "SQL Optimization & Data Lakehouse Engineering — For Starburst Data",
+    "body": "<p>Hi Justin,</p><p>Starburst's Trino-based query engine has made it possible to run fast SQL analytics across a federated data lake without moving data — the performance and architectural flexibility are genuinely impressive.</p><p>I lead a data engineering team specializing in Trino/Starburst query optimization and performance tuning, data lakehouse architecture (Iceberg, Delta Lake, Hudi), connector development for custom data sources, data catalog and governance integration (Apache Atlas, OpenMetadata), and enterprise Starburst deployment and cluster management.</p><p>If Starburst has engineering capacity needs for platform features or customer professional services, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Data Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 96,
+    "to": "abhishek@appsmith.com", "first_name": "Abhishek", "company": "Appsmith", "category": "Cloud/Low-code",
+    "subject": "GCP Migration & Cloud-Native Deployment — For Appsmith",
+    "body": "<p>Hi Abhishek,</p><p>Appsmith's open-source low-code platform has enabled engineering teams worldwide to build internal tools quickly — and the move toward enterprise and cloud-hosted deployments creates real infrastructure and DevOps requirements.</p><p>I lead a cloud engineering team specializing in GCP/AWS cloud-native deployment and Kubernetes orchestration for open-source SaaS platforms, multi-tenant infrastructure architecture for low-code platforms, enterprise self-hosted deployment and upgrade automation, cloud cost optimization for high-growth developer tool platforms, and CI/CD pipeline engineering for rapid release cycles.</p><p>If Appsmith has cloud engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Cloud Infrastructure Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 97,
+    "to": "maria@pangaia.com", "first_name": "Maria", "company": "Pangaia", "category": "Web/Sustainable Commerce",
+    "subject": "Sustainable Fashion Web Platform & Commerce Engineering — For Pangaia",
+    "body": "<p>Hi Maria,</p><p>Pangaia has built one of the most credible sustainable fashion brands — the material science, the supply chain transparency, and the aesthetic are all genuinely distinctive. The digital experience should match that level of intentionality.</p><p>I lead a web engineering team specializing in sustainable fashion e-commerce platform development, transparency and traceability feature development (material origin, supply chain data), headless CMS for content-rich sustainable brand storytelling, subscription and product drop notification system engineering, and carbon footprint calculator and impact dashboard development.</p><p>If Pangaia has web engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Web & E-commerce Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 98,
+    "to": "david@lulu.com", "first_name": "David", "company": "Lulu Press", "category": "Web/Publishing",
+    "subject": "Author Portal & Publishing Platform Engineering — For Lulu Press",
+    "body": "<p>Hi David,</p><p>Lulu Press has empowered hundreds of thousands of independent authors and publishers to bring their books to market — and the author portal experience is what determines how easy or frustrating that journey is.</p><p>I lead a web engineering team specializing in author portal and dashboard development (React, Next.js), book design and layout tool web application development, print-on-demand workflow integration and automation, royalty tracking and payments dashboard engineering, and book discovery and marketplace feature development.</p><p>If Lulu Press has web engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Web Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 99,
+    "to": "brad@animoto.com", "first_name": "Brad", "company": "Animoto", "category": "Video/Templates",
+    "subject": "Video Template Design & Motion Graphics — For Animoto",
+    "body": "<p>Hi Brad,</p><p>Animoto has made professional-quality video creation accessible to small businesses and marketers who don't have video production backgrounds — and the quality and variety of the template library is what drives that value.</p><p>I lead a creative production team specializing in professional video template design and animation, motion graphics and text animation template development, social media optimized video template creation (Reels, TikTok, YouTube Shorts, Stories), business and marketing video template design, and After Effects template development for Animoto-compatible formats.</p><p>If Animoto has creative production capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Video & Motion Design Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 100,
+    "to": "tony@wondershare.com", "first_name": "Tony", "company": "Wondershare", "category": "Motion Graphics",
+    "subject": "Motion Graphics & Video Template Development — For Wondershare",
+    "body": "<p>Hi Tony,</p><p>Wondershare has built an impressive suite of creative software tools — Filmora, PDFelement, DemoCreator — that serve millions of creators and professionals worldwide. The template and asset ecosystem inside those tools is a core part of the value proposition.</p><p>I lead a creative production team specializing in Filmora effect and template development, motion graphics and transition animation design, LUT and color grading preset development, intro/outro template creation for YouTube creators, and stock-style motion graphic element design for creative software marketplaces.</p><p>If Wondershare has creative production capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Motion Graphics & Creative Production Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 101,
+    "to": "anthony@squarespace.com", "first_name": "Anthony", "company": "Squarespace", "category": "Web/Platform",
+    "subject": "Custom Plugin Development & Marketplace Engineering — For Squarespace",
+    "body": "<p>Hi Anthony,</p><p>Squarespace has built the design-forward website builder that small businesses and creatives prefer — and the extension/plugin ecosystem is what allows the platform to serve a broader range of specialized use cases.</p><p>I lead a web engineering team specializing in Squarespace extension and plugin development, custom e-commerce and inventory management integration, third-party service connector development for the Squarespace marketplace, headless Squarespace implementation with custom frontends, and performance optimization for Squarespace-powered websites.</p><p>If Squarespace has platform engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Web Platform Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 102,
+    "to": "zeb@bigcartel.com", "first_name": "Zeb", "company": "Big Cartel", "category": "Web/Artist E-commerce",
+    "subject": "Platform Modernization & Shopify Migration — For Big Cartel",
+    "body": "<p>Hi Zeb,</p><p>Big Cartel has served independent artists and makers for years — the simple, artist-friendly storefront approach has real value for creative sellers who don't need the complexity of Shopify.</p><p>I lead a web engineering team specializing in e-commerce platform modernization and migration, mobile-responsive storefront performance optimization, payment and checkout integration improvement, artist-friendly product management UI development, and theme and customization system engineering.</p><p>If Big Cartel has web engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Web Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 103,
+    "to": "david@cancel.com", "first_name": "David", "company": "Drift", "category": "AI/Conversational Marketing",
+    "subject": "AI Conversational Agent & Sales Automation — For Drift",
+    "body": "<p>Hi David,</p><p>Drift pioneered the conversational marketing category — using chatbots and messaging to turn website visitors into pipeline is an approach that's proven to deliver real revenue impact when done well.</p><p>I lead an AI engineering team specializing in LLM-powered sales chatbot development, intent detection and lead qualification AI, personalized conversation flow engineering based on visitor firmographics, real-time CRM integration for chat lead capture, and AI-powered meeting booking and SDR automation.</p><p>If Drift has AI engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Conversational AI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 104,
+    "to": "girish@freshworks.com", "first_name": "Girish", "company": "Freshworks", "category": "SaaS/QA",
+    "subject": "Automation Testing & QA Engineering — For Freshworks' Product Suite",
+    "body": "<p>Hi Girish,</p><p>Freshworks' suite of CRM, support, and ITSM products serves hundreds of thousands of businesses — maintaining quality and reliability across that breadth of products as you ship AI features is a significant QA engineering challenge.</p><p>I lead a QA and test automation engineering team specializing in Playwright and Cypress end-to-end test automation, API testing frameworks (Postman, REST Assured, k6), performance and load testing for SaaS platforms (k6, Locust, JMeter), AI feature testing strategies and LLM output evaluation frameworks, and CI/CD-integrated test pipeline development.</p><p>If Freshworks has QA engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>QA & Test Automation Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 105,
+    "to": "jim@chorus.ai", "first_name": "Jim", "company": "Chorus.ai", "category": "AI Pipeline",
+    "subject": "AI Pipeline & LLM Integration — For Chorus.ai's Intelligence Platform",
+    "body": "<p>Hi Jim,</p><p>The revenue intelligence space is moving fast — and the companies that can most effectively extract structured insights from unstructured conversation data will have a decisive advantage. Chorus has a strong foundation to build on.</p><p>I lead an AI pipeline engineering team specializing in LLM-based conversation summarization and insight extraction, fine-tuned models for sales-specific NLP tasks, real-time streaming inference for live call coaching, ML feature engineering from conversational signals, and integration between AI pipelines and CRM systems (Salesforce, HubSpot).</p><p>If Chorus.ai has AI engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>AI Pipeline Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 106,
+    "to": "howie@airtable.com", "first_name": "Howie", "company": "Airtable", "category": "AI Integration",
+    "subject": "AI Workflow Automation & No-Code AI Integration — For Airtable",
+    "body": "<p>Hi Howie,</p><p>Airtable's AI field capabilities and automation layer represent a genuinely exciting direction — the ability to embed AI actions directly into the database workflow is a powerful abstraction for non-technical teams.</p><p>I lead an AI engineering team specializing in Airtable AI field and automation development, LLM integration for data enrichment and summarization workflows, no-code AI tool development using Airtable scripting, AI-powered data classification and tagging automation, and custom AI workflow development for operations and marketing teams on Airtable.</p><p>If Airtable has AI engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>AI & Automation Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 107,
+    "to": "peter@veeva.com", "first_name": "Peter", "company": "Veeva Systems", "category": "Clinical Data AI",
+    "subject": "Clinical Data AI & Life Sciences ML — For Veeva's AI Initiatives",
+    "body": "<p>Hi Peter,</p><p>Veeva's deep penetration into regulated clinical and commercial data environments creates extraordinary AI opportunities — from intelligent adverse event detection to AI-assisted regulatory writing.</p><p>I lead an AI/ML engineering team specializing in clinical trial data analysis and anomaly detection, regulatory document AI (NLP for submission preparation), adverse event signal detection (pharmacovigilance ML), medical terminology NLP (MedDRA, SNOMED CT), and validated AI development under 21 CFR Part 11 compliance frameworks.</p><p>If Veeva has AI or data engineering capacity needs, I'd welcome a conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Life Sciences AI Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  },
+  {
+    "wave": 3, "id": 108,
+    "to": "maxim@temporal.io", "first_name": "Maxim", "company": "Temporal.io", "category": "Distributed Systems",
+    "subject": "Distributed Workflow Engineering & Temporal Development — Advanced Services",
+    "body": "<p>Hi Maxim,</p><p>Temporal has cracked one of the most persistent distributed systems challenges — durable execution that survives failures, replays correctly, and is easy for developers to reason about. The enterprise adoption curve is accelerating fast.</p><p>I lead a distributed systems engineering team specializing in complex Temporal workflow architecture and development, Temporal worker optimization and scaling for high-throughput workloads, custom activity and workflow testing framework development, Temporal Cloud migration and multi-cluster deployment engineering, and enterprise integration patterns using Temporal for long-running business processes.</p><p>If Temporal has engineering capacity needs, I'd welcome a technical conversation.</p><p>Best,<br><strong>Moiz Ahmad</strong><br>Distributed Systems Engineering Lead<br>moizahmad1604@gmail.com</p>"
+  }
+]
