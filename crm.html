@@ -658,8 +658,6 @@ let supaSyncing = false;
 
 // ===================== GMAIL STATE =====================
 const SEND_FN = 'https://idxtbwzpodlvwjcslrfw.supabase.co/functions/v1/send-email';
-let gmailUser = localStorage.getItem('crm_gmail_user') || '';
-let gmailPass = localStorage.getItem('crm_gmail_pass') || '';
 
 function supaHeaders() {
   return {
@@ -813,39 +811,9 @@ function saveActivities() {
 function updateGmailBtn() {
   const btn = document.getElementById('gmail-btn');
   if (!btn) return;
-  if (gmailUser && gmailPass) {
-    btn.textContent = '✅ ' + gmailUser;
-    btn.className = 'btn btn-success btn-sm';
-    btn.onclick = () => showView('settings');
-  } else {
-    btn.textContent = '✉️ Connect Gmail';
-    btn.className = 'btn btn-secondary btn-sm';
-    btn.onclick = () => showView('settings');
-  }
-}
-
-function saveGmailCreds() {
-  const u = document.getElementById('gmail-user-input')?.value.trim();
-  const p = document.getElementById('gmail-pass-input')?.value.trim();
-  if (!u || !p) { toast('❌ Enter both Gmail address and App Password'); return; }
-  if (!u.includes('@')) { toast('❌ Enter a valid Gmail address'); return; }
-  if (p.replace(/\s/g,'').length < 16) { toast('❌ App Password should be 16 characters'); return; }
-  gmailUser = u;
-  gmailPass = p.replace(/\s/g,''); // strip spaces Google adds for readability
-  localStorage.setItem('crm_gmail_user', gmailUser);
-  localStorage.setItem('crm_gmail_pass', gmailPass);
-  updateGmailBtn();
-  toast('✅ Gmail configured — ready to send!');
-  showView('settings');
-}
-
-function disconnectGmail() {
-  gmailUser = ''; gmailPass = '';
-  localStorage.removeItem('crm_gmail_user');
-  localStorage.removeItem('crm_gmail_pass');
-  updateGmailBtn();
-  toast('Gmail disconnected');
-  showView('settings');
+  btn.textContent = '✅ Gmail Ready';
+  btn.className = 'btn btn-success btn-sm';
+  btn.onclick = () => showView('settings');
 }
 
 function generateEmailSubject(lead) {
@@ -881,10 +849,6 @@ function generateEmailBody(lead) {
 }
 
 function openComposeModal(leadId) {
-  if (!gmailUser || !gmailPass) {
-    toast('⚠️ Configure Gmail first in ⚙️ Settings');
-    showView('settings'); return;
-  }
   const lead = leads.find(l => l.id === leadId);
   if (!lead) return;
 
@@ -907,7 +871,7 @@ function openComposeModal(leadId) {
         >${generateEmailBody(lead)}</div>
       </div>
       <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534">
-        Sending as <strong>${gmailUser}</strong> via Gmail SMTP
+        Sending as <strong>moizahmad1604@gmail.com</strong> via Gmail SMTP
       </div>
     </div>`;
   document.getElementById('modal-footer').innerHTML = `
@@ -922,7 +886,6 @@ async function sendEmail(leadId) {
   const html    = document.getElementById('compose-body')?.innerHTML || '';
 
   if (!to || !subject) { toast('❌ To and Subject are required'); return; }
-  if (!gmailUser || !gmailPass) { toast('❌ Gmail not configured — go to Settings'); return; }
 
   const btn = document.querySelector('#modal-footer .btn-primary');
   if (btn) { btn.textContent = '⏳ Sending…'; btn.disabled = true; }
@@ -931,7 +894,7 @@ async function sendEmail(leadId) {
     const res = await fetch(SEND_FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, html, from_name: 'Moiz Ahmad', gmail_user: gmailUser, gmail_pass: gmailPass })
+      body: JSON.stringify({ to, subject, html })
     });
     const data = await res.json();
 
@@ -2011,43 +1974,13 @@ function renderSettings(c) {
         ${connected ? `<span style="background:#dcfce7;color:#166534;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">✅ Connected</span>` : `<span style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">Not connected</span>`}
       </div>
       <div style="padding:22px;display:flex;flex-direction:column;gap:16px">
-        ${(gmailUser && gmailPass) ? `
-          <div style="display:flex;align-items:center;gap:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px">
-            <span style="font-size:28px">✅</span>
-            <div>
-              <div style="font-weight:700;color:#166534">Sending as ${gmailUser}</div>
-              <div style="font-size:12px;color:#16a34a;margin-top:2px">Click 📨 Send on any lead to compose and send</div>
-            </div>
+        <div style="display:flex;align-items:center;gap:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px">
+          <span style="font-size:28px">✅</span>
+          <div>
+            <div style="font-weight:700;color:#166534;font-size:14px">moizahmad1604@gmail.com</div>
+            <div style="font-size:12px;color:#16a34a;margin-top:3px">Gmail connected via SMTP · Click 📨 Send on any lead to send emails</div>
           </div>
-          <button class="btn btn-danger btn-sm" style="align-self:flex-start" onclick="disconnectGmail()">Disconnect</button>
-        ` : `
-          <p style="font-size:13px;color:#374151">Connect Gmail using an <strong>App Password</strong> — a 16-character code generated in your Google account. No Cloud Console, no OAuth setup needed.</p>
-
-          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;font-size:12px;color:#1e40af">
-            <strong>📋 How to get your App Password (2 minutes):</strong><br><br>
-            1. Go to <strong>myaccount.google.com/apppasswords</strong><br>
-            2. Sign in as <strong>moizahmad1604@gmail.com</strong><br>
-            3. App name: type <strong>CRM</strong> → click Create<br>
-            4. Copy the 16-character password shown → paste below
-          </div>
-
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <input id="gmail-user-input" type="email"
-              placeholder="moizahmad1604@gmail.com"
-              value="${gmailUser}"
-              style="padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"
-              onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='var(--border)'"
-            />
-            <div style="display:flex;gap:8px">
-              <input id="gmail-pass-input" type="password"
-                placeholder="xxxx xxxx xxxx xxxx  (16-char App Password)"
-                style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;outline:none;letter-spacing:2px"
-                onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='var(--border)'"
-              />
-              <button class="btn btn-primary" onclick="saveGmailCreds()">Save & Connect</button>
-            </div>
-          </div>
-        `}
+        </div>
       </div>
     </div>
 
