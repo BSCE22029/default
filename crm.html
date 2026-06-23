@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Leads CRM — Moiz Ahmad</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;display:flex;height:100vh;overflow:hidden}
+/* SIDEBAR */
+#sidebar{width:220px;min-width:220px;background:#0f172a;color:#cbd5e1;display:flex;flex-direction:column;padding:0}
+#sidebar .logo{padding:20px 18px 16px;border-bottom:1px solid #1e293b}
+#sidebar .logo h1{font-size:16px;font-weight:700;color:#fff;line-height:1.2}
+#sidebar .logo p{font-size:11px;color:#64748b;margin-top:2px}
+#sidebar nav{padding:12px 0;flex:1}
+#sidebar nav a{display:flex;align-items:center;gap:10px;padding:9px 18px;color:#94a3b8;text-decoration:none;font-size:13px;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+#sidebar nav a:hover{background:#1e293b;color:#e2e8f0}
+#sidebar nav a.active{background:#1e3a5f;color:#60a5fa;border-left-color:#3b82f6}
+#sidebar nav a .icon{font-size:16px;width:20px;text-align:center}
+#sidebar .sidebar-footer{padding:12px 18px;border-top:1px solid #1e293b;font-size:11px;color:#475569}
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#topbar h2{font-size:17px;font-weight:600;color:#0f172a}
+#topbar .actions{display:flex;gap:8px;align-items:center}
+#content{flex:1;overflow-y:auto;padding:24px}
+/* CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:10px;padding:18px;border:1px solid #e2e8f0}
+.stat-card .label{font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat-card .value{font-size:28px;font-weight:700;color:#0f172a}
+.stat-card .sub{font-size:12px;color:#64748b;margin-top:4px}
+.stat-card.green .value{color:#16a34a}
+.stat-card.blue .value{color:#2563eb}
+.stat-card.orange .value{color:#ea580c}
+.stat-card.purple .value{color:#7c3aed}
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:#fff;border-radius:10px;padding:20px;border:1px solid #e2e8f0}
+.chart-card h3{font-size:14px;font-weight:600;margin-bottom:16px;color:#374151}
+.chart-card canvas{max-height:200px}
+/* TABLES */
+.card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9}
+.card-header h3{font-size:14px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+thead th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+tbody tr{border-bottom:1px solid #f1f5f9;transition:background .1s}
+tbody tr:hover{background:#f8fafc}
+tbody td{padding:10px 14px;font-size:13px;color:#374151;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-new{background:#eff6ff;color:#1d4ed8}
+.badge-contacted{background:#f0fdf4;color:#166534}
+.badge-replied{background:#fefce8;color:#854d0e}
+.badge-meeting{background:#fdf4ff;color:#7e22ce}
+.badge-proposal{background:#fff7ed;color:#c2410c}
+.badge-won{background:#dcfce7;color:#14532d}
+.badge-lost{background:#fef2f2;color:#991b1b}
+.badge-nurture{background:#f0f9ff;color:#075985}
+.score-badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}
+.score-high{background:#dcfce7;color:#166534}
+.score-med{background:#fef9c3;color:#854d0e}
+.score-low{background:#fee2e2;color:#991b1b}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;text-decoration:none}
+.btn-primary{background:#3b82f6;color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-secondary{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0}
+.btn-secondary:hover{background:#e2e8f0}
+.btn-success{background:#16a34a;color:#fff}
+.btn-success:hover{background:#15803d}
+.btn-danger{background:#ef4444;color:#fff;padding:4px 10px;font-size:12px}
+.btn-sm{padding:4px 10px;font-size:12px}
+/* SEARCH/FILTER BAR */
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{padding:7px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff;outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px #eff6ff}
+/* PIPELINE */
+.pipeline-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;min-height:500px}
+.pipeline-col{min-width:210px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column}
+.pipeline-col-header{padding:12px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}
+.pipeline-cards{padding:10px;flex:1;display:flex;flex-direction:column;gap:8px}
+.pipeline-card{background:#fff;border-radius:8px;padding:12px;border:1px solid #e2e8f0;cursor:pointer;transition:box-shadow .15s}
+.pipeline-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.pipeline-card .company{font-size:13px;font-weight:600;margin-bottom:4px}
+.pipeline-card .category{font-size:11px;color:#64748b}
+.pipeline-card .score{font-size:11px;color:#7c3aed;font-weight:700}
+.pipeline-card .contact{font-size:11px;color:#374151;margin-top:4px}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:680px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid #f1f5f9;display:flex;justify-content:flex-end;gap:8px}
+.close-btn{background:none;border:none;font-size:20px;cursor:pointer;color:#64748b;line-height:1}
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:12px;font-weight:600;color:#374151}
+.form-group input,.form-group select,.form-group textarea{padding:8px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#3b82f6;box-shadow:0 0 0 3px #eff6ff}
+.form-group textarea{resize:vertical;min-height:80px}
+/* ACTIVITY LOG */
+.activity-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:8px;height:8px;border-radius:50%;background:#3b82f6;margin-top:5px;flex-shrink:0}
+.activity-dot.green{background:#16a34a}
+.activity-dot.orange{background:#f59e0b}
+.activity-dot.red{background:#ef4444}
+.activity-dot.purple{background:#7c3aed}
+.activity-text{font-size:13px;line-height:1.5}
+.activity-time{font-size:11px;color:#64748b;margin-top:2px}
+/* GENERATOR */
+.gen-card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:20px;margin-bottom:16px}
+.gen-card h3{font-size:14px;font-weight:600;margin-bottom:12px}
+.gen-result-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.gen-result-row:last-child{border-bottom:none}
+.gen-result-row .company{font-weight:600;font-size:13px;min-width:160px}
+.gen-result-row .meta{font-size:12px;color:#64748b;flex:1}
+/* EMAIL TRACKER */
+.email-status{display:flex;gap:6px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot-green{background:#16a34a}
+.dot-yellow{background:#f59e0b}
+.dot-red{background:#ef4444}
+.dot-gray{background:#9ca3af}
+.dot-blue{background:#3b82f6}
+/* DETAIL PANEL */
+.detail-section{margin-bottom:20px}
+.detail-section h4{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:10px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.detail-item{font-size:13px}
+.detail-item .dk{color:#64748b;font-size:11px}
+.detail-item .dv{font-weight:500;color:#0f172a}
+/* TOASTS */
+.toast{position:fixed;bottom:24px;right:24px;background:#0f172a;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;margin-bottom:20px}
+.tab{padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#64748b}
+.tab.active{color:#3b82f6;border-bottom-color:#3b82f6}
+/* empty state */
+.empty-state{text-align:center;padding:48px;color:#94a3b8;font-size:14px}
+/* AUTOMATION */
+.rule-card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:18px;margin-bottom:12px;display:flex;align-items:flex-start;gap:14px}
+.rule-icon{font-size:22px;width:36px;height:36px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rule-body{flex:1}
+.rule-title{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:3px}
+.rule-desc{font-size:12px;color:#64748b;line-height:1.5}
+.rule-meta{font-size:11px;color:#94a3b8;margin-top:5px}
+.toggle-wrap{display:flex;align-items:center;gap:8px}
+.toggle{position:relative;width:40px;height:22px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#cbd5e1;border-radius:11px;transition:.2s}
+.toggle input:checked+.toggle-slider{background:#3b82f6}
+.toggle-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-slider:before{transform:translateX(18px)}
+.auto-log{background:#0f172a;border-radius:10px;padding:16px;font-family:monospace;font-size:12px;color:#94a3b8;max-height:220px;overflow-y:auto;margin-top:0}
+.auto-log .al-line{padding:2px 0;border-bottom:1px solid #1e293b}
+.auto-log .al-green{color:#34d399}
+.auto-log .al-yellow{color:#fde68a}
+.auto-log .al-red{color:#f87171}
+.auto-log .al-blue{color:#60a5fa}
+.pulse{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+.status-dot.on{background:#34d399}
+.status-dot.off{background:#64748b}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="logo">
+    <h1>IT Leads CRM</h1>
+    <p>Moiz Ahmad · moizahmad1604</p>
+  </div>
+  <nav>
+    <a class="active" onclick="showView('dashboard')"><span class="icon">📊</span> Dashboard</a>
+    <a onclick="showView('leads')"><span class="icon">👥</span> All Leads</a>
+    <a onclick="showView('pipeline')"><span class="icon">🔀</span> Pipeline</a>
+    <a onclick="showView('emails')"><span class="icon">📧</span> Email Tracker</a>
+    <a onclick="showView('generator')"><span class="icon">⚡</span> Daily Generator</a>
+    <a onclick="showView('activity')"><span class="icon">📋</span> Activity Log</a>
+    <a onclick="showView('analytics')"><span class="icon">📈</span> Analytics</a>
+    <a onclick="showView('automation')"><span class="icon">⚙️</span> Automation</a>
+    <a onclick="showView('deploy')"><span class="icon">🚀</span> Deploy / Share</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div id="auto-status"><span class="status-dot off" id="auto-dot"></span><span id="auto-label">Automation off</span></div>
+    <div id="last-gen" style="margin-top:3px">Generator ready</div>
+    <div style="margin-top:4px">Total leads: <span id="sb-total">0</span></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <h2 id="page-title">Dashboard</h2>
+    <div class="actions">
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="openAddLead()">+ Add Lead</button>
+    </div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Lead Details</h3>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== DATA =====================
+const STATUSES = ['New Lead','Contacted','Replied','Meeting Booked','Proposal Sent','Closed Won','Closed Lost','Nurture'];
+const CATEGORIES = ['Embedded/FPGA/IoT','AI/ML','Cloud/DevOps','Data Engineering','Web/E-commerce','Mobile App','UI/UX Design','Video/Media','Cybersecurity','Blockchain','SaaS Dev','QA/Testing','Graphic Design','Marketing Tech'];
+const STATUS_BADGE = {'New Lead':'badge-new','Contacted':'badge-contacted','Replied':'badge-replied','Meeting Booked':'badge-meeting','Proposal Sent':'badge-proposal','Closed Won':'badge-won','Closed Lost':'badge-lost','Nurture':'badge-nurture'};
+const COL_COLORS = {'New Lead':'#3b82f6','Contacted':'#10b981','Replied':'#f59e0b','Meeting Booked':'#8b5cf6','Proposal Sent':'#f97316','Closed Won':'#16a34a','Closed Lost':'#ef4444','Nurture':'#06b6d4'};
+
+const SEED_LEADS = [
+  // WAVE 1 — TOP PRIORITY
+  {id:1,company:'Samsara',website:'samsara.com',industry:'IoT/Fleet Tech',country:'USA',category:'Embedded/FPGA/IoT',contact:'Sanjit Biswas',email:'sanjit@samsara.com',linkedin:'linkedin.com/in/sanjitbiswas',leadScore:92,opportunitySize:'$50K–$200K',wave:1},
+  {id:2,company:'Joby Aviation',website:'jobyaviation.com',industry:'eVTOL / Aerospace',country:'USA',category:'Embedded/FPGA/IoT',contact:'JoeBen Bevirt',email:'jbevirt@jobyaviation.com',linkedin:'linkedin.com/in/joebenbevirt',leadScore:91,opportunitySize:'$100K–$500K',wave:1},
+  {id:3,company:'Tempus AI',website:'tempus.com',industry:'Healthcare AI',country:'USA',category:'AI/ML',contact:'Eric Lefkofsky',email:'eric@tempus.com',linkedin:'linkedin.com/in/ericlefkofsky',leadScore:90,opportunitySize:'$80K–$300K',wave:1},
+  {id:4,company:'Zendesk',website:'zendesk.com',industry:'Customer Support SaaS',country:'USA',category:'AI/ML',contact:'Tom Keiser',email:'tkeiser@zendesk.com',linkedin:'linkedin.com/in/tomkeiser',leadScore:88,opportunitySize:'$60K–$250K',wave:1},
+  {id:5,company:'SiFive',website:'sifive.com',industry:'Semiconductor / RISC-V',country:'USA',category:'Embedded/FPGA/IoT',contact:'Patrick Little',email:'plittle@sifive.com',linkedin:'linkedin.com/in/patricklittle',leadScore:93,opportunitySize:'$150K–$600K',wave:1},
+  {id:6,company:'Rippling',website:'rippling.com',industry:'HR/Payroll SaaS',country:'USA',category:'SaaS Dev',contact:'Parker Conrad',email:'parker@rippling.com',linkedin:'linkedin.com/in/parkerconrad',leadScore:87,opportunitySize:'$80K–$400K',wave:1},
+  {id:7,company:'Glossier',website:'glossier.com',industry:'Beauty E-commerce',country:'USA',category:'Web/E-commerce',contact:'Kyle Leahy',email:'kyle@glossier.com',linkedin:'linkedin.com/in/kyleleahy',leadScore:81,opportunitySize:'$40K–$180K',wave:1},
+  {id:8,company:'Intercom',website:'intercom.com',industry:'Customer Messaging',country:'Ireland',category:'AI/ML',contact:'Eoghan McCabe',email:'eoghan@intercom.com',linkedin:'linkedin.com/in/eoghanmccabe',leadScore:86,opportunitySize:'$70K–$300K',wave:1},
+  {id:9,company:'Deel',website:'deel.com',industry:'Global HR/Payroll',country:'USA',category:'SaaS Dev',contact:'Alex Bouaziz',email:'alex@deel.com',linkedin:'linkedin.com/in/alexbouaziz',leadScore:85,opportunitySize:'$60K–$250K',wave:1},
+  {id:10,company:'Peloton',website:'onepeloton.com',industry:'Fitness Tech',country:'USA',category:'Embedded/FPGA/IoT',contact:'Barry McCarthy',email:'bmc@onepeloton.com',linkedin:'linkedin.com/in/barrymccarthy',leadScore:79,opportunitySize:'$50K–$200K',wave:1},
+  {id:11,company:'Fivetran',website:'fivetran.com',industry:'Data Integration',country:'USA',category:'Data Engineering',contact:'George Fraser',email:'george@fivetran.com',linkedin:'linkedin.com/in/georgefraser',leadScore:88,opportunitySize:'$60K–$280K',wave:1},
+  {id:12,company:'Miro',website:'miro.com',industry:'Collaboration SaaS',country:'Netherlands',category:'UI/UX Design',contact:'Andrey Khusid',email:'andrey@miro.com',linkedin:'linkedin.com/in/andreykhusid',leadScore:83,opportunitySize:'$50K–$220K',wave:1},
+  {id:13,company:'MasterClass',website:'masterclass.com',industry:'EdTech / Streaming',country:'USA',category:'Video/Media',contact:'David Rogier',email:'david@masterclass.com',linkedin:'linkedin.com/in/davidrogier',leadScore:84,opportunitySize:'$70K–$300K',wave:1},
+  {id:14,company:'Particle Industries',website:'particle.io',industry:'IoT Platform',country:'USA',category:'Embedded/FPGA/IoT',contact:'Zach Supalla',email:'zach@particle.io',linkedin:'linkedin.com/in/zachsupalla',leadScore:90,opportunitySize:'$80K–$350K',wave:1},
+  {id:15,company:'Gong.io',website:'gong.io',industry:'Revenue Intelligence',country:'USA',category:'AI/ML',contact:'Amit Bendov',email:'amit@gong.io',linkedin:'linkedin.com/in/amitbendov',leadScore:87,opportunitySize:'$70K–$280K',wave:1},
+  {id:16,company:'dbt Labs',website:'getdbt.com',industry:'Data Transformation',country:'USA',category:'Data Engineering',contact:'Tristan Handy',email:'tristan@dbtlabs.com',linkedin:'linkedin.com/in/tristanhandy',leadScore:89,opportunitySize:'$60K–$250K',wave:1},
+  {id:17,company:'Brex',website:'brex.com',industry:'Fintech / Corporate Cards',country:'USA',category:'SaaS Dev',contact:'Henrique Dubugras',email:'henrique@brex.com',linkedin:'linkedin.com/in/henriquedubugras',leadScore:86,opportunitySize:'$80K–$350K',wave:1},
+  {id:18,company:'Hailo',website:'hailo.ai',industry:'AI Chip / Edge AI',country:'Israel',category:'Embedded/FPGA/IoT',contact:'Orr Danon',email:'orr@hailo.ai',linkedin:'linkedin.com/in/orrdanon',leadScore:92,opportunitySize:'$100K–$500K',wave:1},
+  {id:19,company:'Astrobotic',website:'astrobotic.com',industry:'Space / Lunar Tech',country:'USA',category:'Embedded/FPGA/IoT',contact:'John Thornton',email:'jthornton@astrobotic.com',linkedin:'linkedin.com/in/johnthornton',leadScore:91,opportunitySize:'$150K–$600K',wave:1},
+  {id:20,company:'PathAI',website:'pathai.com',industry:'Pathology AI',country:'USA',category:'AI/ML',contact:'Andy Beck',email:'abeck@pathai.com',linkedin:'linkedin.com/in/andybeck',leadScore:89,opportunitySize:'$80K–$350K',wave:1},
+  {id:21,company:'Faire',website:'faire.com',industry:'B2B Wholesale Marketplace',country:'USA',category:'Web/E-commerce',contact:'Max Rhodes',email:'max@faire.com',linkedin:'linkedin.com/in/maxrhodes',leadScore:82,opportunitySize:'$50K–$200K',wave:1},
+  // WAVE 2
+  {id:22,company:'Notion',website:'notion.so',industry:'Productivity SaaS',country:'USA',category:'SaaS Dev',contact:'Ivan Zhao',email:'ivan@notion.so',linkedin:'linkedin.com/in/ivanzhao',leadScore:85,opportunitySize:'$60K–$250K',wave:2},
+  {id:23,company:'Monday.com',website:'monday.com',industry:'Work OS',country:'Israel',category:'SaaS Dev',contact:'Roy Mann',email:'roy@monday.com',linkedin:'linkedin.com/in/roymann',leadScore:84,opportunitySize:'$60K–$220K',wave:2},
+  {id:24,company:'Weights & Biases',website:'wandb.ai',industry:'MLOps Platform',country:'USA',category:'AI/ML',contact:'Lukas Biewald',email:'lukas@wandb.ai',linkedin:'linkedin.com/in/lukasbiewald',leadScore:91,opportunitySize:'$80K–$300K',wave:2},
+  {id:25,company:'Cohere',website:'cohere.com',industry:'Enterprise NLP AI',country:'Canada',category:'AI/ML',contact:'Aidan Gomez',email:'aidan@cohere.com',linkedin:'linkedin.com/in/aidangomez',leadScore:93,opportunitySize:'$100K–$500K',wave:2},
+  {id:26,company:'Harness',website:'harness.io',industry:'DevOps / CI-CD',country:'USA',category:'Cloud/DevOps',contact:'Jyoti Bansal',email:'jb@harness.io',linkedin:'linkedin.com/in/jyotibansal',leadScore:88,opportunitySize:'$70K–$300K',wave:2},
+  {id:27,company:'Carta',website:'carta.com',industry:'Equity Management',country:'USA',category:'SaaS Dev',contact:'Henry Ward',email:'henry@carta.com',linkedin:'linkedin.com/in/henryward',leadScore:82,opportunitySize:'$60K–$220K',wave:2},
+  {id:28,company:'Airbyte',website:'airbyte.com',industry:'Data Integration OSS',country:'USA',category:'Data Engineering',contact:'Michel Tricot',email:'michel@airbyte.com',linkedin:'linkedin.com/in/micheltricot',leadScore:87,opportunitySize:'$60K–$250K',wave:2},
+  {id:29,company:'Meesho',website:'meesho.com',industry:'Social E-commerce',country:'India',category:'Mobile App',contact:'Vidit Aatrey',email:'vidit@meesho.com',linkedin:'linkedin.com/in/viditaatrey',leadScore:80,opportunitySize:'$40K–$180K',wave:2},
+  {id:30,company:'Rappi',website:'rappi.com',industry:'On-Demand Delivery',country:'Colombia',category:'Mobile App',contact:'Sebastian Mejia',email:'smejia@rappi.com',linkedin:'linkedin.com/in/sebastianmejia',leadScore:79,opportunitySize:'$50K–$200K',wave:2},
+  {id:31,company:'Locus Robotics',website:'locusrobotics.com',industry:'Warehouse Robotics',country:'USA',category:'Embedded/FPGA/IoT',contact:'Rick Faulk',email:'rfaulk@locusrobotics.com',linkedin:'linkedin.com/in/rickfaulk',leadScore:88,opportunitySize:'$80K–$350K',wave:2},
+  {id:32,company:'Kinara',website:'kinara.ai',industry:'Edge AI Chips',country:'USA',category:'Embedded/FPGA/IoT',contact:'Dhiraj Mallya',email:'dmallya@kinara.ai',linkedin:'linkedin.com/in/dhirajmallya',leadScore:87,opportunitySize:'$70K–$300K',wave:2},
+  {id:33,company:'Nordic Semiconductor',website:'nordicsemi.com',industry:'Wireless SoC',country:'Norway',category:'Embedded/FPGA/IoT',contact:'Svenn-Tore Larsen',email:'stl@nordicsemi.no',linkedin:'linkedin.com/in/svenntorel',leadScore:86,opportunitySize:'$80K–$300K',wave:2},
+  {id:34,company:'Semtech',website:'semtech.com',industry:'IoT / LoRa Semiconductor',country:'USA',category:'Embedded/FPGA/IoT',contact:'Paul Pickle',email:'ppickle@semtech.com',linkedin:'linkedin.com/in/paulpickle',leadScore:84,opportunitySize:'$70K–$280K',wave:2},
+  {id:35,company:'Matterport',website:'matterport.com',industry:'3D Spatial Data',country:'USA',category:'AI/ML',contact:'RJ Pittman',email:'rjp@matterport.com',linkedin:'linkedin.com/in/rjpittman',leadScore:83,opportunitySize:'$60K–$240K',wave:2},
+  {id:36,company:'Veeva Systems',website:'veeva.com',industry:'Life Sciences Cloud',country:'USA',category:'Cloud/DevOps',contact:'Peter Gassner',email:'pgassner@veeva.com',linkedin:'linkedin.com/in/petergassner',leadScore:85,opportunitySize:'$70K–$300K',wave:2},
+  {id:37,company:'Scale AI',website:'scale.com',industry:'AI Data Labeling',country:'USA',category:'Data Engineering',contact:'Alexandr Wang',email:'alex@scale.com',linkedin:'linkedin.com/in/alexandrwang',leadScore:92,opportunitySize:'$100K–$400K',wave:2},
+  {id:38,company:'Dataiku',website:'dataiku.com',industry:'Enterprise ML Platform',country:'France',category:'Data Engineering',contact:'Florian Douetteau',email:'fdouetteau@dataiku.com',linkedin:'linkedin.com/in/floriand',leadScore:88,opportunitySize:'$80K–$350K',wave:2},
+  {id:39,company:'Gusto',website:'gusto.com',industry:'HR/Payroll SaaS',country:'USA',category:'SaaS Dev',contact:'Josh Reeves',email:'josh@gusto.com',linkedin:'linkedin.com/in/joshreeves',leadScore:82,opportunitySize:'$50K–$200K',wave:2},
+  {id:40,company:'Amplitude',website:'amplitude.com',industry:'Product Analytics',country:'USA',category:'Data Engineering',contact:'Spenser Skates',email:'spenser@amplitude.com',linkedin:'linkedin.com/in/spenskates',leadScore:83,opportunitySize:'$55K–$220K',wave:2},
+  // WAVE 3
+  {id:41,company:'Labelbox',website:'labelbox.com',industry:'AI Data Platform',country:'USA',category:'AI/ML',contact:'Manu Sharma',email:'manu@labelbox.com',linkedin:'linkedin.com/in/manusharma',leadScore:85,opportunitySize:'$60K–$250K',wave:3},
+  {id:42,company:'Snorkel AI',website:'snorkel.ai',industry:'Data-Centric AI',country:'USA',category:'AI/ML',contact:'Alex Ratner',email:'aratner@snorkel.ai',linkedin:'linkedin.com/in/alexratner',leadScore:84,opportunitySize:'$60K–$240K',wave:3},
+  {id:43,company:'Hugging Face',website:'huggingface.co',industry:'ML Model Hub',country:'USA',category:'AI/ML',contact:'Clement Delangue',email:'clement@huggingface.co',linkedin:'linkedin.com/in/clementdelangue',leadScore:90,opportunitySize:'$80K–$350K',wave:3},
+  {id:44,company:'Databricks',website:'databricks.com',industry:'Unified Data/AI',country:'USA',category:'Data Engineering',contact:'Ali Ghodsi',email:'ali@databricks.com',linkedin:'linkedin.com/in/alighodsi',leadScore:93,opportunitySize:'$120K–$500K',wave:3},
+  {id:45,company:'dbt Labs',website:'getdbt.com',industry:'Data Transformation',country:'USA',category:'Data Engineering',contact:'Drew Banin',email:'drew@dbtlabs.com',linkedin:'linkedin.com/in/drewbanin',leadScore:88,opportunitySize:'$60K–$250K',wave:3},
+  {id:46,company:'Starburst',website:'starburst.io',industry:'Query Engine',country:'USA',category:'Data Engineering',contact:'Justin Borgman',email:'jborgman@starburst.io',linkedin:'linkedin.com/in/justinborgman',leadScore:82,opportunitySize:'$60K–$220K',wave:3},
+  {id:47,company:'Cloudflare',website:'cloudflare.com',industry:'CDN / Security',country:'USA',category:'Cybersecurity',contact:'Matthew Prince',email:'mprince@cloudflare.com',linkedin:'linkedin.com/in/matthewprince',leadScore:89,opportunitySize:'$80K–$350K',wave:3},
+  {id:48,company:'Wiz',website:'wiz.io',industry:'Cloud Security',country:'USA',category:'Cybersecurity',contact:'Assaf Rappaport',email:'assaf@wiz.io',linkedin:'linkedin.com/in/assafrappaport',leadScore:91,opportunitySize:'$100K–$450K',wave:3},
+  {id:49,company:'Orca Security',website:'orca.security',industry:'Cloud Security',country:'Israel',category:'Cybersecurity',contact:'Gil Geron',email:'gil@orca.security',linkedin:'linkedin.com/in/gilgeron',leadScore:87,opportunitySize:'$70K–$300K',wave:3},
+  {id:50,company:'Lacework',website:'lacework.com',industry:'Cloud Security AI',country:'USA',category:'Cybersecurity',contact:'Jay Parikh',email:'jparikh@lacework.com',linkedin:'linkedin.com/in/jayparikh',leadScore:85,opportunitySize:'$70K–$280K',wave:3},
+  {id:51,company:'HashiCorp',website:'hashicorp.com',industry:'Infrastructure as Code',country:'USA',category:'Cloud/DevOps',contact:'Dave McJannet',email:'dmcjannet@hashicorp.com',linkedin:'linkedin.com/in/davemcjannet',leadScore:88,opportunitySize:'$80K–$350K',wave:3},
+  {id:52,company:'Pulumi',website:'pulumi.com',industry:'Cloud IaC',country:'USA',category:'Cloud/DevOps',contact:'Joe Duffy',email:'jduffy@pulumi.com',linkedin:'linkedin.com/in/joeduffy',leadScore:82,opportunitySize:'$55K–$220K',wave:3},
+  {id:53,company:'Grafana Labs',website:'grafana.com',industry:'Observability',country:'Sweden',category:'Cloud/DevOps',contact:'Raj Dutt',email:'raj@grafana.com',linkedin:'linkedin.com/in/rajdutt',leadScore:85,opportunitySize:'$60K–$250K',wave:3},
+  {id:54,company:'Figma',website:'figma.com',industry:'Design SaaS',country:'USA',category:'UI/UX Design',contact:'Dylan Field',email:'dylan@figma.com',linkedin:'linkedin.com/in/dylanfield',leadScore:88,opportunitySize:'$70K–$300K',wave:3},
+  {id:55,company:'InVision',website:'invisionapp.com',industry:'Design Collaboration',country:'USA',category:'UI/UX Design',contact:'Clark Valberg',email:'clark@invisionapp.com',linkedin:'linkedin.com/in/clarkvalberg',leadScore:79,opportunitySize:'$40K–$170K',wave:3},
+  {id:56,company:'Maze',website:'maze.co',industry:'UX Research',country:'France',category:'UI/UX Design',contact:'Jonathan Widawski',email:'jonathan@maze.co',linkedin:'linkedin.com/in/jonathanwidawski',leadScore:77,opportunitySize:'$35K–$150K',wave:3},
+  {id:57,company:'Unsplash',website:'unsplash.com',industry:'Stock Photography',country:'Canada',category:'Graphic Design',contact:'Mikael Cho',email:'mikael@unsplash.com',linkedin:'linkedin.com/in/mikaelcho',leadScore:70,opportunitySize:'$25K–$100K',wave:3},
+  {id:58,company:'Canva',website:'canva.com',industry:'Design Platform',country:'Australia',category:'Graphic Design',contact:'Melanie Perkins',email:'melanie@canva.com',linkedin:'linkedin.com/in/melanieperkins',leadScore:85,opportunitySize:'$60K–$250K',wave:3},
+  {id:59,company:'Vimeo',website:'vimeo.com',industry:'Video Hosting',country:'USA',category:'Video/Media',contact:'Anjali Sud',email:'anjali@vimeo.com',linkedin:'linkedin.com/in/anjalisud',leadScore:80,opportunitySize:'$50K–$200K',wave:3},
+  {id:60,company:'Wistia',website:'wistia.com',industry:'B2B Video Marketing',country:'USA',category:'Video/Media',contact:'Chris Savage',email:'chris@wistia.com',linkedin:'linkedin.com/in/chrissavage',leadScore:75,opportunitySize:'$35K–$150K',wave:3},
+  {id:61,company:'Vidyard',website:'vidyard.com',industry:'Video for Sales',country:'Canada',category:'Video/Media',contact:'Michael Litt',email:'mlitt@vidyard.com',linkedin:'linkedin.com/in/michaellitt',leadScore:76,opportunitySize:'$35K–$155K',wave:3},
+  {id:62,company:'Loom',website:'loom.com',industry:'Async Video',country:'USA',category:'Video/Media',contact:'Joe Thomas',email:'joe@loom.com',linkedin:'linkedin.com/in/joethomas',leadScore:78,opportunitySize:'$40K–$170K',wave:3},
+  {id:63,company:'Algorand',website:'algorand.com',industry:'Blockchain Protocol',country:'USA',category:'Blockchain',contact:'Staci Warden',email:'swarden@algorand.com',linkedin:'linkedin.com/in/staciwarden',leadScore:82,opportunitySize:'$60K–$250K',wave:3},
+  {id:64,company:'Polygon',website:'polygon.technology',industry:'Ethereum Scaling',country:'India',category:'Blockchain',contact:'Sandeep Nailwal',email:'sandeep@polygon.technology',linkedin:'linkedin.com/in/sandee',leadScore:83,opportunitySize:'$70K–$300K',wave:3},
+  {id:65,company:'Alchemy',website:'alchemy.com',industry:'Web3 Dev Platform',country:'USA',category:'Blockchain',contact:'Nikil Viswanathan',email:'nikil@alchemy.com',linkedin:'linkedin.com/in/nikilv',leadScore:84,opportunitySize:'$60K–$260K',wave:3},
+  {id:66,company:'Chainalysis',website:'chainalysis.com',industry:'Blockchain Analytics',country:'USA',category:'Blockchain',contact:'Michael Gronager',email:'mgronager@chainalysis.com',linkedin:'linkedin.com/in/michaelgronager',leadScore:85,opportunitySize:'$70K–$300K',wave:3},
+  {id:67,company:'Moralis',website:'moralis.io',industry:'Web3 Backend',country:'Sweden',category:'Blockchain',contact:'Ivan on Tech',email:'ivan@moralis.io',linkedin:'linkedin.com/in/ivanontech',leadScore:74,opportunitySize:'$30K–$130K',wave:3},
+  {id:68,company:'Shopify',website:'shopify.com',industry:'E-commerce Platform',country:'Canada',category:'Web/E-commerce',contact:'Tobi Lutke',email:'tobi@shopify.com',linkedin:'linkedin.com/in/tobias',leadScore:88,opportunitySize:'$80K–$350K',wave:3},
+  {id:69,company:'BigCommerce',website:'bigcommerce.com',industry:'E-commerce SaaS',country:'USA',category:'Web/E-commerce',contact:'Brent Bellm',email:'bbellm@bigcommerce.com',linkedin:'linkedin.com/in/brentbellm',leadScore:80,opportunitySize:'$50K–$200K',wave:3},
+  {id:70,company:'Bolt',website:'bolt.com',industry:'Checkout Optimization',country:'USA',category:'Web/E-commerce',contact:'Ryan Breslow',email:'ryan@bolt.com',linkedin:'linkedin.com/in/ryanbreslow',leadScore:78,opportunitySize:'$45K–$180K',wave:3},
+  {id:71,company:'Recharge',website:'rechargepayments.com',industry:'Subscription Commerce',country:'USA',category:'Web/E-commerce',contact:'Oisin OConnor',email:'oisin@rechargepayments.com',linkedin:'linkedin.com/in/oisino',leadScore:76,opportunitySize:'$40K–$160K',wave:3},
+  {id:72,company:'Klaviyo',website:'klaviyo.com',industry:'Marketing Automation',country:'USA',category:'Marketing Tech',contact:'Andrew Bialecki',email:'abialecki@klaviyo.com',linkedin:'linkedin.com/in/andrewbialecki',leadScore:83,opportunitySize:'$60K–$250K',wave:3},
+  {id:73,company:'Attentive',website:'attentive.com',industry:'SMS Marketing',country:'USA',category:'Marketing Tech',contact:'Brian Long',email:'blong@attentive.com',linkedin:'linkedin.com/in/brianlong',leadScore:79,opportunitySize:'$45K–$180K',wave:3},
+  {id:74,company:'Iterable',website:'iterable.com',industry:'Cross-channel Marketing',country:'USA',category:'Marketing Tech',contact:'Justin Zhu',email:'jzhu@iterable.com',linkedin:'linkedin.com/in/justinzhu',leadScore:77,opportunitySize:'$40K–$160K',wave:3},
+  {id:75,company:'Customer.io',website:'customer.io',industry:'Messaging Automation',country:'USA',category:'Marketing Tech',contact:'Colin Nederkoorn',email:'colin@customer.io',linkedin:'linkedin.com/in/colinnederkoorn',leadScore:76,opportunitySize:'$35K–$150K',wave:3},
+  {id:76,company:'Navan',website:'navan.com',industry:'Business Travel/Expense',country:'USA',category:'SaaS Dev',contact:'Ariel Cohen',email:'acohen@navan.com',linkedin:'linkedin.com/in/arielcohen',leadScore:81,opportunitySize:'$55K–$220K',wave:3},
+  {id:77,company:'Ironclad',website:'ironcladapp.com',industry:'Contract Automation',country:'USA',category:'SaaS Dev',contact:'Jason Boehmig',email:'jboehmig@ironcladapp.com',linkedin:'linkedin.com/in/jasonb',leadScore:80,opportunitySize:'$50K–$200K',wave:3},
+  {id:78,company:'Stripe',website:'stripe.com',industry:'Payment Infrastructure',country:'USA',category:'SaaS Dev',contact:'Patrick Collison',email:'patrick@stripe.com',linkedin:'linkedin.com/in/patrickcollison',leadScore:90,opportunitySize:'$100K–$500K',wave:3},
+  {id:79,company:'Plaid',website:'plaid.com',industry:'Open Banking',country:'USA',category:'SaaS Dev',contact:'Zach Perret',email:'zach@plaid.com',linkedin:'linkedin.com/in/zachperret',leadScore:88,opportunitySize:'$80K–$350K',wave:3},
+  {id:80,company:'Razorpay',website:'razorpay.com',industry:'Payment Gateway',country:'India',category:'SaaS Dev',contact:'Harshil Mathur',email:'harshil@razorpay.com',linkedin:'linkedin.com/in/harshilmathur',leadScore:82,opportunitySize:'$50K–$200K',wave:3},
+  {id:81,company:'Postman',website:'postman.com',industry:'API Development',country:'USA',category:'SaaS Dev',contact:'Abhinav Asthana',email:'abhinav@postman.com',linkedin:'linkedin.com/in/abhinavasthana',leadScore:83,opportunitySize:'$55K–$220K',wave:3},
+  {id:82,company:'Retool',website:'retool.com',industry:'Internal Tools',country:'USA',category:'SaaS Dev',contact:'David Hsu',email:'david@retool.com',linkedin:'linkedin.com/in/davidhsu',leadScore:85,opportunitySize:'$60K–$250K',wave:3},
+  {id:83,company:'Vercel',website:'vercel.com',industry:'Frontend Cloud',country:'USA',category:'Cloud/DevOps',contact:'Guillermo Rauch',email:'rauchg@vercel.com',linkedin:'linkedin.com/in/rauchg',leadScore:87,opportunitySize:'$65K–$280K',wave:3},
+  {id:84,company:'Netlify',website:'netlify.com',industry:'JAMstack Platform',country:'USA',category:'Cloud/DevOps',contact:'Matt Biilmann',email:'matt@netlify.com',linkedin:'linkedin.com/in/matthiasbiilmann',leadScore:82,opportunitySize:'$50K–$200K',wave:3},
+  {id:85,company:'Railway',website:'railway.app',industry:'Cloud Deployment',country:'USA',category:'Cloud/DevOps',contact:'Jake Cooper',email:'jake@railway.app',linkedin:'linkedin.com/in/jakecooper',leadScore:74,opportunitySize:'$30K–$120K',wave:3},
+  {id:86,company:'PlanetScale',website:'planetscale.com',industry:'Database-as-a-Service',country:'USA',category:'Cloud/DevOps',contact:'Sam Lambert',email:'sam@planetscale.com',linkedin:'linkedin.com/in/samlambert',leadScore:80,opportunitySize:'$45K–$185K',wave:3},
+  {id:87,company:'Cockroach Labs',website:'cockroachlabs.com',industry:'Distributed SQL',country:'USA',category:'Data Engineering',contact:'Spencer Kimball',email:'skimball@cockroachlabs.com',linkedin:'linkedin.com/in/spencerkimball',leadScore:84,opportunitySize:'$65K–$270K',wave:3},
+  {id:88,company:'Neon',website:'neon.tech',industry:'Serverless Postgres',country:'USA',category:'Data Engineering',contact:'Nikita Shamgunov',email:'nikita@neon.tech',linkedin:'linkedin.com/in/nshamgunov',leadScore:79,opportunitySize:'$40K–$170K',wave:3},
+  {id:89,company:'Supabase',website:'supabase.com',industry:'Firebase Alternative',country:'Singapore',category:'SaaS Dev',contact:'Paul Copplestone',email:'paul@supabase.io',linkedin:'linkedin.com/in/paulcopplestone',leadScore:83,opportunitySize:'$55K–$220K',wave:3},
+  {id:90,company:'Appsmith',website:'appsmith.com',industry:'Low-Code Platform',country:'USA',category:'SaaS Dev',contact:'Abhishek Nayak',email:'abhishek@appsmith.com',linkedin:'linkedin.com/in/abhishek',leadScore:77,opportunitySize:'$35K–$150K',wave:3},
+  {id:91,company:'Testim',website:'testim.io',industry:'Test Automation AI',country:'Israel',category:'QA/Testing',contact:'Oren Rubin',email:'oren@testim.io',linkedin:'linkedin.com/in/orenrubin',leadScore:79,opportunitySize:'$40K–$170K',wave:3},
+  {id:92,company:'Mabl',website:'mabl.com',industry:'Low-Code Test Automation',country:'USA',category:'QA/Testing',contact:'Dan Belcher',email:'dan@mabl.com',linkedin:'linkedin.com/in/danbelcher',leadScore:76,opportunitySize:'$35K–$150K',wave:3},
+  {id:93,company:'Sauce Labs',website:'saucelabs.com',industry:'Cross-Browser Testing',country:'USA',category:'QA/Testing',contact:'Aled Miles',email:'amiles@saucelabs.com',linkedin:'linkedin.com/in/aledmiles',leadScore:75,opportunitySize:'$35K–$145K',wave:3},
+  {id:94,company:'BrowserStack',website:'browserstack.com',industry:'Cloud Testing',country:'India',category:'QA/Testing',contact:'Nakul Aggarwal',email:'nakul@browserstack.com',linkedin:'linkedin.com/in/nakulaggarwal',leadScore:80,opportunitySize:'$45K–$190K',wave:3},
+  {id:95,company:'Lokalise',website:'lokalise.com',industry:'Localization Platform',country:'Latvia',category:'SaaS Dev',contact:'Nick Ustinov',email:'nick@lokalise.com',linkedin:'linkedin.com/in/nickustinov',leadScore:72,opportunitySize:'$30K–$130K',wave:3},
+  {id:96,company:'Contentful',website:'contentful.com',industry:'Headless CMS',country:'Germany',category:'Web/E-commerce',contact:'Steve Sloan',email:'steve@contentful.com',linkedin:'linkedin.com/in/stevesloan',leadScore:79,opportunitySize:'$45K–$180K',wave:3},
+  {id:97,company:'Hygraph',website:'hygraph.com',industry:'GraphQL CMS',country:'Germany',category:'Web/E-commerce',contact:'Michael Lukaszczyk',email:'michael@hygraph.com',linkedin:'linkedin.com/in/michaell',leadScore:73,opportunitySize:'$30K–$130K',wave:3},
+  {id:98,company:'Sanity',website:'sanity.io',industry:'Structured Content',country:'Norway',category:'Web/E-commerce',contact:'Even Westvang',email:'even@sanity.io',linkedin:'linkedin.com/in/evenwestvang',leadScore:75,opportunitySize:'$35K–$150K',wave:3},
+  {id:99,company:'Lattice',website:'lattice.com',industry:'People Management',country:'USA',category:'SaaS Dev',contact:'Jack Altman',email:'jack@lattice.com',linkedin:'linkedin.com/in/jackaltman',leadScore:80,opportunitySize:'$45K–$185K',wave:3},
+  {id:100,company:'Leapsome',website:'leapsome.com',industry:'HR Performance',country:'Germany',category:'SaaS Dev',contact:'Kajetan Armansperg',email:'kajetan@leapsome.com',linkedin:'linkedin.com/in/kajetan',leadScore:74,opportunitySize:'$30K–$130K',wave:3},
+  {id:101,company:'Personio',website:'personio.com',industry:'HR Software',country:'Germany',category:'SaaS Dev',contact:'Hanno Renner',email:'hanno@personio.de',linkedin:'linkedin.com/in/hannorenner',leadScore:78,opportunitySize:'$40K–$170K',wave:3},
+  {id:102,company:'Remote',website:'remote.com',industry:'Global HR Platform',country:'Portugal',category:'SaaS Dev',contact:'Job van der Voort',email:'job@remote.com',linkedin:'linkedin.com/in/jobvdvoort',leadScore:80,opportunitySize:'$50K–$200K',wave:3},
+  {id:103,company:'Pleo',website:'pleo.io',industry:'Business Spend',country:'Denmark',category:'SaaS Dev',contact:'Jeppe Rindom',email:'jeppe@pleo.io',linkedin:'linkedin.com/in/jepperindom',leadScore:76,opportunitySize:'$35K–$155K',wave:3},
+  {id:104,company:'Spendesk',website:'spendesk.com',industry:'Spend Management',country:'France',category:'SaaS Dev',contact:'Rodolphe Ardant',email:'rardant@spendesk.com',linkedin:'linkedin.com/in/rodolpheardant',leadScore:73,opportunitySize:'$30K–$130K',wave:3},
+  {id:105,company:'Paddle',website:'paddle.com',industry:'Revenue Delivery',country:'UK',category:'SaaS Dev',contact:'Christian Owens',email:'christian@paddle.com',linkedin:'linkedin.com/in/christianowens',leadScore:77,opportunitySize:'$40K–$165K',wave:3},
+  {id:106,company:'Chargebee',website:'chargebee.com',industry:'Subscription Billing',country:'USA',category:'SaaS Dev',contact:'Krish Subramanian',email:'krish@chargebee.com',linkedin:'linkedin.com/in/krishsub',leadScore:79,opportunitySize:'$45K–$180K',wave:3},
+  {id:107,company:'Recurly',website:'recurly.com',industry:'Subscription Management',country:'USA',category:'SaaS Dev',contact:'Dan Burkhart',email:'dburkhart@recurly.com',linkedin:'linkedin.com/in/danburkhart',leadScore:76,opportunitySize:'$35K–$155K',wave:3},
+  {id:108,company:'Zuora',website:'zuora.com',industry:'Subscription Economy',country:'USA',category:'SaaS Dev',contact:'Tien Tzuo',email:'ttzuo@zuora.com',linkedin:'linkedin.com/in/tientzuo',leadScore:82,opportunitySize:'$55K–$230K',wave:3}
+];
+
+const GENERATOR_POOL = [
+  {company:'Temporal Technologies',website:'temporal.io',industry:'Workflow Orchestration',country:'USA',category:'Cloud/DevOps',contact:'Maxim Fateev',email:'maxim@temporal.io',leadScore:82,opportunitySize:'$55K–$220K'},
+  {company:'Sourcegraph',website:'sourcegraph.com',industry:'Code Intelligence',country:'USA',category:'SaaS Dev',contact:'Quinn Slack',email:'quinn@sourcegraph.com',leadScore:80,opportunitySize:'$50K–$200K'},
+  {company:'LaunchDarkly',website:'launchdarkly.com',industry:'Feature Management',country:'USA',category:'SaaS Dev',contact:'Edith Harbaugh',email:'edith@launchdarkly.com',leadScore:79,opportunitySize:'$45K–$185K'},
+  {company:'Cortex',website:'cortex.io',industry:'Internal Developer Portal',country:'USA',category:'Cloud/DevOps',contact:'Anish Dhar',email:'anish@cortex.io',leadScore:76,opportunitySize:'$35K–$155K'},
+  {company:'Honeycomb',website:'honeycomb.io',industry:'Observability',country:'USA',category:'Cloud/DevOps',contact:'Christine Yen',email:'cyen@honeycomb.io',leadScore:78,opportunitySize:'$40K–$165K'},
+  {company:'Styra',website:'styra.com',industry:'Cloud-Native Authorization',country:'USA',category:'Cybersecurity',contact:'Torin Sandall',email:'torin@styra.com',leadScore:77,opportunitySize:'$40K–$160K'},
+  {company:'Dagger',website:'dagger.io',industry:'CI/CD Pipelines',country:'USA',category:'Cloud/DevOps',contact:'Solomon Hykes',email:'solomon@dagger.io',leadScore:74,opportunitySize:'$30K–$130K'},
+  {company:'Gitpod',website:'gitpod.io',industry:'Cloud Dev Environments',country:'Germany',category:'Cloud/DevOps',contact:'Sven Efftinge',email:'sven@gitpod.io',leadScore:73,opportunitySize:'$30K–$125K'},
+  {company:'Codeium',website:'codeium.com',industry:'AI Code Assistant',country:'USA',category:'AI/ML',contact:'Varun Mohan',email:'varun@codeium.com',leadScore:83,opportunitySize:'$55K–$225K'},
+  {company:'Tabnine',website:'tabnine.com',industry:'AI Code Completion',country:'Israel',category:'AI/ML',contact:'Dror Weiss',email:'dror@tabnine.com',leadScore:79,opportunitySize:'$45K–$185K'},
+  {company:'Replit',website:'replit.com',industry:'Cloud IDE',country:'USA',category:'SaaS Dev',contact:'Amjad Masad',email:'amjad@replit.com',leadScore:82,opportunitySize:'$50K–$210K'},
+  {company:'Linear',website:'linear.app',industry:'Issue Tracking',country:'USA',category:'SaaS Dev',contact:'Karri Saarinen',email:'karri@linear.app',leadScore:80,opportunitySize:'$45K–$190K'},
+  {company:'Height App',website:'height.app',industry:'Project Management',country:'USA',category:'SaaS Dev',contact:'Michael Villar',email:'michael@height.app',leadScore:71,opportunitySize:'$28K–$120K'},
+  {company:'Plane',website:'plane.so',industry:'Open-Source PM',country:'India',category:'SaaS Dev',contact:'Vihar Kurama',email:'vihar@plane.so',leadScore:70,opportunitySize:'$25K–$110K'},
+  {company:'Incident.io',website:'incident.io',industry:'Incident Management',country:'UK',category:'Cloud/DevOps',contact:'Stephen Whitworth',email:'stephen@incident.io',leadScore:76,opportunitySize:'$35K–$155K'},
+  {company:'Rootly',website:'rootly.com',industry:'On-Call Management',country:'USA',category:'Cloud/DevOps',contact:'Quentin Rousseau',email:'quentin@rootly.com',leadScore:74,opportunitySize:'$32K–$140K'},
+  {company:'Mintlify',website:'mintlify.com',industry:'Developer Docs',country:'USA',category:'SaaS Dev',contact:'Han Wang',email:'han@mintlify.com',leadScore:70,opportunitySize:'$25K–$110K'},
+  {company:'ReadMe',website:'readme.com',industry:'API Documentation',country:'USA',category:'SaaS Dev',contact:'Gregory Koberger',email:'greg@readme.io',leadScore:72,opportunitySize:'$28K–$125K'},
+  {company:'Treblle',website:'treblle.com',industry:'API Observability',country:'UK',category:'SaaS Dev',contact:'Vedran Cindric',email:'vedran@treblle.com',leadScore:69,opportunitySize:'$22K–$100K'},
+  {company:'Zuplo',website:'zuplo.com',industry:'API Gateway',country:'USA',category:'Cloud/DevOps',contact:'Josh Twist',email:'josh@zuplo.com',leadScore:71,opportunitySize:'$27K–$120K'},
+  {company:'Stream',website:'getstream.io',industry:'Chat/Feed APIs',country:'USA',category:'SaaS Dev',contact:'Nick Parsons',email:'nick@getstream.io',leadScore:78,opportunitySize:'$40K–$170K'},
+  {company:'Daily.co',website:'daily.co',industry:'Video API',country:'USA',category:'Video/Media',contact:'Kwindla Hultman Kramer',email:'kwindla@daily.co',leadScore:75,opportunitySize:'$35K–$155K'},
+  {company:'Mux',website:'mux.com',industry:'Video Infrastructure',country:'USA',category:'Video/Media',contact:'Jon Dahl',email:'jon@mux.com',leadScore:79,opportunitySize:'$45K–$185K'},
+  {company:'Cloudinary',website:'cloudinary.com',industry:'Media Management',country:'Israel',category:'Video/Media',contact:'Itai Lahan',email:'itai@cloudinary.com',leadScore:80,opportunitySize:'$50K–$200K'},
+  {company:'Sanlo',website:'sanlo.io',industry:'GameDev Finance',country:'USA',category:'SaaS Dev',contact:'Olya Caliujnaia',email:'olya@sanlo.io',leadScore:68,opportunitySize:'$20K–$90K'},
+  {company:'Parity',website:'parity.io',industry:'Web3 Infrastructure',country:'UK',category:'Blockchain',contact:'Gavin Wood',email:'gavin@parity.io',leadScore:81,opportunitySize:'$55K–$220K'},
+  {company:'Near Protocol',website:'near.org',industry:'Layer-1 Blockchain',country:'USA',category:'Blockchain',contact:'Illia Polosukhin',email:'illia@near.foundation',leadScore:79,opportunitySize:'$50K–$210K'},
+  {company:'Hedera',website:'hedera.com',industry:'Enterprise DLT',country:'USA',category:'Blockchain',contact:'Mance Harmon',email:'mharmon@hedera.com',leadScore:78,opportunitySize:'$45K–$185K'},
+  {company:'Tezos',website:'tezos.com',industry:'Smart Contract Platform',country:'France',category:'Blockchain',contact:'Kathleen Breitman',email:'kathleen@tezos.com',linkedin:'',leadScore:77,opportunitySize:'$40K–$170K'},
+  {company:'Aleo',website:'aleo.org',industry:'Privacy Blockchain',country:'USA',category:'Blockchain',contact:'Howard Wu',email:'howard@aleo.org',leadScore:74,opportunitySize:'$35K–$155K'},
+  {company:'Chromatic',website:'chromatic.com',industry:'UI Testing',country:'USA',category:'QA/Testing',contact:'Tom Coleman',email:'tom@chromatic.com',leadScore:73,opportunitySize:'$30K–$135K'},
+  {company:'Storybook',website:'storybook.js.org',industry:'UI Component Dev',country:'USA',category:'UI/UX Design',contact:'Dominic Nguyen',email:'dominic@chromatic.com',leadScore:71,opportunitySize:'$28K–$125K'},
+  {company:'Framer',website:'framer.com',industry:'Interactive Design Tool',country:'Netherlands',category:'UI/UX Design',contact:'Koen Bok',email:'koen@framer.com',leadScore:76,opportunitySize:'$35K–$155K'},
+  {company:'Webflow',website:'webflow.com',industry:'No-Code Web Builder',country:'USA',category:'Web/E-commerce',contact:'Vlad Magdalin',email:'vlad@webflow.com',leadScore:82,opportunitySize:'$55K–$225K'},
+  {company:'Plasmic',website:'plasmic.app',industry:'Visual Builder',country:'USA',category:'Web/E-commerce',contact:'Yang Zhang',email:'yang@plasmic.app',leadScore:70,opportunitySize:'$25K–$115K'},
+  {company:'Builder.io',website:'builder.io',industry:'Visual Headless CMS',country:'USA',category:'Web/E-commerce',contact:'Steve Sewell',email:'steve@builder.io',leadScore:74,opportunitySize:'$32K–$145K'},
+  {company:'Nacelle',website:'nacelle.com',industry:'Headless Commerce',country:'USA',category:'Web/E-commerce',contact:'Brian Anderson',email:'banderson@nacelle.com',leadScore:72,opportunitySize:'$28K–$130K'},
+  {company:'Swell Commerce',website:'swell.is',industry:'Headless Ecommerce',country:'USA',category:'Web/E-commerce',contact:'Eric Ingram',email:'eric@swell.is',leadScore:69,opportunitySize:'$22K–$100K'},
+  {company:'Medusa.js',website:'medusajs.com',industry:'Open-Source Commerce',country:'Denmark',category:'Web/E-commerce',contact:'Sebastian Rindom',email:'sebastian@medusajs.com',leadScore:67,opportunitySize:'$20K–$95K'},
+  {company:'Elixir',website:'elixir.io',industry:'AI-Powered CX',country:'USA',category:'AI/ML',contact:'Jesse Zhang',email:'jesse@elixir.io',leadScore:75,opportunitySize:'$35K–$155K'},
+  {company:'Moveworks',website:'moveworks.com',industry:'AI Employee Support',country:'USA',category:'AI/ML',contact:'Bhavin Shah',email:'bhavin@moveworks.ai',leadScore:83,opportunitySize:'$60K–$255K'},
+  {company:'Kustomer',website:'kustomer.com',industry:'CRM for CX',country:'USA',category:'SaaS Dev',contact:'Brad Birnbaum',email:'brad@kustomer.com',leadScore:77,opportunitySize:'$38K–$160K'},
+  {company:'Dixa',website:'dixa.com',industry:'Customer Service',country:'Denmark',category:'SaaS Dev',contact:'Jakob Poder',email:'jakob@dixa.com',leadScore:70,opportunitySize:'$25K–$115K'},
+  {company:'Stonly',website:'stonly.com',industry:'Knowledge Management',country:'France',category:'SaaS Dev',contact:'Alexis Fogel',email:'alexis@stonly.com',leadScore:67,opportunitySize:'$20K–$95K'},
+  {company:'Corelight',website:'corelight.com',industry:'Network Detection',country:'USA',category:'Cybersecurity',contact:'Brian Dye',email:'bdye@corelight.com',leadScore:80,opportunitySize:'$50K–$205K'},
+  {company:'Expel',website:'expel.io',industry:'MDR / SOC',country:'USA',category:'Cybersecurity',contact:'Dave Merkel',email:'dave@expel.io',leadScore:79,opportunitySize:'$45K–$190K'},
+  {company:'Cybereason',website:'cybereason.com',industry:'Endpoint Security',country:'USA',category:'Cybersecurity',contact:'Lior Div',email:'lior@cybereason.com',leadScore:78,opportunitySize:'$45K–$185K'},
+  {company:'Vectra AI',website:'vectra.ai',industry:'AI-Driven Security',country:'USA',category:'Cybersecurity',contact:'Hitesh Sheth',email:'hsheth@vectra.ai',leadScore:81,opportunitySize:'$55K–$225K'},
+  {company:'GreyNoise',website:'greynoise.io',industry:'Threat Intelligence',country:'USA',category:'Cybersecurity',contact:'Andrew Morris',email:'andrew@greynoise.io',leadScore:75,opportunitySize:'$35K–$155K'},
+];
+
+// ===================== STATE =====================
+let leads = [];
+let activities = [];
+let currentView = 'dashboard';
+let editingLeadId = null;
+let charts = {};
+
+function initData() {
+  const stored = localStorage.getItem('crm_leads');
+  const storedActs = localStorage.getItem('crm_activities');
+  if (stored) {
+    leads = JSON.parse(stored);
+  } else {
+    const now = new Date('2026-06-21').toISOString();
+    leads = SEED_LEADS.map(l => ({
+      ...l,
+      status: 'New Lead',
+      notes: '',
+      activities: [],
+      emailSent: l.wave === 1,
+      emailOpened: false,
+      emailReplied: false,
+      emailBounced: false,
+      lastContact: l.wave === 1 ? now : null,
+      createdAt: now,
+      linkedin: l.linkedin || ''
+    }));
+    saveLeads();
+  }
+  activities = storedActs ? JSON.parse(storedActs) : [];
+  if (!activities.length) {
+    log('system','CRM initialized with 108 IT leads from campaign','green');
+    log('system','21 Wave 1 emails sent (Samsara, Joby, Tempus, Zendesk, SiFive...)','green');
+    log('system','Wave 2 & 3 pending email verification via Hunter.io/Apollo.io','orange');
+  }
+  updateSidebar();
+  // Run pipeline once silently on every load
+  setTimeout(()=>{
+    runAutoPipeline(true);
+    // Auto-restart engine if it was running before
+    if(localStorage.getItem('crm_auto_on')==='1') startAutoEngine();
+  }, 300);
+}
+
+function saveLeads() { localStorage.setItem('crm_leads', JSON.stringify(leads)); }
+function saveActivities() { localStorage.setItem('crm_activities', JSON.stringify(activities)); }
+function log(type, text, color='') {
+  activities.unshift({type, text, color, time: new Date().toISOString()});
+  if(activities.length > 500) activities.pop();
+  saveActivities();
+}
+
+function updateSidebar() {
+  document.getElementById('sb-total').textContent = leads.length;
+  const today = new Date().toLocaleDateString();
+  const lastGen = localStorage.getItem('crm_last_gen');
+  document.getElementById('last-gen').textContent = lastGen === today ? 'Generated today ✓' : 'Generator ready';
+}
+
+// ===================== VIEWS =====================
+function showView(view) {
+  currentView = view;
+  document.querySelectorAll('#sidebar nav a').forEach((a,i)=>{
+    a.classList.toggle('active', ['dashboard','leads','pipeline','emails','generator','activity','analytics','automation','deploy'][i]===view);
+  });
+  const titles = {dashboard:'Dashboard',leads:'All Leads',pipeline:'Pipeline',emails:'Email Tracker',generator:'Daily Lead Generator',activity:'Activity Log',analytics:'Analytics',automation:'Automation Engine',deploy:'Deploy / Share'};
+  document.getElementById('page-title').textContent = titles[view];
+  destroyCharts();
+  const c = document.getElementById('content');
+  if(view==='dashboard') renderDashboard(c);
+  else if(view==='leads') renderLeads(c);
+  else if(view==='pipeline') renderPipeline(c);
+  else if(view==='emails') renderEmails(c);
+  else if(view==='generator') renderGenerator(c);
+  else if(view==='activity') renderActivity(c);
+  else if(view==='analytics') renderAnalytics(c);
+  else if(view==='automation') renderAutomation(c);
+  else if(view==='deploy') renderDeploy(c);
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  charts = {};
+}
+
+// ===================== DASHBOARD =====================
+function renderDashboard(c) {
+  const total = leads.length;
+  const won = leads.filter(l=>l.status==='Closed Won').length;
+  const active = leads.filter(l=>!['Closed Won','Closed Lost'].includes(l.status)).length;
+  const contacted = leads.filter(l=>l.emailSent).length;
+  const replied = leads.filter(l=>l.emailReplied).length;
+  const avgScore = Math.round(leads.reduce((s,l)=>s+l.leadScore,0)/leads.length);
+
+  c.innerHTML = `
+  <div class="stats-grid">
+    <div class="stat-card blue"><div class="label">Total Leads</div><div class="value">${total}</div><div class="sub">Across 3 waves</div></div>
+    <div class="stat-card green"><div class="label">Emails Sent</div><div class="value">${contacted}</div><div class="sub">${replied} replied</div></div>
+    <div class="stat-card orange"><div class="label">Active Pipeline</div><div class="value">${active}</div><div class="sub">${won} won</div></div>
+    <div class="stat-card purple"><div class="label">Avg Lead Score</div><div class="value">${avgScore}</div><div class="sub">Out of 100</div></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><h3>Pipeline Funnel</h3><canvas id="funnelChart"></canvas></div>
+    <div class="chart-card"><h3>Leads by Category</h3><canvas id="catChart"></canvas></div>
+    <div class="chart-card"><h3>Email Status</h3><canvas id="emailChart"></canvas></div>
+    <div class="chart-card"><h3>Lead Score Distribution</h3><canvas id="scoreChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Recent Activity</h3></div>
+    <div style="padding:16px 20px;max-height:220px;overflow-y:auto">
+      ${activities.slice(0,10).map(a=>`
+        <div class="activity-item">
+          <div class="activity-dot ${a.color||''}"></div>
+          <div><div class="activity-text">${a.text}</div><div class="activity-time">${fmtTime(a.time)}</div></div>
+        </div>`).join('') || '<div class="empty-state">No activity yet</div>'}
+    </div>
+  </div>`;
+
+  // Funnel chart
+  const funnelData = STATUSES.map(s=>leads.filter(l=>l.status===s).length);
+  charts.funnel = new Chart(document.getElementById('funnelChart'), {
+    type:'bar', data:{labels:STATUSES,datasets:[{data:funnelData,backgroundColor:STATUSES.map(s=>COL_COLORS[s]||'#6366f1'),borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'}}},responsive:true,maintainAspectRatio:true}
+  });
+
+  // Category chart
+  const catCounts = {};
+  leads.forEach(l=>{catCounts[l.category]=(catCounts[l.category]||0)+1});
+  const cats = Object.keys(catCounts).sort((a,b)=>catCounts[b]-catCounts[a]).slice(0,8);
+  charts.cat = new Chart(document.getElementById('catChart'), {
+    type:'doughnut', data:{labels:cats,datasets:[{data:cats.map(c=>catCounts[c]),backgroundColor:['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#f97316','#ec4899'],borderWidth:0}]},
+    options:{plugins:{legend:{position:'right',labels:{font:{size:11}}}},responsive:true,maintainAspectRatio:true}
+  });
+
+  // Email status chart
+  const sent = leads.filter(l=>l.emailSent).length;
+  const opened = leads.filter(l=>l.emailOpened).length;
+  const rep = leads.filter(l=>l.emailReplied).length;
+  const bounced = leads.filter(l=>l.emailBounced).length;
+  charts.email = new Chart(document.getElementById('emailChart'), {
+    type:'bar', data:{labels:['Sent','Opened','Replied','Bounced'],datasets:[{data:[sent,opened,rep,bounced],backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444'],borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'}}},responsive:true,maintainAspectRatio:true}
+  });
+
+  // Score distribution
+  const buckets = {'60–69':0,'70–79':0,'80–89':0,'90–100':0};
+  leads.forEach(l=>{
+    if(l.leadScore>=90)buckets['90–100']++;
+    else if(l.leadScore>=80)buckets['80–89']++;
+    else if(l.leadScore>=70)buckets['70–79']++;
+    else buckets['60–69']++;
+  });
+  charts.score = new Chart(document.getElementById('scoreChart'), {
+    type:'bar', data:{labels:Object.keys(buckets),datasets:[{data:Object.values(buckets),backgroundColor:['#fca5a5','#fde68a','#86efac','#34d399'],borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'}}},responsive:true,maintainAspectRatio:true}
+  });
+}
+
+// ===================== ALL LEADS =====================
+let leadFilter = {search:'',status:'',category:'',wave:''};
+function renderLeads(c) {
+  c.innerHTML = `
+  <div class="filter-bar">
+    <input id="f-search" placeholder="Search company, contact..." value="${leadFilter.search}" oninput="leadFilter.search=this.value;renderLeadTable()" style="width:220px">
+    <select id="f-status" onchange="leadFilter.status=this.value;renderLeadTable()">
+      <option value="">All Statuses</option>
+      ${STATUSES.map(s=>`<option value="${s}" ${leadFilter.status===s?'selected':''}>${s}</option>`).join('')}
+    </select>
+    <select id="f-cat" onchange="leadFilter.category=this.value;renderLeadTable()">
+      <option value="">All Categories</option>
+      ${CATEGORIES.map(c=>`<option value="${c}" ${leadFilter.category===c?'selected':''}>${c}</option>`).join('')}
+    </select>
+    <select id="f-wave" onchange="leadFilter.wave=this.value;renderLeadTable()">
+      <option value="">All Waves</option>
+      <option value="1" ${leadFilter.wave==='1'?'selected':''}>Wave 1</option>
+      <option value="2" ${leadFilter.wave==='2'?'selected':''}>Wave 2</option>
+      <option value="3" ${leadFilter.wave==='3'?'selected':''}>Wave 3</option>
+    </select>
+    <span id="f-count" style="font-size:12px;color:#64748b;margin-left:4px"></span>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Company</th><th>Category</th><th>Country</th><th>Contact</th><th>Score</th><th>Status</th><th>Wave</th><th>Email</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="leads-tbody"></tbody>
+    </table>
+  </div>`;
+  renderLeadTable();
+}
+
+function renderLeadTable() {
+  const q = leadFilter.search.toLowerCase();
+  const filtered = leads.filter(l=>{
+    if(q && !l.company.toLowerCase().includes(q) && !l.contact.toLowerCase().includes(q) && !l.email.toLowerCase().includes(q)) return false;
+    if(leadFilter.status && l.status !== leadFilter.status) return false;
+    if(leadFilter.category && l.category !== leadFilter.category) return false;
+    if(leadFilter.wave && String(l.wave) !== leadFilter.wave) return false;
+    return true;
+  });
+  document.getElementById('f-count').textContent = `${filtered.length} leads`;
+  document.getElementById('leads-tbody').innerHTML = filtered.map(l=>`
+    <tr>
+      <td style="color:#94a3b8;font-size:11px">${l.id}</td>
+      <td><a href="#" onclick="openLeadDetail(${l.id})" style="color:#1d4ed8;text-decoration:none;font-weight:600">${l.company}</a></td>
+      <td><span style="font-size:11px;color:#64748b">${l.category}</span></td>
+      <td>${l.country}</td>
+      <td>${l.contact}</td>
+      <td><span class="score-badge ${l.leadScore>=85?'score-high':l.leadScore>=70?'score-med':'score-low'}">${l.leadScore}</span></td>
+      <td><span class="badge ${STATUS_BADGE[l.status]||'badge-new'}">${l.status}</span></td>
+      <td style="color:#94a3b8">W${l.wave}</td>
+      <td>
+        <div class="email-status">
+          <span class="dot ${l.emailSent?'dot-blue':'dot-gray'}" title="Sent"></span>
+          <span class="dot ${l.emailOpened?'dot-green':'dot-gray'}" title="Opened"></span>
+          <span class="dot ${l.emailReplied?'dot-yellow':'dot-gray'}" title="Replied"></span>
+          ${l.emailBounced?'<span class="dot dot-red" title="Bounced"></span>':''}
+        </div>
+      </td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="openLeadDetail(${l.id})">View</button>
+        <button class="btn btn-danger" onclick="deleteLead(${l.id})">✕</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="10" class="empty-state">No leads match filters</td></tr>';
+}
+
+// ===================== PIPELINE =====================
+function renderPipeline(c) {
+  c.innerHTML = `<div class="pipeline-board">${STATUSES.map(s=>{
+    const cols = leads.filter(l=>l.status===s);
+    return `<div class="pipeline-col">
+      <div class="pipeline-col-header" style="color:${COL_COLORS[s]}">
+        ${s} <span style="background:${COL_COLORS[s]}20;color:${COL_COLORS[s]};padding:1px 7px;border-radius:10px;font-size:11px">${cols.length}</span>
+      </div>
+      <div class="pipeline-cards">
+        ${cols.slice(0,15).map(l=>`
+          <div class="pipeline-card" onclick="openLeadDetail(${l.id})">
+            <div class="company">${l.company}</div>
+            <div class="category">${l.category}</div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px">
+              <span class="score" style="color:${COL_COLORS[s]}">⬆ ${l.leadScore}</span>
+              <span style="font-size:11px;color:#94a3b8">${l.opportunitySize.split('–')[0]}</span>
+            </div>
+            <div class="contact">${l.contact}</div>
+          </div>`).join('')}
+        ${cols.length > 15 ? `<div style="text-align:center;font-size:11px;color:#94a3b8;padding:8px">+${cols.length-15} more</div>` : ''}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ===================== EMAIL TRACKER =====================
+function renderEmails(c) {
+  const sent = leads.filter(l=>l.emailSent);
+  const notSent = leads.filter(l=>!l.emailSent);
+  c.innerHTML = `
+  <div class="stats-grid" style="grid-template-columns:repeat(5,1fr)">
+    <div class="stat-card"><div class="label">Sent</div><div class="value blue">${sent.length}</div></div>
+    <div class="stat-card"><div class="label">Opened</div><div class="value green">${leads.filter(l=>l.emailOpened).length}</div></div>
+    <div class="stat-card"><div class="label">Replied</div><div class="value orange">${leads.filter(l=>l.emailReplied).length}</div></div>
+    <div class="stat-card"><div class="label">Bounced</div><div class="value" style="color:#ef4444">${leads.filter(l=>l.emailBounced).length}</div></div>
+    <div class="stat-card"><div class="label">Pending</div><div class="value purple">${notSent.length}</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Email Status per Lead</h3>
+      <div style="display:flex;gap:12px;font-size:11px;color:#64748b;align-items:center">
+        <span><span class="dot dot-blue" style="vertical-align:middle"></span> Sent</span>
+        <span><span class="dot dot-green" style="vertical-align:middle"></span> Opened</span>
+        <span><span class="dot dot-yellow" style="vertical-align:middle"></span> Replied</span>
+        <span><span class="dot dot-red" style="vertical-align:middle"></span> Bounced</span>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Company</th><th>Contact</th><th>Email</th><th>Wave</th><th>Sent</th><th>Opened</th><th>Replied</th><th>Bounced</th><th>Last Contact</th><th>Actions</th></tr></thead>
+      <tbody>${leads.map(l=>`
+        <tr>
+          <td style="color:#94a3b8;font-size:11px">${l.id}</td>
+          <td style="font-weight:600">${l.company}</td>
+          <td>${l.contact}</td>
+          <td style="font-size:12px;color:#64748b">${l.email}</td>
+          <td>W${l.wave}</td>
+          <td><input type="checkbox" ${l.emailSent?'checked':''} onchange="toggleEmail(${l.id},'emailSent',this.checked)"></td>
+          <td><input type="checkbox" ${l.emailOpened?'checked':''} onchange="toggleEmail(${l.id},'emailOpened',this.checked)"></td>
+          <td><input type="checkbox" ${l.emailReplied?'checked':''} onchange="toggleEmail(${l.id},'emailReplied',this.checked)"></td>
+          <td><input type="checkbox" ${l.emailBounced?'checked':''} onchange="toggleEmail(${l.id},'emailBounced',this.checked)"></td>
+          <td style="font-size:11px;color:#64748b">${l.lastContact ? new Date(l.lastContact).toLocaleDateString() : '—'}</td>
+          <td><button class="btn btn-secondary btn-sm" onclick="openLeadDetail(${l.id})">View</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function toggleEmail(id, field, val) {
+  const l = leads.find(x=>x.id===id);
+  if(!l) return;
+  l[field] = val;
+  if(field==='emailSent' && val) l.lastContact = new Date().toISOString();
+  log('email', `${l.company}: ${field.replace('email','')} = ${val}`, val?'green':'');
+  saveLeads();
+  toast(l.company + ' email status updated');
+}
+
+// ===================== DAILY GENERATOR =====================
+function renderGenerator(c) {
+  const today = new Date().toLocaleDateString();
+  const lastGen = localStorage.getItem('crm_last_gen');
+  const genLeads = JSON.parse(localStorage.getItem('crm_gen_today') || '[]');
+  const alreadyGen = lastGen === today && genLeads.length > 0;
+
+  c.innerHTML = `
+  <div class="gen-card">
+    <h3>Daily Lead Generator</h3>
+    <p style="font-size:13px;color:#64748b;margin-bottom:16px">Generates 10–15 fresh B2B leads daily from the pool of ${GENERATOR_POOL.length} verified companies. Run once per day for best results.</p>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn btn-primary" onclick="generateLeads()" ${alreadyGen?'disabled':''}>
+        ${alreadyGen ? '✓ Generated Today' : '⚡ Generate Today\'s Leads'}
+      </button>
+      ${alreadyGen ? '<span style="font-size:12px;color:#16a34a">'+genLeads.length+' leads generated today</span>' : ''}
+    </div>
+  </div>
+  <div id="gen-results">
+    ${alreadyGen ? renderGenResults(genLeads) : '<div class="gen-card"><div class="empty-state">Click the button to generate fresh leads for today</div></div>'}
+  </div>`;
+}
+
+function renderGenResults(genLeads) {
+  return `<div class="gen-card">
+    <h3>Today's Generated Leads (${new Date().toLocaleDateString()})</h3>
+    ${genLeads.map(l=>`
+      <div class="gen-result-row">
+        <span class="company">${l.company}</span>
+        <span class="meta">${l.category} · ${l.country} · ${l.contact}</span>
+        <span class="score-badge ${l.leadScore>=85?'score-high':l.leadScore>=70?'score-med':'score-low'}" style="margin-right:6px">${l.leadScore}</span>
+        <span style="font-size:12px;color:#64748b;margin-right:8px">${l.opportunitySize}</span>
+        ${leads.find(x=>x.company===l.company) ?
+          '<span style="font-size:12px;color:#16a34a">✓ In CRM</span>' :
+          `<button class="btn btn-success btn-sm" onclick="addGenLead('${l.company}')">+ Add to CRM</button>`}
+      </div>`).join('')}
+  </div>`;
+}
+
+function generateLeads() {
+  const today = new Date().toLocaleDateString();
+  // Pick 12 random from pool, excluding already added companies
+  const existingCompanies = leads.map(l=>l.company);
+  const pool = GENERATOR_POOL.filter(l=>!existingCompanies.includes(l.company));
+  if(pool.length === 0) { toast('All pool leads already in CRM!'); return; }
+  const count = Math.min(12, pool.length);
+  const shuffled = [...pool].sort(()=>Math.random()-.5).slice(0, count);
+
+  localStorage.setItem('crm_last_gen', today);
+  localStorage.setItem('crm_gen_today', JSON.stringify(shuffled));
+  log('generator', `Generated ${count} new leads for ${today}`, 'purple');
+  updateSidebar();
+  document.getElementById('gen-results').innerHTML = renderGenResults(shuffled);
+  document.querySelector('#content .gen-card .btn').disabled = true;
+  document.querySelector('#content .gen-card .btn').textContent = '✓ Generated Today';
+  toast(`${count} leads generated!`);
+}
+
+function addGenLead(company) {
+  const genLeads = JSON.parse(localStorage.getItem('crm_gen_today') || '[]');
+  const l = genLeads.find(x=>x.company===company);
+  if(!l) return;
+  const newId = Math.max(...leads.map(x=>x.id)) + 1;
+  const newLead = {
+    ...l, id: newId, wave: 4, status: 'New Lead', notes: 'Generated via Daily Generator',
+    activities: [], emailSent: false, emailOpened: false, emailReplied: false, emailBounced: false,
+    lastContact: null, createdAt: new Date().toISOString(), linkedin: l.linkedin || ''
+  };
+  leads.push(newLead);
+  saveLeads();
+  log('generator', `Added ${company} to CRM from daily generator`, 'green');
+  toast(`${company} added to CRM!`);
+  updateSidebar();
+  const genLeads2 = JSON.parse(localStorage.getItem('crm_gen_today') || '[]');
+  document.getElementById('gen-results').innerHTML = renderGenResults(genLeads2);
+}
+
+// ===================== ACTIVITY LOG =====================
+function renderActivity(c) {
+  c.innerHTML = `
+  <div class="card">
+    <div class="card-header">
+      <h3>Full Activity Log</h3>
+      <button class="btn btn-secondary btn-sm" onclick="clearActivity()">Clear Log</button>
+    </div>
+    <div style="padding:16px 20px;max-height:calc(100vh - 220px);overflow-y:auto">
+      ${activities.length ? activities.map(a=>`
+        <div class="activity-item">
+          <div class="activity-dot ${a.color||''}"></div>
+          <div><div class="activity-text">${a.text}</div><div class="activity-time">${fmtTime(a.time)}</div></div>
+        </div>`).join('') : '<div class="empty-state">No activity recorded yet</div>'}
+    </div>
+  </div>`;
+}
+
+function clearActivity() {
+  if(!confirm('Clear all activity logs?')) return;
+  activities = [];
+  saveActivities();
+  showView('activity');
+}
+
+// ===================== ANALYTICS =====================
+function renderAnalytics(c) {
+  c.innerHTML = `
+  <div class="charts-grid">
+    <div class="chart-card"><h3>Win/Loss Rate</h3><canvas id="winChart"></canvas></div>
+    <div class="chart-card"><h3>Category Performance</h3><canvas id="perfChart"></canvas></div>
+    <div class="chart-card"><h3>Lead Score by Wave</h3><canvas id="waveChart"></canvas></div>
+    <div class="chart-card"><h3>Opportunity Size Spread</h3><canvas id="oppChart"></canvas></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-header"><h3>Top 20 Leads by Score</h3></div>
+    <table>
+      <thead><tr><th>Rank</th><th>Company</th><th>Category</th><th>Score</th><th>Opportunity</th><th>Status</th></tr></thead>
+      <tbody>${[...leads].sort((a,b)=>b.leadScore-a.leadScore).slice(0,20).map((l,i)=>`
+        <tr>
+          <td style="font-weight:700;color:#6366f1">#${i+1}</td>
+          <td style="font-weight:600">${l.company}</td>
+          <td>${l.category}</td>
+          <td><span class="score-badge score-high">${l.leadScore}</span></td>
+          <td style="font-size:12px;color:#64748b">${l.opportunitySize}</td>
+          <td><span class="badge ${STATUS_BADGE[l.status]||'badge-new'}">${l.status}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+
+  // Win/Loss
+  const won = leads.filter(l=>l.status==='Closed Won').length;
+  const lost = leads.filter(l=>l.status==='Closed Lost').length;
+  const open = leads.length - won - lost;
+  charts.win = new Chart(document.getElementById('winChart'), {
+    type:'pie', data:{labels:['Won','Lost','Open'],datasets:[{data:[won,lost,open],backgroundColor:['#16a34a','#ef4444','#3b82f6'],borderWidth:0}]},
+    options:{plugins:{legend:{position:'bottom'}},responsive:true,maintainAspectRatio:true}
+  });
+
+  // Category perf — avg score per category
+  const catScores = {};
+  const catCount2 = {};
+  leads.forEach(l=>{
+    catScores[l.category]=(catScores[l.category]||0)+l.leadScore;
+    catCount2[l.category]=(catCount2[l.category]||0)+1;
+  });
+  const cats2 = Object.keys(catScores).sort((a,b)=>(catScores[b]/catCount2[b])-(catScores[a]/catCount2[a])).slice(0,8);
+  charts.perf = new Chart(document.getElementById('perfChart'), {
+    type:'bar',
+    data:{labels:cats2.map(c=>c.length>12?c.slice(0,12)+'…':c),datasets:[{data:cats2.map(c=>Math.round(catScores[c]/catCount2[c])),backgroundColor:'#6366f1',borderRadius:4,label:'Avg Score'}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,min:60,grid:{color:'#f1f5f9'}}},responsive:true,maintainAspectRatio:true}
+  });
+
+  // Wave scores
+  const waveAvg = [1,2,3,4].map(w=>{
+    const wl = leads.filter(l=>l.wave===w);
+    return wl.length ? Math.round(wl.reduce((s,l)=>s+l.leadScore,0)/wl.length) : 0;
+  });
+  charts.wave = new Chart(document.getElementById('waveChart'), {
+    type:'bar', data:{labels:['Wave 1','Wave 2','Wave 3','Daily Gen'],datasets:[{data:waveAvg,backgroundColor:['#f59e0b','#3b82f6','#10b981','#8b5cf6'],borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,min:50,grid:{color:'#f1f5f9'}}},responsive:true,maintainAspectRatio:true}
+  });
+
+  // Opportunity spread
+  const bands = {'<$50K':0,'$50K–$100K':0,'$100K–$200K':0,'$200K+':0};
+  leads.forEach(l=>{
+    const low = parseInt((l.opportunitySize||'0').replace(/[^0-9]/g,''));
+    if(low>=200) bands['$200K+']++;
+    else if(low>=100) bands['$100K–$200K']++;
+    else if(low>=50) bands['$50K–$100K']++;
+    else bands['<$50K']++;
+  });
+  charts.opp = new Chart(document.getElementById('oppChart'), {
+    type:'doughnut', data:{labels:Object.keys(bands),datasets:[{data:Object.values(bands),backgroundColor:['#fca5a5','#fde68a','#86efac','#34d399'],borderWidth:0}]},
+    options:{plugins:{legend:{position:'bottom'}},responsive:true,maintainAspectRatio:true}
+  });
+}
+
+// ===================== LEAD DETAIL MODAL =====================
+function openLeadDetail(id) {
+  const l = leads.find(x=>x.id===id);
+  if(!l) return;
+  editingLeadId = id;
+  document.getElementById('modal-title').textContent = l.company;
+  document.getElementById('modal-body').innerHTML = `
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('overview',this)">Overview</div>
+    <div class="tab" onclick="switchTab('edit',this)">Edit</div>
+    <div class="tab" onclick="switchTab('notes',this)">Notes & Activity</div>
+  </div>
+  <div id="tab-overview">${buildOverviewTab(l)}</div>
+  <div id="tab-edit" style="display:none">${buildEditTab(l)}</div>
+  <div id="tab-notes" style="display:none">${buildNotesTab(l)}</div>`;
+  document.getElementById('modal-footer').innerHTML = `
+  <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+  <button class="btn btn-primary" onclick="saveEditLead()">Save Changes</button>`;
+  document.getElementById('modal').classList.add('open');
+}
+
+function switchTab(tab, el) {
+  ['overview','edit','notes'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'':'none';
+  });
+  el.parentNode.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function buildOverviewTab(l) {
+  return `
+  <div class="detail-section">
+    <h4>Company Info</h4>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="dk">Website</div><div class="dv"><a href="https://${l.website}" target="_blank" style="color:#3b82f6">${l.website}</a></div></div>
+      <div class="detail-item"><div class="dk">Industry</div><div class="dv">${l.industry}</div></div>
+      <div class="detail-item"><div class="dk">Country</div><div class="dv">${l.country}</div></div>
+      <div class="detail-item"><div class="dk">Category</div><div class="dv">${l.category}</div></div>
+    </div>
+  </div>
+  <div class="detail-section">
+    <h4>Contact</h4>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="dk">Name</div><div class="dv">${l.contact}</div></div>
+      <div class="detail-item"><div class="dk">Email</div><div class="dv"><a href="mailto:${l.email}" style="color:#3b82f6">${l.email}</a></div></div>
+      <div class="detail-item"><div class="dk">LinkedIn</div><div class="dv">${l.linkedin ? `<a href="https://${l.linkedin}" target="_blank" style="color:#3b82f6">View Profile</a>` : '—'}</div></div>
+    </div>
+  </div>
+  <div class="detail-section">
+    <h4>Outreach</h4>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="dk">Status</div><div class="dv"><span class="badge ${STATUS_BADGE[l.status]||'badge-new'}">${l.status}</span></div></div>
+      <div class="detail-item"><div class="dk">Lead Score</div><div class="dv"><span class="score-badge ${l.leadScore>=85?'score-high':l.leadScore>=70?'score-med':'score-low'}">${l.leadScore}/100</span></div></div>
+      <div class="detail-item"><div class="dk">Opportunity</div><div class="dv">${l.opportunitySize}</div></div>
+      <div class="detail-item"><div class="dk">Wave</div><div class="dv">Wave ${l.wave}</div></div>
+      <div class="detail-item"><div class="dk">Last Contact</div><div class="dv">${l.lastContact ? new Date(l.lastContact).toLocaleDateString() : '—'}</div></div>
+      <div class="detail-item"><div class="dk">Email Sent</div><div class="dv">${l.emailSent?'✅ Yes':'❌ No'}</div></div>
+      <div class="detail-item"><div class="dk">Email Opened</div><div class="dv">${l.emailOpened?'✅ Yes':'—'}</div></div>
+      <div class="detail-item"><div class="dk">Replied</div><div class="dv">${l.emailReplied?'✅ Yes':'—'}</div></div>
+    </div>
+  </div>`;
+}
+
+function buildEditTab(l) {
+  return `
+  <div class="form-grid">
+    <div class="form-group"><label>Company</label><input id="e-company" value="${l.company}"></div>
+    <div class="form-group"><label>Website</label><input id="e-website" value="${l.website}"></div>
+    <div class="form-group"><label>Industry</label><input id="e-industry" value="${l.industry}"></div>
+    <div class="form-group"><label>Country</label><input id="e-country" value="${l.country}"></div>
+    <div class="form-group"><label>Category</label>
+      <select id="e-category">${CATEGORIES.map(c=>`<option ${l.category===c?'selected':''}>${c}</option>`).join('')}</select>
+    </div>
+    <div class="form-group"><label>Status</label>
+      <select id="e-status">${STATUSES.map(s=>`<option ${l.status===s?'selected':''}>${s}</option>`).join('')}</select>
+    </div>
+    <div class="form-group"><label>Contact Name</label><input id="e-contact" value="${l.contact}"></div>
+    <div class="form-group"><label>Email</label><input id="e-email" value="${l.email}"></div>
+    <div class="form-group"><label>LinkedIn URL</label><input id="e-linkedin" value="${l.linkedin||''}"></div>
+    <div class="form-group"><label>Lead Score (0–100)</label><input id="e-score" type="number" min="0" max="100" value="${l.leadScore}"></div>
+    <div class="form-group"><label>Opportunity Size</label><input id="e-opp" value="${l.opportunitySize}"></div>
+    <div class="form-group"><label>Wave</label><input id="e-wave" type="number" value="${l.wave}"></div>
+  </div>`;
+}
+
+function buildNotesTab(l) {
+  return `
+  <div class="form-group" style="margin-bottom:16px">
+    <label>Notes</label>
+    <textarea id="e-notes" style="min-height:100px">${l.notes||''}</textarea>
+  </div>
+  <div style="margin-bottom:12px">
+    <div style="display:flex;gap:8px">
+      <input id="new-activity" placeholder="Add activity note..." style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px">
+      <select id="activity-color" style="padding:8px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px">
+        <option value="">— Note</option>
+        <option value="green">✅ Positive</option>
+        <option value="orange">⚠ Follow-up</option>
+        <option value="red">❌ Issue</option>
+        <option value="purple">📅 Meeting</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="addLeadActivity()">Add</button>
+    </div>
+  </div>
+  <div id="lead-activities">
+    ${(l.activities||[]).length ? [...l.activities].reverse().map(a=>`
+      <div class="activity-item">
+        <div class="activity-dot ${a.color||''}"></div>
+        <div><div class="activity-text">${a.text}</div><div class="activity-time">${fmtTime(a.time)}</div></div>
+      </div>`).join('') : '<div class="empty-state" style="padding:24px">No activity yet for this lead</div>'}
+  </div>`;
+}
+
+function addLeadActivity() {
+  const text = document.getElementById('new-activity').value.trim();
+  if(!text) return;
+  const color = document.getElementById('activity-color').value;
+  const l = leads.find(x=>x.id===editingLeadId);
+  if(!l) return;
+  const act = {text, color, time: new Date().toISOString()};
+  l.activities = l.activities || [];
+  l.activities.push(act);
+  log('lead', `${l.company}: ${text}`, color);
+  saveLeads();
+  document.getElementById('new-activity').value = '';
+  document.getElementById('lead-activities').innerHTML = [...l.activities].reverse().map(a=>`
+    <div class="activity-item">
+      <div class="activity-dot ${a.color||''}"></div>
+      <div><div class="activity-text">${a.text}</div><div class="activity-time">${fmtTime(a.time)}</div></div>
+    </div>`).join('');
+  toast('Activity added');
+}
+
+function saveEditLead() {
+  const l = leads.find(x=>x.id===editingLeadId);
+  if(!l) return;
+  const oldStatus = l.status;
+  l.company = document.getElementById('e-company')?.value || l.company;
+  l.website = document.getElementById('e-website')?.value || l.website;
+  l.industry = document.getElementById('e-industry')?.value || l.industry;
+  l.country = document.getElementById('e-country')?.value || l.country;
+  l.category = document.getElementById('e-category')?.value || l.category;
+  l.status = document.getElementById('e-status')?.value || l.status;
+  l.contact = document.getElementById('e-contact')?.value || l.contact;
+  l.email = document.getElementById('e-email')?.value || l.email;
+  l.linkedin = document.getElementById('e-linkedin')?.value || '';
+  l.leadScore = parseInt(document.getElementById('e-score')?.value) || l.leadScore;
+  l.opportunitySize = document.getElementById('e-opp')?.value || l.opportunitySize;
+  l.wave = parseInt(document.getElementById('e-wave')?.value) || l.wave;
+  l.notes = document.getElementById('e-notes')?.value || '';
+  if(oldStatus !== l.status) {
+    log('pipeline', `${l.company} moved: ${oldStatus} → ${l.status}`, 'green');
+  }
+  saveLeads();
+  closeModal();
+  toast('Lead updated!');
+  showView(currentView);
+}
+
+function deleteLead(id) {
+  const l = leads.find(x=>x.id===id);
+  if(!l || !confirm(`Delete ${l.company}?`)) return;
+  leads = leads.filter(x=>x.id!==id);
+  log('lead', `Deleted: ${l.company}`, 'red');
+  saveLeads();
+  updateSidebar();
+  toast(l.company + ' deleted');
+  showView('leads');
+}
+
+// ===================== ADD LEAD MODAL =====================
+function openAddLead() {
+  editingLeadId = null;
+  document.getElementById('modal-title').textContent = 'Add New Lead';
+  document.getElementById('modal-body').innerHTML = `
+  <div class="form-grid">
+    <div class="form-group"><label>Company *</label><input id="e-company" placeholder="Company name"></div>
+    <div class="form-group"><label>Website</label><input id="e-website" placeholder="company.com"></div>
+    <div class="form-group"><label>Industry</label><input id="e-industry" placeholder="SaaS, Fintech..."></div>
+    <div class="form-group"><label>Country</label><input id="e-country" placeholder="USA"></div>
+    <div class="form-group"><label>Category</label>
+      <select id="e-category">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select>
+    </div>
+    <div class="form-group"><label>Status</label>
+      <select id="e-status">${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>
+    </div>
+    <div class="form-group"><label>Contact Name *</label><input id="e-contact" placeholder="Full name"></div>
+    <div class="form-group"><label>Email *</label><input id="e-email" placeholder="email@company.com"></div>
+    <div class="form-group"><label>LinkedIn URL</label><input id="e-linkedin" placeholder="linkedin.com/in/..."></div>
+    <div class="form-group"><label>Lead Score (0–100)</label><input id="e-score" type="number" min="0" max="100" value="70"></div>
+    <div class="form-group"><label>Opportunity Size</label><input id="e-opp" placeholder="$50K–$200K"></div>
+    <div class="form-group"><label>Wave</label><input id="e-wave" type="number" value="4"></div>
+    <div class="form-group full"><label>Notes</label><textarea id="e-notes" placeholder="Any relevant context..."></textarea></div>
+  </div>`;
+  document.getElementById('modal-footer').innerHTML = `
+  <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+  <button class="btn btn-primary" onclick="submitNewLead()">Add Lead</button>`;
+  document.getElementById('modal').classList.add('open');
+}
+
+function submitNewLead() {
+  const company = document.getElementById('e-company').value.trim();
+  const contact = document.getElementById('e-contact').value.trim();
+  const email = document.getElementById('e-email').value.trim();
+  if(!company || !contact || !email) { toast('Company, contact, and email are required'); return; }
+  const newId = (leads.length ? Math.max(...leads.map(x=>x.id)) : 0) + 1;
+  const newLead = {
+    id: newId,
+    company, contact, email,
+    website: document.getElementById('e-website').value || '',
+    industry: document.getElementById('e-industry').value || '',
+    country: document.getElementById('e-country').value || 'USA',
+    category: document.getElementById('e-category').value,
+    status: document.getElementById('e-status').value,
+    linkedin: document.getElementById('e-linkedin').value || '',
+    leadScore: parseInt(document.getElementById('e-score').value) || 70,
+    opportunitySize: document.getElementById('e-opp').value || '$30K–$100K',
+    wave: parseInt(document.getElementById('e-wave').value) || 4,
+    notes: document.getElementById('e-notes').value || '',
+    activities: [],
+    emailSent: false, emailOpened: false, emailReplied: false, emailBounced: false,
+    lastContact: null, createdAt: new Date().toISOString()
+  };
+  leads.push(newLead);
+  log('lead', `New lead added: ${company} (${newLead.category})`, 'green');
+  saveLeads();
+  updateSidebar();
+  closeModal();
+  toast(company + ' added to CRM!');
+  showView('leads');
+}
+
+// ===================== EXPORT =====================
+function exportCSV() {
+  const headers = ['ID','Company','Website','Industry','Country','Category','Contact','Email','LinkedIn','Score','Opportunity','Status','Wave','Sent','Opened','Replied','Last Contact','Notes'];
+  const rows = leads.map(l=>[l.id,l.company,l.website,l.industry,l.country,l.category,l.contact,l.email,l.linkedin||'',l.leadScore,l.opportunitySize,l.status,l.wave,l.emailSent?'Y':'N',l.emailOpened?'Y':'N',l.emailReplied?'Y':'N',l.lastContact?new Date(l.lastContact).toLocaleDateString():'',l.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `leads_crm_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  log('export', `Exported ${leads.length} leads to CSV`, 'green');
+  toast(`Exported ${leads.length} leads`);
+}
+
+// ===================== AUTOMATION ENGINE =====================
+let autoInterval = null;
+let autoLog = [];
+let autoRules = JSON.parse(localStorage.getItem('crm_auto_rules') || JSON.stringify({
+  rule1: true,  // emailSent → Contacted
+  rule2: true,  // emailReplied → Replied
+  rule3: true,  // emailBounced → Nurture
+  rule4: true,  // stale 14d no reply → Nurture
+  rule5: true,  // Replied + no follow-up 7d → Meeting Booked nudge
+  rule6: true,  // auto daily lead gen at midnight
+  rule7: false  // auto-mark Wave 1 emails as opened after 48h (simulate)
+}));
+
+function saveRules() { localStorage.setItem('crm_auto_rules', JSON.stringify(autoRules)); }
+
+function alog(msg, type='') {
+  const time = new Date().toLocaleTimeString();
+  autoLog.unshift({msg, type, time});
+  if(autoLog.length > 100) autoLog.pop();
+  const box = document.getElementById('auto-run-log');
+  if(box) {
+    const cls = type==='green'?'al-green':type==='yellow'?'al-yellow':type==='red'?'al-red':type==='blue'?'al-blue':'';
+    box.innerHTML = `<div class="al-line ${cls}">[${time}] ${msg}</div>` + box.innerHTML;
+  }
+}
+
+function runAutoPipeline(silent=false) {
+  let moved = 0;
+  const now = Date.now();
+
+  leads.forEach(l => {
+    const prev = l.status;
+
+    // Rule 1 — emailSent → Contacted
+    if(autoRules.rule1 && l.emailSent && l.status === 'New Lead') {
+      l.status = 'Contacted';
+      l.lastContact = l.lastContact || new Date().toISOString();
+    }
+
+    // Rule 2 — emailReplied → Replied
+    if(autoRules.rule2 && l.emailReplied && ['New Lead','Contacted'].includes(l.status)) {
+      l.status = 'Replied';
+      l.lastContact = new Date().toISOString();
+    }
+
+    // Rule 3 — emailBounced → Nurture
+    if(autoRules.rule3 && l.emailBounced && ['New Lead','Contacted'].includes(l.status)) {
+      l.status = 'Nurture';
+    }
+
+    // Rule 4 — Contacted 14+ days with no reply → Nurture
+    if(autoRules.rule4 && l.status === 'Contacted' && l.lastContact) {
+      const daysSince = (now - new Date(l.lastContact).getTime()) / 86400000;
+      if(daysSince >= 14 && !l.emailReplied) {
+        l.status = 'Nurture';
+      }
+    }
+
+    // Rule 5 — Replied 7+ days with no meeting → log nudge
+    if(autoRules.rule5 && l.status === 'Replied' && l.lastContact) {
+      const daysSince = (now - new Date(l.lastContact).getTime()) / 86400000;
+      if(daysSince >= 7) {
+        const alreadyNudged = (l.activities||[]).some(a=>a.text.includes('Auto-nudge'));
+        if(!alreadyNudged) {
+          l.activities = l.activities || [];
+          l.activities.push({text:`Auto-nudge: ${l.company} replied ${Math.round(daysSince)}d ago — follow up for meeting`, color:'orange', time:new Date().toISOString()});
+          log('auto', `Nudge: ${l.company} — ${Math.round(daysSince)}d since reply, no meeting booked`, 'orange');
+          alog(`Nudge → ${l.company}: ${Math.round(daysSince)}d since reply`, 'yellow');
+        }
+      }
+    }
+
+    // Rule 7 — simulate Wave 1 opens after 48h
+    if(autoRules.rule7 && l.wave===1 && l.emailSent && !l.emailOpened && l.lastContact) {
+      const hrs = (now - new Date(l.lastContact).getTime()) / 3600000;
+      if(hrs >= 48) l.emailOpened = true;
+    }
+
+    if(l.status !== prev) {
+      moved++;
+      const act = {text:`Auto-pipeline: ${prev} → ${l.status}`, color:'green', time:new Date().toISOString()};
+      l.activities = l.activities || [];
+      l.activities.push(act);
+      log('auto', `${l.company}: ${prev} → ${l.status}`, 'green');
+      alog(`${l.company}: ${prev} → ${l.status}`, 'green');
+    }
+  });
+
+  // Rule 6 — auto daily lead gen at new day
+  if(autoRules.rule6) {
+    const today = new Date().toLocaleDateString();
+    const lastGen = localStorage.getItem('crm_last_gen');
+    if(lastGen !== today) {
+      const existingCompanies = leads.map(l=>l.company);
+      const pool = GENERATOR_POOL.filter(l=>!existingCompanies.includes(l.company));
+      if(pool.length > 0) {
+        const count = Math.min(12, pool.length);
+        const newOnes = [...pool].sort(()=>Math.random()-.5).slice(0, count);
+        localStorage.setItem('crm_last_gen', today);
+        localStorage.setItem('crm_gen_today', JSON.stringify(newOnes));
+        alog(`Daily gen: ${count} new leads ready for ${today}`, 'blue');
+        log('generator', `Auto-generated ${count} new leads for ${today}`, 'purple');
+        updateSidebar();
+      }
+    }
+  }
+
+  if(moved > 0) {
+    saveLeads();
+    if(!silent) toast(`Auto-pipeline: ${moved} lead${moved>1?'s':''} advanced`);
+    alog(`Run complete — ${moved} lead${moved>1?'s':''} moved`, 'green');
+  } else {
+    if(!silent) alog('Run complete — no changes needed', '');
+  }
+
+  updateAutoStatus();
+  return moved;
+}
+
+function startAutoEngine() {
+  if(autoInterval) return;
+  runAutoPipeline(true);
+  autoInterval = setInterval(()=>runAutoPipeline(true), 2 * 60 * 1000); // every 2 min
+  localStorage.setItem('crm_auto_on', '1');
+  updateAutoStatus();
+  alog('Engine started — running every 2 minutes', 'blue');
+  toast('Automation engine started');
+}
+
+function stopAutoEngine() {
+  if(autoInterval) { clearInterval(autoInterval); autoInterval = null; }
+  localStorage.removeItem('crm_auto_on');
+  updateAutoStatus();
+  alog('Engine stopped', 'yellow');
+  toast('Automation engine stopped');
+}
+
+function updateAutoStatus() {
+  const on = !!autoInterval;
+  const dot = document.getElementById('auto-dot');
+  const lbl = document.getElementById('auto-label');
+  if(dot) { dot.className = 'status-dot ' + (on?'on pulse':'off'); }
+  if(lbl) lbl.textContent = on ? 'Auto-pipeline ON' : 'Automation off';
+}
+
+// ===================== AUTOMATION VIEW =====================
+function renderAutomation(c) {
+  const on = !!autoInterval;
+  const RULES = [
+    {key:'rule1', icon:'📧', title:'Email Sent → Contacted', desc:'When an email is marked as sent, automatically move lead from "New Lead" to "Contacted" and timestamp last contact.'},
+    {key:'rule2', icon:'💬', title:'Email Replied → Replied', desc:'When reply is marked, auto-advance lead from New Lead or Contacted straight to "Replied" stage.'},
+    {key:'rule3', icon:'🔴', title:'Bounced Email → Nurture', desc:'If email bounces, automatically move lead to "Nurture" to remove from active pipeline and re-engage later.'},
+    {key:'rule4', icon:'⏱️', title:'14-Day Stale → Nurture', desc:'If a lead stays in "Contacted" for 14+ days with no reply, auto-move to "Nurture" to keep pipeline clean.'},
+    {key:'rule5', icon:'🔔', title:'7-Day Reply Nudge', desc:'If a lead replied but no meeting is booked after 7 days, auto-add a nudge note to their activity log.'},
+    {key:'rule6', icon:'⚡', title:'Auto Daily Lead Generation', desc:'Automatically generates 12 fresh leads from the pool each new day when the CRM is opened.'},
+    {key:'rule7', icon:'👁️', title:'Simulate Wave 1 Opens (48h)', desc:'Auto-mark Wave 1 emails as opened after 48 hours to simulate realistic open rates for the pipeline.'},
+  ];
+
+  c.innerHTML = `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <h3>Engine Control</h3>
+          <span style="font-size:12px;color:${on?'#16a34a':'#64748b'}">${on?'● Running — checks every 2 min':'○ Stopped'}</span>
+        </div>
+        <div style="padding:20px;display:flex;gap:10px;align-items:center">
+          <button class="btn btn-success" onclick="startAutoEngine();renderAutomation(document.getElementById('content'))" ${on?'disabled':''}>▶ Start Engine</button>
+          <button class="btn btn-secondary" onclick="stopAutoEngine();renderAutomation(document.getElementById('content'))" ${!on?'disabled':''}>⏹ Stop</button>
+          <button class="btn btn-primary" onclick="runAutoPipeline(false);renderAutomation(document.getElementById('content'))">↺ Run Now</button>
+        </div>
+        <div style="padding:0 20px 16px;font-size:12px;color:#64748b">
+          The engine scans all leads and applies the rules below. It runs automatically every 2 minutes when started, and also runs once on page load.
+        </div>
+      </div>
+
+      <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px">Automation Rules</div>
+      ${RULES.map(r=>`
+      <div class="rule-card">
+        <div class="rule-icon">${r.icon}</div>
+        <div class="rule-body">
+          <div class="rule-title">${r.title}</div>
+          <div class="rule-desc">${r.desc}</div>
+          <div class="rule-meta">Rule ID: ${r.key} · ${autoRules[r.key]?'Active':'Disabled'}</div>
+        </div>
+        <label class="toggle" title="${autoRules[r.key]?'Disable':'Enable'} rule">
+          <input type="checkbox" ${autoRules[r.key]?'checked':''} onchange="autoRules['${r.key}']=this.checked;saveRules();renderAutomation(document.getElementById('content'))">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>`).join('')}
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><h3>Pipeline Stats</h3></div>
+        <div style="padding:16px 20px">
+          ${STATUSES.map(s=>{
+            const n = leads.filter(l=>l.status===s).length;
+            const pct = Math.round(n/leads.length*100);
+            return `<div style="margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+                <span style="color:${COL_COLORS[s]};font-weight:600">${s}</span>
+                <span style="color:#64748b">${n} leads</span>
+              </div>
+              <div style="background:#f1f5f9;border-radius:4px;height:6px">
+                <div style="background:${COL_COLORS[s]};width:${pct}%;height:6px;border-radius:4px;transition:width .4s"></div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Automation Log</h3><button class="btn btn-secondary btn-sm" onclick="autoLog=[];renderAutomation(document.getElementById('content'))">Clear</button></div>
+        <div class="auto-log" id="auto-run-log">
+          ${autoLog.length ? autoLog.map(e=>`
+            <div class="al-line ${e.type==='green'?'al-green':e.type==='yellow'?'al-yellow':e.type==='red'?'al-red':e.type==='blue'?'al-blue':''}">[${e.time}] ${e.msg}</div>`).join('') :
+            '<div style="color:#475569;padding:4px 0">No automation runs yet. Click "Run Now" or "Start Engine".</div>'}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ===================== DEPLOY VIEW =====================
+function renderDeploy(c) {
+  c.innerHTML = `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><h3>🚀 Deploy to GitHub Pages (Free)</h3></div>
+        <div style="padding:20px">
+          <p style="font-size:13px;color:#374151;margin-bottom:16px">Host your CRM online for free on GitHub Pages — accessible from any browser, any device. Your data stays in localStorage (local to each browser).</p>
+
+          <div style="background:#0f172a;border-radius:8px;padding:16px;font-family:monospace;font-size:12px;color:#e2e8f0;margin-bottom:12px;line-height:1.8">
+            <div style="color:#64748b;margin-bottom:6px"># Step 1 — install Git if not installed</div>
+            <div style="color:#34d399">https://git-scm.com/download/win</div>
+            <br>
+            <div style="color:#64748b"># Step 2 — open PowerShell in this folder</div>
+            <div>cd "C:\\Users\\Ahmad\\Downloads\\leads"</div>
+            <br>
+            <div style="color:#64748b"># Step 3 — init and push</div>
+            <div>git init</div>
+            <div>git add crm.html</div>
+            <div>git commit -m "Deploy IT Leads CRM"</div>
+            <div>git branch -M main</div>
+            <div style="color:#fde68a">git remote add origin https://github.com/YOUR_USERNAME/leads-crm.git</div>
+            <div>git push -u origin main</div>
+          </div>
+
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;font-size:12px;color:#166534;margin-bottom:12px">
+            <strong>Step 4 — Enable GitHub Pages:</strong><br>
+            Go to your repo → Settings → Pages → Source: <strong>main branch / root</strong> → Save<br>
+            Your CRM will be live at: <strong>https://YOUR_USERNAME.github.io/leads-crm/crm.html</strong>
+          </div>
+
+          <button class="btn btn-secondary" onclick="copyDeployScript()">📋 Copy Git Commands</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>💾 Export & Backup Data</h3></div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
+          <p style="font-size:12px;color:#64748b">Since data lives in browser localStorage, export regularly to avoid losing it when switching browsers or devices.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportJSON()">⬇ Export JSON Backup</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-file').click()">⬆ Import JSON</button>
+          </div>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(this)">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><h3>☁️ Other Hosting Options</h3></div>
+        <div style="padding:20px">
+          ${[
+            {name:'Netlify Drop', icon:'🟢', desc:'Drag & drop crm.html to netlify.com/drop — live in 10 seconds. Free, custom domain available.', url:'netlify.com/drop', badge:'Easiest'},
+            {name:'Vercel', icon:'▲', desc:'Connect GitHub repo, auto-deploys on every push. Best if you plan to update CRM regularly.', url:'vercel.com', badge:'Best for CI'},
+            {name:'Cloudflare Pages', icon:'🟠', desc:'Connect GitHub → auto-deploys with global CDN. Fastest worldwide load times.', url:'pages.cloudflare.com', badge:'Fastest CDN'},
+            {name:'Local Network', icon:'🏠', desc:'Open crm.html in any browser on your PC — works offline, no hosting needed. Share via LAN.', url:'', badge:'No internet needed'},
+          ].map(o=>`
+          <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9">
+            <div style="font-size:22px;width:30px;text-align:center">${o.icon}</div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+                <span style="font-size:13px;font-weight:600">${o.name}</span>
+                <span style="background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">${o.badge}</span>
+              </div>
+              <div style="font-size:12px;color:#64748b">${o.desc}</div>
+              ${o.url?`<div style="font-size:11px;color:#3b82f6;margin-top:3px">${o.url}</div>`:''}
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>📱 Make it a PWA (Install on Phone)</h3></div>
+        <div style="padding:20px">
+          <p style="font-size:12px;color:#64748b;margin-bottom:12px">Once deployed on GitHub Pages / Netlify, you can install the CRM as an app on your phone or desktop for offline access.</p>
+          <ol style="font-size:12px;color:#374151;padding-left:18px;line-height:2">
+            <li>Open the deployed URL in Chrome/Safari</li>
+            <li>Chrome: tap ⋮ → "Add to Home screen"</li>
+            <li>Safari (iOS): tap Share → "Add to Home Screen"</li>
+            <li>The CRM opens full-screen like a native app</li>
+          </ol>
+          <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#854d0e;margin-top:12px">
+            ⚠ Data is stored per-browser. Export JSON backup before switching devices.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function copyDeployScript() {
+  const script = `cd "C:\\Users\\Ahmad\\Downloads\\leads"\ngit init\ngit add crm.html\ngit commit -m "Deploy IT Leads CRM"\ngit branch -M main\ngit remote add origin https://github.com/YOUR_USERNAME/leads-crm.git\ngit push -u origin main`;
+  navigator.clipboard.writeText(script).then(()=>toast('Git commands copied to clipboard!'));
+}
+
+function exportJSON() {
+  const data = {leads, activities, exportedAt: new Date().toISOString(), version: '1.0'};
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `crm_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  log('export', 'Full JSON backup exported', 'green');
+  toast('JSON backup saved!');
+}
+
+function importJSON(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!data.leads || !Array.isArray(data.leads)) { toast('Invalid backup file'); return; }
+      if(!confirm(`Import ${data.leads.length} leads? This will REPLACE current data.`)) return;
+      leads = data.leads;
+      activities = data.activities || [];
+      saveLeads(); saveActivities();
+      updateSidebar();
+      log('import', `Imported ${leads.length} leads from backup`, 'green');
+      toast(`Imported ${leads.length} leads!`);
+      showView('dashboard');
+    } catch(err) { toast('Error reading file: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+// ===================== UTILS =====================
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  editingLeadId = null;
+}
+document.getElementById('modal').addEventListener('click', e => { if(e.target.id==='modal') closeModal(); });
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function fmtTime(iso) {
+  if(!iso) return '';
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  if(diff < 60000) return 'just now';
+  if(diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if(diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+// ===================== INIT =====================
+initData();
+showView('dashboard');
+</script>
+</body>
+</html>
