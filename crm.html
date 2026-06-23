@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IT Leads CRM — Moiz Ahmad</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* ===== RESET & BASE ===== */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -658,10 +657,9 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 let supaSyncing = false;
 
 // ===================== GMAIL STATE =====================
-let gmailToken = null;
-let gmailTokenClient = null;
-let gmailClientId = localStorage.getItem('crm_gmail_client_id') || '';
-let gmailUserEmail = localStorage.getItem('crm_gmail_email') || '';
+const SEND_FN = 'https://idxtbwzpodlvwjcslrfw.supabase.co/functions/v1/send-email';
+let gmailUser = localStorage.getItem('crm_gmail_user') || '';
+let gmailPass = localStorage.getItem('crm_gmail_pass') || '';
 
 function supaHeaders() {
   return {
@@ -811,107 +809,86 @@ function saveActivities() {
   localStorage.setItem('crm_activities', JSON.stringify(activities));
 }
 
-// ===================== GMAIL OAUTH + SEND =====================
-function initGmailClient() {
-  if (!gmailClientId || !window.google?.accounts?.oauth2) return;
-  gmailTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: gmailClientId,
-    scope: 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email',
-    callback: async (resp) => {
-      if (resp.error) { toast('❌ Gmail auth failed: ' + resp.error); return; }
-      gmailToken = resp.access_token;
-      // Fetch user email
-      try {
-        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${gmailToken}` }
-        });
-        const info = await r.json();
-        gmailUserEmail = info.email || '';
-        localStorage.setItem('crm_gmail_email', gmailUserEmail);
-      } catch(e) {}
-      updateGmailBtn();
-      toast('✅ Gmail connected — ' + (gmailUserEmail || 'ready to send'));
-    }
-  });
-}
-
-function connectGmail() {
-  if (!gmailClientId) {
-    toast('❌ Paste your OAuth Client ID in Settings first');
-    showView('settings'); return;
-  }
-  if (!window.google?.accounts?.oauth2) {
-    toast('❌ Google auth library not loaded yet, try again in a second'); return;
-  }
-  if (!gmailTokenClient) initGmailClient();
-  gmailTokenClient.requestAccessToken({ prompt: gmailToken ? '' : 'consent' });
-}
-
-function disconnectGmail() {
-  if (gmailToken) google.accounts.oauth2.revoke(gmailToken, () => {});
-  gmailToken = null; gmailUserEmail = '';
-  localStorage.removeItem('crm_gmail_email');
-  updateGmailBtn();
-  toast('Gmail disconnected');
-}
-
+// ===================== GMAIL SEND (via Supabase Edge Function) =====================
 function updateGmailBtn() {
   const btn = document.getElementById('gmail-btn');
   if (!btn) return;
-  if (gmailToken) {
-    btn.textContent = '✅ ' + (gmailUserEmail || 'Gmail connected');
+  if (gmailUser && gmailPass) {
+    btn.textContent = '✅ ' + gmailUser;
     btn.className = 'btn btn-success btn-sm';
-    btn.onclick = disconnectGmail;
+    btn.onclick = () => showView('settings');
   } else {
     btn.textContent = '✉️ Connect Gmail';
     btn.className = 'btn btn-secondary btn-sm';
-    btn.onclick = connectGmail;
+    btn.onclick = () => showView('settings');
   }
 }
 
+function saveGmailCreds() {
+  const u = document.getElementById('gmail-user-input')?.value.trim();
+  const p = document.getElementById('gmail-pass-input')?.value.trim();
+  if (!u || !p) { toast('❌ Enter both Gmail address and App Password'); return; }
+  if (!u.includes('@')) { toast('❌ Enter a valid Gmail address'); return; }
+  if (p.replace(/\s/g,'').length < 16) { toast('❌ App Password should be 16 characters'); return; }
+  gmailUser = u;
+  gmailPass = p.replace(/\s/g,''); // strip spaces Google adds for readability
+  localStorage.setItem('crm_gmail_user', gmailUser);
+  localStorage.setItem('crm_gmail_pass', gmailPass);
+  updateGmailBtn();
+  toast('✅ Gmail configured — ready to send!');
+  showView('settings');
+}
+
+function disconnectGmail() {
+  gmailUser = ''; gmailPass = '';
+  localStorage.removeItem('crm_gmail_user');
+  localStorage.removeItem('crm_gmail_pass');
+  updateGmailBtn();
+  toast('Gmail disconnected');
+  showView('settings');
+}
+
 function generateEmailSubject(lead) {
-  const subjectMap = {
-    'Embedded/FPGA/IoT':  `Quick question about ${lead.company}'s embedded systems roadmap`,
-    'AI/ML':              `AI/ML partnership opportunity for ${lead.company}`,
-    'Cloud/DevOps':       `Helping ${lead.company} scale cloud infrastructure`,
-    'Data Engineering':   `Data pipeline solutions for ${lead.company}`,
-    'Web/E-commerce':     `Web development services for ${lead.company}`,
-    'Mobile App':         `Mobile app development proposal — ${lead.company}`,
-    'UI/UX Design':       `UI/UX design services for ${lead.company}`,
-    'Video/Media':        `Video production partnership with ${lead.company}`,
-    'Cybersecurity':      `Cybersecurity solutions for ${lead.company}`,
-    'Blockchain':         `Blockchain development for ${lead.company}`,
-    'SaaS Dev':           `SaaS development partnership — ${lead.company}`,
-    'QA/Testing':         `QA automation services for ${lead.company}`,
-    'Graphic Design':     `Design services for ${lead.company}`,
-    'Marketing Tech':     `MarTech solutions for ${lead.company}`,
+  const map = {
+    'Embedded/FPGA/IoT': `Quick question about ${lead.company}'s embedded systems roadmap`,
+    'AI/ML':             `AI/ML partnership opportunity for ${lead.company}`,
+    'Cloud/DevOps':      `Helping ${lead.company} scale cloud infrastructure`,
+    'Data Engineering':  `Data pipeline solutions for ${lead.company}`,
+    'Web/E-commerce':    `Web development services for ${lead.company}`,
+    'Mobile App':        `Mobile app development proposal — ${lead.company}`,
+    'UI/UX Design':      `UI/UX design services for ${lead.company}`,
+    'Video/Media':       `Video production partnership with ${lead.company}`,
+    'Cybersecurity':     `Cybersecurity solutions for ${lead.company}`,
+    'Blockchain':        `Blockchain development for ${lead.company}`,
+    'SaaS Dev':          `SaaS development partnership — ${lead.company}`,
+    'QA/Testing':        `QA automation services for ${lead.company}`,
+    'Graphic Design':    `Design services for ${lead.company}`,
+    'Marketing Tech':    `MarTech solutions for ${lead.company}`,
   };
-  return subjectMap[lead.category] || `Partnership opportunity — ${lead.company}`;
+  return map[lead.category] || `Partnership opportunity — ${lead.company}`;
 }
 
 function generateEmailBody(lead) {
   const firstName = (lead.contact || '').split(' ')[0] || 'there';
+  const sig = `<p style="margin-top:24px">Best regards,<br><strong>Moiz Ahmad</strong><br>Co-Founder, Aujla Studio<br>${gmailUser || 'moizahmad1604@gmail.com'}</p>`;
   const bodies = {
-    'Embedded/FPGA/IoT': `<p>Hi ${firstName},</p><p>I came across ${lead.company} and was impressed by your work in the embedded systems and IoT space. I'm Moiz Ahmad, co-founder of a specialized IT services firm focused on firmware, FPGA, and IoT development.</p><p>We've helped companies like yours accelerate hardware bring-up and reduce time-to-market on embedded products. I'd love to explore if there's a fit — would you be open to a 15-minute call this week?</p>`,
-    'AI/ML': `<p>Hi ${firstName},</p><p>Your AI work at ${lead.company} caught my attention — particularly the practical ML applications you're building. I'm Moiz, and our team specializes in AI/ML development for B2B companies.</p><p>We've built everything from custom model training pipelines to production inference infrastructure. Would a quick 15-minute conversation make sense to explore synergies?</p>`,
-    'Cloud/DevOps': `<p>Hi ${firstName},</p><p>I noticed ${lead.company} is scaling fast and wanted to reach out. Our team specializes in cloud infrastructure and DevOps — Kubernetes, CI/CD, cost optimization, and reliability engineering.</p><p>We've helped similar companies cut cloud costs by 30-40% while improving deployment speed. Open to a brief call to see if we can add value?</p>`,
-    'default': `<p>Hi ${firstName},</p><p>I came across ${lead.company} and was genuinely impressed by what your team is building. I'm Moiz Ahmad, and we provide specialized IT services — from development to infrastructure — for companies in your space.</p><p>I'd love to explore if there's a way we could support ${lead.company}'s technical goals. Would you be open to a quick 15-minute call this week?</p>`
+    'Embedded/FPGA/IoT': `<p>Hi ${firstName},</p><p>I came across ${lead.company} and was impressed by your work in embedded systems and IoT. I'm Moiz Ahmad, co-founder of a specialized IT services firm focused on firmware, FPGA, and IoT development.</p><p>We've helped companies like yours accelerate hardware bring-up and cut time-to-market. Would you be open to a 15-minute call this week?</p>`,
+    'AI/ML':             `<p>Hi ${firstName},</p><p>Your AI work at ${lead.company} caught my attention. I'm Moiz, and our team specializes in AI/ML development — from model training pipelines to production inference infrastructure.</p><p>Would a quick 15-minute conversation make sense to explore synergies?</p>`,
+    'Cloud/DevOps':      `<p>Hi ${firstName},</p><p>I noticed ${lead.company} is scaling fast. Our team specializes in cloud infrastructure and DevOps — Kubernetes, CI/CD, and cost optimization.</p><p>We've helped similar companies cut cloud costs 30–40% while improving deployment speed. Open to a brief call?</p>`,
+    'default':           `<p>Hi ${firstName},</p><p>I came across ${lead.company} and was genuinely impressed by what your team is building. I'm Moiz Ahmad and we provide specialized IT services for companies in your space.</p><p>Would you be open to a quick 15-minute call this week?</p>`,
   };
-  const body = bodies[lead.category] || bodies['default'];
-  return body + `<p>Best regards,<br><strong>Moiz Ahmad</strong><br>Co-Founder, Aujla Studio<br>${gmailUserEmail || 'mohsinrazaojla32@gmail.com'}</p>`;
+  return (bodies[lead.category] || bodies['default']) + sig;
 }
 
 function openComposeModal(leadId) {
-  if (!gmailToken) {
-    if (confirm('Gmail not connected yet. Connect now?')) connectGmail();
-    return;
+  if (!gmailUser || !gmailPass) {
+    toast('⚠️ Configure Gmail first in ⚙️ Settings');
+    showView('settings'); return;
   }
   const lead = leads.find(l => l.id === leadId);
   if (!lead) return;
-  const subject = generateEmailSubject(lead);
-  const body = generateEmailBody(lead);
 
-  document.getElementById('modal-title').textContent = `Send Email — ${lead.company}`;
+  document.getElementById('modal-title').textContent = `✉️ Send Email — ${lead.company}`;
   document.getElementById('modal-body').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:14px">
       <div class="form-group">
@@ -920,17 +897,17 @@ function openComposeModal(leadId) {
       </div>
       <div class="form-group">
         <label>Subject</label>
-        <input id="compose-subject" value="${subject}" style="padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;width:100%">
+        <input id="compose-subject" value="${generateEmailSubject(lead)}" style="padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;width:100%">
       </div>
       <div class="form-group">
-        <label>Body (HTML)</label>
-        <div id="compose-preview" contenteditable="true"
+        <label>Body</label>
+        <div id="compose-body" contenteditable="true"
           style="min-height:180px;border:1.5px solid var(--border);border-radius:8px;padding:14px;font-size:13px;font-family:inherit;outline:none;line-height:1.7"
-          onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--border)'"
-        >${body}</div>
+          onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='var(--border)'"
+        >${generateEmailBody(lead)}</div>
       </div>
       <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534">
-        Sending as: <strong>${gmailUserEmail}</strong> via Gmail API
+        Sending as <strong>${gmailUser}</strong> via Gmail SMTP
       </div>
     </div>`;
   document.getElementById('modal-footer').innerHTML = `
@@ -940,41 +917,29 @@ function openComposeModal(leadId) {
 }
 
 async function sendEmail(leadId) {
-  const to      = document.getElementById('compose-to').value.trim();
-  const subject = document.getElementById('compose-subject').value.trim();
-  const bodyEl  = document.getElementById('compose-preview');
-  const htmlBody = bodyEl ? bodyEl.innerHTML : '';
+  const to      = document.getElementById('compose-to')?.value.trim();
+  const subject = document.getElementById('compose-subject')?.value.trim();
+  const html    = document.getElementById('compose-body')?.innerHTML || '';
 
   if (!to || !subject) { toast('❌ To and Subject are required'); return; }
-  if (!gmailToken)     { toast('❌ Gmail not connected'); return; }
+  if (!gmailUser || !gmailPass) { toast('❌ Gmail not configured — go to Settings'); return; }
 
   const btn = document.querySelector('#modal-footer .btn-primary');
   if (btn) { btn.textContent = '⏳ Sending…'; btn.disabled = true; }
 
-  const mime = [
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    'Content-Type: text/html; charset=utf-8',
-    'MIME-Version: 1.0',
-    '',
-    htmlBody
-  ].join('\r\n');
-
-  const encoded = btoa(unescape(encodeURIComponent(mime)))
-    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-
   try {
-    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    const res = await fetch(SEND_FN, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${gmailToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ raw: encoded })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, html, from_name: 'Moiz Ahmad', gmail_user: gmailUser, gmail_pass: gmailPass })
     });
+    const data = await res.json();
 
-    if (res.ok) {
+    if (res.ok && data.success) {
       const lead = leads.find(l => l.id === leadId);
       if (lead) {
-        lead.emailSent    = true;
-        lead.lastContact  = new Date().toISOString();
+        lead.emailSent   = true;
+        lead.lastContact = new Date().toISOString();
         if (lead.status === 'New Lead') lead.status = 'Contacted';
         saveLeads();
         log('email', `Email sent to ${lead.company} (${to})`, 'green');
@@ -982,13 +947,9 @@ async function sendEmail(leadId) {
       closeModal();
       updateSidebar();
       toast(`✅ Email sent to ${to}`);
-      if (currentView === 'leads' || currentView === 'email-tracker') showView(currentView);
+      if (currentView === 'leads' || currentView === 'emails') showView(currentView);
     } else {
-      const err = await res.json();
-      const msg = err.error?.message || 'Send failed';
-      toast('❌ ' + msg);
-      // Token may be expired — clear it
-      if (err.error?.status === 'UNAUTHENTICATED') { gmailToken = null; updateGmailBtn(); }
+      toast('❌ ' + (data.error || 'Send failed'));
       if (btn) { btn.textContent = '📨 Send Email'; btn.disabled = false; }
     }
   } catch(e) {
@@ -996,9 +957,6 @@ async function sendEmail(leadId) {
     if (btn) { btn.textContent = '📨 Send Email'; btn.disabled = false; }
   }
 }
-
-// Called once GIS library loads
-window.onGoogleLibraryLoad = function() { if (gmailClientId) initGmailClient(); };
 
 function log(type, text, color='') {
   activities.unshift({type, text, color, time: new Date().toISOString()});
@@ -2053,45 +2011,42 @@ function renderSettings(c) {
         ${connected ? `<span style="background:#dcfce7;color:#166534;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">✅ Connected</span>` : `<span style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">Not connected</span>`}
       </div>
       <div style="padding:22px;display:flex;flex-direction:column;gap:16px">
-        ${connected ? `
+        ${(gmailUser && gmailPass) ? `
           <div style="display:flex;align-items:center;gap:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px">
             <span style="font-size:28px">✅</span>
             <div>
-              <div style="font-weight:700;color:#166534">Sending as ${gmailUserEmail}</div>
-              <div style="font-size:12px;color:#16a34a;margin-top:2px">Click any lead → "Send Email" to compose and send</div>
+              <div style="font-weight:700;color:#166534">Sending as ${gmailUser}</div>
+              <div style="font-size:12px;color:#16a34a;margin-top:2px">Click 📨 Send on any lead to compose and send</div>
             </div>
           </div>
-          <button class="btn btn-danger btn-sm" style="align-self:flex-start" onclick="disconnectGmail();showView('settings')">Disconnect Gmail</button>
+          <button class="btn btn-danger btn-sm" style="align-self:flex-start" onclick="disconnectGmail()">Disconnect</button>
         ` : `
-          <p style="font-size:13px;color:#374151">Connect your Gmail account so the CRM can send emails on your behalf. You'll get a Google sign-in popup — grant the "Send email" permission.</p>
+          <p style="font-size:13px;color:#374151">Connect Gmail using an <strong>App Password</strong> — a 16-character code generated in your Google account. No Cloud Console, no OAuth setup needed.</p>
 
-          <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px;font-size:12px;color:#713f12">
-            <strong>⚠️ One-time setup required:</strong> You need a Google OAuth Client ID.<br>
-            The Client ID tells Google which app is requesting access to Gmail.
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;font-size:12px;color:#1e40af">
+            <strong>📋 How to get your App Password (2 minutes):</strong><br><br>
+            1. Go to <strong>myaccount.google.com/apppasswords</strong><br>
+            2. Sign in as <strong>moizahmad1604@gmail.com</strong><br>
+            3. App name: type <strong>CRM</strong> → click Create<br>
+            4. Copy the 16-character password shown → paste below
           </div>
 
-          <div style="background:#0f172a;border-radius:8px;padding:16px;font-size:12px;font-family:monospace;color:#e2e8f0;line-height:2">
-            <div style="color:#64748b">// Step 1 — Go to Google Cloud Console</div>
-            <div style="color:#34d399">console.cloud.google.com → New Project → "CRM-Email"</div>
-            <div style="color:#64748b;margin-top:6px">// Step 2 — Enable Gmail API</div>
-            <div>APIs & Services → Enable APIs → search "Gmail API" → Enable</div>
-            <div style="color:#64748b;margin-top:6px">// Step 3 — Create OAuth credentials</div>
-            <div>Credentials → Create → OAuth Client ID → Web Application</div>
-            <div style="color:#fde68a">Authorized JS origins: https://bsce22029.github.io</div>
-            <div style="color:#fde68a">Also add: http://localhost (for local testing)</div>
-            <div style="color:#64748b;margin-top:6px">// Step 4 — Paste Client ID below</div>
-          </div>
-
-          <div style="display:flex;gap:8px">
-            <input id="client-id-input" type="text"
-              placeholder="123456789-abc…apps.googleusercontent.com"
-              value="${gmailClientId}"
-              style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input id="gmail-user-input" type="email"
+              placeholder="moizahmad1604@gmail.com"
+              value="${gmailUser}"
+              style="padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"
               onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='var(--border)'"
             />
-            <button class="btn btn-primary" onclick="saveClientId()">Save</button>
+            <div style="display:flex;gap:8px">
+              <input id="gmail-pass-input" type="password"
+                placeholder="xxxx xxxx xxxx xxxx  (16-char App Password)"
+                style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;outline:none;letter-spacing:2px"
+                onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='var(--border)'"
+              />
+              <button class="btn btn-primary" onclick="saveGmailCreds()">Save & Connect</button>
+            </div>
           </div>
-          <button class="btn btn-primary" style="align-self:flex-start" onclick="connectGmail()">🔗 Connect Gmail →</button>
         `}
       </div>
     </div>
@@ -2115,16 +2070,6 @@ function renderSettings(c) {
   </div>`;
 }
 
-function saveClientId() {
-  const val = document.getElementById('client-id-input')?.value.trim();
-  if (!val || !val.includes('.apps.googleusercontent.com')) {
-    toast('❌ Paste a valid Client ID (ends with .apps.googleusercontent.com)'); return;
-  }
-  gmailClientId = val;
-  localStorage.setItem('crm_gmail_client_id', gmailClientId);
-  initGmailClient();
-  toast('✅ Client ID saved — click "Connect Gmail" to authorise');
-}
 
 function copyDeployScript() {
   const script = `cd "C:\\Users\\Ahmad\\Downloads\\leads"\ngit init\ngit add crm.html\ngit commit -m "Deploy IT Leads CRM"\ngit branch -M main\ngit remote add origin https://github.com/YOUR_USERNAME/leads-crm.git\ngit push -u origin main`;
@@ -2206,8 +2151,7 @@ document.querySelectorAll('#sidebar nav a').forEach(a => {
 // ===================== INIT =====================
 initData();
 showView('dashboard');
-// Init Gmail if client ID already saved
-setTimeout(() => { initGmailClient(); updateGmailBtn(); }, 1500);
+setTimeout(() => updateGmailBtn(), 500);
 </script>
 </body>
 </html>
