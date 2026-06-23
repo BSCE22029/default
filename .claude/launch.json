@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "crm",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8099"],
+      "port": 8099
+    },
+    {
+      "name": "saas",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "crm-saas", "run", "dev"],
+      "port": 5180
+    }
+  ]
+}
