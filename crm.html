@@ -446,7 +446,7 @@ tbody td{padding:11px 16px;font-size:13px;color:var(--text-2);vertical-align:mid
     </div>
     <div class="actions">
       <span id="sync-status" style="font-size:11px;color:#64748b;margin-right:4px;white-space:nowrap">💾 Local only</span>
-      <button id="gmail-btn" class="btn btn-secondary btn-sm" onclick="connectGmail()">✉️ Connect Gmail</button>
+      <button id="gmail-btn" class="btn btn-success btn-sm" onclick="showView('settings')">✅ Gmail Ready</button>
       <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export</button>
       <button class="btn btn-primary btn-sm" onclick="openAddLead()">+ Add Lead</button>
     </div>
@@ -838,7 +838,7 @@ function generateEmailSubject(lead) {
 
 function generateEmailBody(lead) {
   const firstName = (lead.contact || '').split(' ')[0] || 'there';
-  const sig = `<p style="margin-top:24px">Best regards,<br><strong>Moiz Ahmad</strong><br>Co-Founder, Aujla Studio<br>${gmailUser || 'moizahmad1604@gmail.com'}</p>`;
+  const sig = `<p style="margin-top:24px">Best regards,<br><strong>Moiz Ahmad</strong><br>Co-Founder, Aujla Studio<br>moizahmad1604@gmail.com</p>`;
   const bodies = {
     'Embedded/FPGA/IoT': `<p>Hi ${firstName},</p><p>I came across ${lead.company} and was impressed by your work in embedded systems and IoT. I'm Moiz Ahmad, co-founder of a specialized IT services firm focused on firmware, FPGA, and IoT development.</p><p>We've helped companies like yours accelerate hardware bring-up and cut time-to-market. Would you be open to a 15-minute call this week?</p>`,
     'AI/ML':             `<p>Hi ${firstName},</p><p>Your AI work at ${lead.company} caught my attention. I'm Moiz, and our team specializes in AI/ML development — from model training pipelines to production inference infrastructure.</p><p>Would a quick 15-minute conversation make sense to explore synergies?</p>`,
