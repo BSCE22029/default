@@ -444,6 +444,7 @@ tbody td{padding:11px 16px;font-size:13px;color:var(--text-2);vertical-align:mid
       <h2 id="page-title">Dashboard</h2>
     </div>
     <div class="actions">
+      <span id="sync-status" style="font-size:11px;color:#64748b;margin-right:4px;white-space:nowrap">💾 Local only</span>
       <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export</button>
       <button class="btn btn-primary btn-sm" onclick="openAddLead()">+ Add Lead</button>
     </div>
@@ -648,8 +649,88 @@ let activities = [];
 let currentView = 'dashboard';
 let editingLeadId = null;
 let charts = {};
+let sheetsUrl = localStorage.getItem('crm_sheets_url') || '';
+let sheetsSyncing = false;
 
-function initData() {
+// ===================== SHEETS SYNC =====================
+async function sheetsGet(action) {
+  if (!sheetsUrl) return null;
+  try {
+    const r = await fetch(`${sheetsUrl}?action=${action}`, {redirect:'follow'});
+    return await r.json();
+  } catch(e) { console.warn('Sheets GET failed:', e); return null; }
+}
+
+async function sheetsPost(body) {
+  if (!sheetsUrl) return null;
+  try {
+    const r = await fetch(sheetsUrl, {
+      method:'POST', redirect:'follow',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify(body)
+    });
+    return await r.json();
+  } catch(e) { console.warn('Sheets POST failed:', e); return null; }
+}
+
+function setSyncStatus(state) {
+  // state: 'idle' | 'syncing' | 'ok' | 'error' | 'off'
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const icons = {idle:'🔄',syncing:'⏳',ok:'✅',error:'❌',off:'💾'};
+  const texts = {idle:'Syncing…',syncing:'Saving…',ok:'Synced',error:'Sync failed',off:'Local only'};
+  el.textContent = icons[state] + ' ' + texts[state];
+  el.style.color = {idle:'#94a3b8',syncing:'#f59e0b',ok:'#16a34a',error:'#ef4444',off:'#64748b'}[state];
+}
+
+async function syncLeadsToSheets() {
+  if (!sheetsUrl || sheetsSyncing) return;
+  sheetsSyncing = true;
+  setSyncStatus('syncing');
+  const res = await sheetsPost({action:'saveLeads', leads});
+  sheetsSyncing = false;
+  setSyncStatus(res && res.success ? 'ok' : 'error');
+  if (res && res.error) console.warn('Sheets sync error:', res.error);
+}
+
+async function syncActivitiesToSheets() {
+  if (!sheetsUrl) return;
+  await sheetsPost({action:'saveActivities', activities});
+}
+
+async function loadFromSheets() {
+  setSyncStatus('idle');
+  const data = await sheetsGet('getData');
+  if (!data || !Array.isArray(data.leads)) {
+    setSyncStatus(sheetsUrl ? 'error' : 'off');
+    return false;
+  }
+  if (data.leads.length > 0) {
+    leads = data.leads;
+    localStorage.setItem('crm_leads', JSON.stringify(leads));
+  } else {
+    // Sheet is empty — push our local data up
+    await syncLeadsToSheets();
+  }
+  if (Array.isArray(data.activities) && data.activities.length > 0) {
+    activities = data.activities;
+    localStorage.setItem('crm_activities', JSON.stringify(activities));
+  }
+  setSyncStatus('ok');
+  return true;
+}
+
+async function testSheetsConnection(url) {
+  try {
+    const r = await fetch(`${url}?action=ping`, {redirect:'follow'});
+    const d = await r.json();
+    return d && d.pong === true;
+  } catch(e) { return false; }
+}
+
+// ===================== INIT =====================
+async function initData() {
+  // 1. Load from localStorage as fast initial state
   const stored = localStorage.getItem('crm_leads');
   const storedActs = localStorage.getItem('crm_activities');
   if (stored) {
@@ -658,16 +739,11 @@ function initData() {
     const now = new Date('2026-06-21').toISOString();
     leads = SEED_LEADS.map(l => ({
       ...l,
-      status: 'New Lead',
-      notes: '',
-      activities: [],
-      emailSent: l.wave === 1,
-      emailOpened: false,
-      emailReplied: false,
-      emailBounced: false,
+      status: 'New Lead', notes: '', activities: [],
+      emailSent: l.wave === 1, emailOpened: false,
+      emailReplied: false, emailBounced: false,
       lastContact: l.wave === 1 ? now : null,
-      createdAt: now,
-      linkedin: l.linkedin || ''
+      createdAt: now, linkedin: l.linkedin || ''
     }));
     saveLeads();
   }
@@ -675,19 +751,38 @@ function initData() {
   if (!activities.length) {
     log('system','CRM initialized with 108 IT leads from campaign','green');
     log('system','21 Wave 1 emails sent (Samsara, Joby, Tempus, Zendesk, SiFive...)','green');
-    log('system','Wave 2 & 3 pending email verification via Hunter.io/Apollo.io','orange');
+    log('system','Wave 2 & 3 pending — verify via Hunter.io/Apollo.io','orange');
   }
   updateSidebar();
-  // Run pipeline once silently on every load
+  setSyncStatus(sheetsUrl ? 'idle' : 'off');
+
+  // 2. If Sheets is configured, load live data (updates view in background)
+  if (sheetsUrl) {
+    const loaded = await loadFromSheets();
+    if (loaded) {
+      updateSidebar();
+      if (currentView) showView(currentView);
+    }
+  }
+
   setTimeout(()=>{
     runAutoPipeline(true);
-    // Auto-restart engine if it was running before
-    if(localStorage.getItem('crm_auto_on')==='1') startAutoEngine();
+    if (localStorage.getItem('crm_auto_on') === '1') startAutoEngine();
   }, 300);
 }
 
-function saveLeads() { localStorage.setItem('crm_leads', JSON.stringify(leads)); }
-function saveActivities() { localStorage.setItem('crm_activities', JSON.stringify(activities)); }
+function saveLeads() {
+  localStorage.setItem('crm_leads', JSON.stringify(leads));
+  // Debounced Sheets sync — don't hammer on rapid changes
+  clearTimeout(window._saveLeadsTimer);
+  window._saveLeadsTimer = setTimeout(syncLeadsToSheets, 1500);
+}
+
+function saveActivities() {
+  localStorage.setItem('crm_activities', JSON.stringify(activities));
+  clearTimeout(window._saveActsTimer);
+  window._saveActsTimer = setTimeout(syncActivitiesToSheets, 2000);
+}
 function log(type, text, color='') {
   activities.unshift({type, text, color, time: new Date().toISOString()});
   if(activities.length > 500) activities.pop();
@@ -1593,7 +1688,77 @@ function renderAutomation(c) {
 
 // ===================== DEPLOY VIEW =====================
 function renderDeploy(c) {
+  const connected = !!sheetsUrl;
   c.innerHTML = `
+  <!-- GOOGLE SHEETS DATABASE -->
+  <div class="card" style="margin-bottom:20px;border:2px solid ${connected?'#bbf7d0':'#e2e8f0'}">
+    <div class="card-header" style="background:${connected?'#f0fdf4':'#f8fafc'}">
+      <h3>${connected?'✅':'🗄️'} Google Sheets Database ${connected?'<span style="font-size:11px;font-weight:400;color:#16a34a">— Connected</span>':'<span style="font-size:11px;font-weight:400;color:#64748b">— Not connected</span>'}</h3>
+      ${connected?`<button class="btn btn-danger btn-sm" onclick="disconnectSheets()">Disconnect</button>`:''}
+    </div>
+    <div style="padding:20px">
+      ${connected ? `
+        <div style="display:flex;align-items:center;gap:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin-bottom:16px">
+          <span style="font-size:24px">✅</span>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#166534">Your CRM is synced to Google Sheets</div>
+            <div style="font-size:11px;color:#16a34a;margin-top:2px;word-break:break-all">${sheetsUrl.substring(0,80)}…</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-success btn-sm" onclick="forceSyncNow()">🔄 Sync Now</button>
+          <button class="btn btn-secondary btn-sm" onclick="openSheetsInBrowser()">📊 Open Sheet</button>
+        </div>
+      ` : `
+        <p style="font-size:13px;color:#374151;margin-bottom:16px">Connect a Google Sheet as your database — leads sync automatically on every save. Access your data from any device, any browser.</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <div style="background:#eff6ff;border-radius:8px;padding:14px;font-size:12px">
+            <div style="font-weight:700;color:#1d4ed8;margin-bottom:4px">✅ With Google Sheets</div>
+            <ul style="color:#374151;padding-left:16px;line-height:2">
+              <li>Data on every device</li>
+              <li>Auto-saves in background</li>
+              <li>View/edit leads in Sheets</li>
+              <li>Never lose data</li>
+            </ul>
+          </div>
+          <div style="background:#f8fafc;border-radius:8px;padding:14px;font-size:12px">
+            <div style="font-weight:700;color:#64748b;margin-bottom:4px">⚠️ Without (current)</div>
+            <ul style="color:#64748b;padding-left:16px;line-height:2">
+              <li>Browser-only storage</li>
+              <li>Data lost if cache cleared</li>
+              <li>One device only</li>
+              <li>Need manual JSON exports</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="background:#0f172a;border-radius:8px;padding:16px;font-family:monospace;font-size:12px;color:#e2e8f0;margin-bottom:16px;line-height:2">
+          <div style="color:#64748b;margin-bottom:4px">// ── Step 1: Create a Google Sheet ──────────────</div>
+          <div style="color:#34d399">sheets.google.com → New blank spreadsheet</div>
+          <div style="color:#64748b;margin-top:8px;margin-bottom:4px">// ── Step 2: Open Apps Script ────────────────────</div>
+          <div>Extensions → Apps Script → paste <strong style="color:#fde68a">Code.gs</strong> file</div>
+          <div style="color:#64748b;margin-top:8px;margin-bottom:4px">// ── Step 3: Deploy ──────────────────────────────</div>
+          <div>Deploy → New deployment → Web App</div>
+          <div style="color:#fde68a">Execute as: Me | Who has access: Anyone</div>
+          <div style="color:#64748b;margin-top:8px;margin-bottom:4px">// ── Step 4: Paste the Web App URL below ─────────</div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="sheets-url-input" type="url"
+            placeholder="https://script.google.com/macros/s/…/exec"
+            style="flex:1;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none"
+            value="${sheetsUrl}"
+            onfocus="this.style.borderColor='#3b82f6'"
+            onblur="this.style.borderColor='#e2e8f0'"
+          />
+          <button class="btn btn-primary" onclick="connectSheets()">Connect →</button>
+        </div>
+        <p style="font-size:11px;color:#64748b">The <strong>Code.gs</strong> file is at <code>C:\\Users\\Ahmad\\Downloads\\leads\\Code.gs</code> — open it in Notepad and copy the contents.</p>
+      `}
+    </div>
+  </div>
+
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div>
       <div class="card" style="margin-bottom:16px">
@@ -1681,7 +1846,47 @@ function renderDeploy(c) {
         </div>
       </div>
     </div>
+  </div>
   </div>`;
+}
+
+async function connectSheets() {
+  const input = document.getElementById('sheets-url-input');
+  const url = (input && input.value.trim()) || '';
+  if (!url || !url.startsWith('https://script.google.com/')) {
+    toast('❌ Paste a valid Apps Script Web App URL'); return;
+  }
+  toast('🔄 Testing connection…');
+  const ok = await testSheetsConnection(url);
+  if (!ok) { toast('❌ Connection failed — check the URL and deployment settings'); return; }
+  sheetsUrl = url;
+  localStorage.setItem('crm_sheets_url', sheetsUrl);
+  toast('✅ Connected! Syncing leads to Google Sheets…');
+  setSyncStatus('syncing');
+  await syncLeadsToSheets();
+  await syncActivitiesToSheets();
+  showView('deploy');
+}
+
+function disconnectSheets() {
+  if (!confirm('Disconnect Google Sheets? Your local data stays intact.')) return;
+  sheetsUrl = '';
+  localStorage.removeItem('crm_sheets_url');
+  setSyncStatus('off');
+  toast('Disconnected from Google Sheets');
+  showView('deploy');
+}
+
+async function forceSyncNow() {
+  if (!sheetsUrl) { toast('No Sheets connection configured'); return; }
+  toast('🔄 Syncing all data…');
+  await syncLeadsToSheets();
+  await syncActivitiesToSheets();
+  toast('✅ All data synced to Google Sheets');
+}
+
+function openSheetsInBrowser() {
+  toast('Copy the spreadsheet URL from your Google Drive to open it');
 }
 
 function copyDeployScript() {
