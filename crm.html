@@ -649,88 +649,113 @@ let activities = [];
 let currentView = 'dashboard';
 let editingLeadId = null;
 let charts = {};
-let sheetsUrl = localStorage.getItem('crm_sheets_url') || '';
-let sheetsSyncing = false;
+// ===================== SUPABASE CONFIG =====================
+const SUPA_URL = 'https://idxtbwzpodlvwjcslrfw.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkeHRid3pwb2RsdndqY3NscmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTM5NDUsImV4cCI6MjA5NzQyOTk0NX0.WV_C3BQifHjb0xAgKNA8T_bnXut924jZfG1HbXueVrU';
+let supaSyncing = false;
 
-// ===================== SHEETS SYNC =====================
-async function sheetsGet(action) {
-  if (!sheetsUrl) return null;
-  try {
-    const r = await fetch(`${sheetsUrl}?action=${action}`, {redirect:'follow'});
-    return await r.json();
-  } catch(e) { console.warn('Sheets GET failed:', e); return null; }
+function supaHeaders(write = false) {
+  const h = {
+    'apikey': SUPA_KEY,
+    'Authorization': `Bearer ${SUPA_KEY}`,
+    'Content-Type': 'application/json'
+  };
+  h[write ? 'Content-Profile' : 'Accept-Profile'] = 'crm';
+  return h;
 }
 
-async function sheetsPost(body) {
-  if (!sheetsUrl) return null;
-  try {
-    const r = await fetch(sheetsUrl, {
-      method:'POST', redirect:'follow',
-      headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify(body)
-    });
-    return await r.json();
-  } catch(e) { console.warn('Sheets POST failed:', e); return null; }
+// camelCase JS ↔ snake_case DB
+function toDb(l) {
+  return {
+    id: l.id, company: l.company, website: l.website || '',
+    industry: l.industry || '', country: l.country || '',
+    category: l.category || '', contact: l.contact || '',
+    email: l.email || '', linkedin: l.linkedin || '',
+    lead_score: l.leadScore || 0, opportunity_size: l.opportunitySize || '',
+    status: l.status || 'New Lead', wave: l.wave || 1,
+    notes: l.notes || '', email_sent: !!l.emailSent,
+    email_opened: !!l.emailOpened, email_replied: !!l.emailReplied,
+    email_bounced: !!l.emailBounced, last_contact: l.lastContact || null,
+    created_at: l.createdAt || new Date().toISOString(),
+    activities: l.activities || []
+  };
+}
+
+function fromDb(r) {
+  return {
+    id: r.id, company: r.company, website: r.website,
+    industry: r.industry, country: r.country, category: r.category,
+    contact: r.contact, email: r.email, linkedin: r.linkedin,
+    leadScore: r.lead_score, opportunitySize: r.opportunity_size,
+    status: r.status, wave: r.wave, notes: r.notes,
+    emailSent: r.email_sent, emailOpened: r.email_opened,
+    emailReplied: r.email_replied, emailBounced: r.email_bounced,
+    lastContact: r.last_contact, createdAt: r.created_at,
+    activities: Array.isArray(r.activities) ? r.activities : []
+  };
 }
 
 function setSyncStatus(state) {
-  // state: 'idle' | 'syncing' | 'ok' | 'error' | 'off'
   const el = document.getElementById('sync-status');
   if (!el) return;
-  const icons = {idle:'🔄',syncing:'⏳',ok:'✅',error:'❌',off:'💾'};
-  const texts = {idle:'Syncing…',syncing:'Saving…',ok:'Synced',error:'Sync failed',off:'Local only'};
-  el.textContent = icons[state] + ' ' + texts[state];
-  el.style.color = {idle:'#94a3b8',syncing:'#f59e0b',ok:'#16a34a',error:'#ef4444',off:'#64748b'}[state];
+  const map = {
+    idle:    ['🔄','Syncing…',  '#94a3b8'],
+    syncing: ['⏳','Saving…',   '#f59e0b'],
+    ok:      ['☁️','Synced',    '#16a34a'],
+    error:   ['❌','Sync error','#ef4444'],
+    off:     ['💾','Local only','#64748b']
+  };
+  const [icon, text, color] = map[state] || map.off;
+  el.textContent = `${icon} ${text}`;
+  el.style.color = color;
 }
 
-async function syncLeadsToSheets() {
-  if (!sheetsUrl || sheetsSyncing) return;
-  sheetsSyncing = true;
+async function pushToSupabase() {
+  if (supaSyncing) return;
+  supaSyncing = true;
   setSyncStatus('syncing');
-  const res = await sheetsPost({action:'saveLeads', leads});
-  sheetsSyncing = false;
-  setSyncStatus(res && res.success ? 'ok' : 'error');
-  if (res && res.error) console.warn('Sheets sync error:', res.error);
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/leads`, {
+      method: 'POST',
+      headers: { ...supaHeaders(true), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(leads.map(toDb))
+    });
+    setSyncStatus(res.ok ? 'ok' : 'error');
+    if (!res.ok) console.warn('Supabase upsert error:', await res.text());
+  } catch(e) {
+    setSyncStatus('error');
+    console.warn('Supabase push failed:', e);
+  }
+  supaSyncing = false;
 }
 
-async function syncActivitiesToSheets() {
-  if (!sheetsUrl) return;
-  await sheetsPost({action:'saveActivities', activities});
-}
-
-async function loadFromSheets() {
+async function loadFromSupabase() {
   setSyncStatus('idle');
-  const data = await sheetsGet('getData');
-  if (!data || !Array.isArray(data.leads)) {
-    setSyncStatus(sheetsUrl ? 'error' : 'off');
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/leads?select=*&order=id.asc`, {
+      headers: supaHeaders(false)
+    });
+    if (!res.ok) { setSyncStatus('error'); return false; }
+    const rows = await res.json();
+    if (rows.length > 0) {
+      leads = rows.map(fromDb);
+      localStorage.setItem('crm_leads', JSON.stringify(leads));
+    } else {
+      // DB is empty on first run — seed it with local data
+      await pushToSupabase();
+    }
+    setSyncStatus('ok');
+    return true;
+  } catch(e) {
+    setSyncStatus('error');
+    console.warn('Supabase load failed:', e);
     return false;
   }
-  if (data.leads.length > 0) {
-    leads = data.leads;
-    localStorage.setItem('crm_leads', JSON.stringify(leads));
-  } else {
-    // Sheet is empty — push our local data up
-    await syncLeadsToSheets();
-  }
-  if (Array.isArray(data.activities) && data.activities.length > 0) {
-    activities = data.activities;
-    localStorage.setItem('crm_activities', JSON.stringify(activities));
-  }
-  setSyncStatus('ok');
-  return true;
-}
-
-async function testSheetsConnection(url) {
-  try {
-    const r = await fetch(`${url}?action=ping`, {redirect:'follow'});
-    const d = await r.json();
-    return d && d.pong === true;
-  } catch(e) { return false; }
 }
 
 // ===================== INIT =====================
 async function initData() {
-  // 1. Load from localStorage as fast initial state
+  // 1. Show local data immediately (fast)
   const stored = localStorage.getItem('crm_leads');
   const storedActs = localStorage.getItem('crm_activities');
   if (stored) {
@@ -745,24 +770,22 @@ async function initData() {
       lastContact: l.wave === 1 ? now : null,
       createdAt: now, linkedin: l.linkedin || ''
     }));
-    saveLeads();
+    localStorage.setItem('crm_leads', JSON.stringify(leads));
   }
   activities = storedActs ? JSON.parse(storedActs) : [];
   if (!activities.length) {
-    log('system','CRM initialized with 108 IT leads from campaign','green');
-    log('system','21 Wave 1 emails sent (Samsara, Joby, Tempus, Zendesk, SiFive...)','green');
-    log('system','Wave 2 & 3 pending — verify via Hunter.io/Apollo.io','orange');
+    log('system','CRM initialized — 108 IT leads loaded from campaign','green');
+    log('system','21 Wave 1 emails sent (Samsara, Joby, Tempus, Zendesk…)','green');
+    log('system','Wave 2 & 3 pending email verification','orange');
   }
   updateSidebar();
-  setSyncStatus(sheetsUrl ? 'idle' : 'off');
+  setSyncStatus('idle');
 
-  // 2. If Sheets is configured, load live data (updates view in background)
-  if (sheetsUrl) {
-    const loaded = await loadFromSheets();
-    if (loaded) {
-      updateSidebar();
-      if (currentView) showView(currentView);
-    }
+  // 2. Load live data from Supabase in background
+  const loaded = await loadFromSupabase();
+  if (loaded) {
+    updateSidebar();
+    if (currentView) showView(currentView);
   }
 
   setTimeout(()=>{
@@ -773,15 +796,12 @@ async function initData() {
 
 function saveLeads() {
   localStorage.setItem('crm_leads', JSON.stringify(leads));
-  // Debounced Sheets sync — don't hammer on rapid changes
-  clearTimeout(window._saveLeadsTimer);
-  window._saveLeadsTimer = setTimeout(syncLeadsToSheets, 1500);
+  clearTimeout(window._saveTimer);
+  window._saveTimer = setTimeout(pushToSupabase, 1500);
 }
 
 function saveActivities() {
   localStorage.setItem('crm_activities', JSON.stringify(activities));
-  clearTimeout(window._saveActsTimer);
-  window._saveActsTimer = setTimeout(syncActivitiesToSheets, 2000);
 }
 function log(type, text, color='') {
   activities.unshift({type, text, color, time: new Date().toISOString()});
@@ -1688,74 +1708,36 @@ function renderAutomation(c) {
 
 // ===================== DEPLOY VIEW =====================
 function renderDeploy(c) {
-  const connected = !!sheetsUrl;
   c.innerHTML = `
-  <!-- GOOGLE SHEETS DATABASE -->
-  <div class="card" style="margin-bottom:20px;border:2px solid ${connected?'#bbf7d0':'#e2e8f0'}">
-    <div class="card-header" style="background:${connected?'#f0fdf4':'#f8fafc'}">
-      <h3>${connected?'✅':'🗄️'} Google Sheets Database ${connected?'<span style="font-size:11px;font-weight:400;color:#16a34a">— Connected</span>':'<span style="font-size:11px;font-weight:400;color:#64748b">— Not connected</span>'}</h3>
-      ${connected?`<button class="btn btn-danger btn-sm" onclick="disconnectSheets()">Disconnect</button>`:''}
+  <!-- SUPABASE DATABASE STATUS -->
+  <div class="card" style="margin-bottom:20px;border:2px solid #bbf7d0">
+    <div class="card-header" style="background:linear-gradient(to right,#f0fdf4,#ecfdf5)">
+      <h3>🗄️ Supabase Database <span style="font-size:11px;font-weight:500;color:#16a34a;background:#dcfce7;padding:2px 10px;border-radius:20px;margin-left:6px">✅ Connected</span></h3>
+      <button class="btn btn-success btn-sm" onclick="forceSyncNow()">🔄 Sync Now</button>
     </div>
     <div style="padding:20px">
-      ${connected ? `
-        <div style="display:flex;align-items:center;gap:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin-bottom:16px">
-          <span style="font-size:24px">✅</span>
-          <div>
-            <div style="font-size:13px;font-weight:600;color:#166534">Your CRM is synced to Google Sheets</div>
-            <div style="font-size:11px;color:#16a34a;margin-top:2px;word-break:break-all">${sheetsUrl.substring(0,80)}…</div>
-          </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:22px;margin-bottom:4px">☁️</div>
+          <div style="font-size:12px;font-weight:700;color:#166534">Cloud Database</div>
+          <div style="font-size:11px;color:#16a34a;margin-top:2px">Supabase PostgreSQL</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-success btn-sm" onclick="forceSyncNow()">🔄 Sync Now</button>
-          <button class="btn btn-secondary btn-sm" onclick="openSheetsInBrowser()">📊 Open Sheet</button>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:22px;margin-bottom:4px">🔄</div>
+          <div style="font-size:12px;font-weight:700;color:#1e40af">Auto-Sync</div>
+          <div style="font-size:11px;color:#3b82f6;margin-top:2px">Every save pushes live</div>
         </div>
-      ` : `
-        <p style="font-size:13px;color:#374151;margin-bottom:16px">Connect a Google Sheet as your database — leads sync automatically on every save. Access your data from any device, any browser.</p>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-          <div style="background:#eff6ff;border-radius:8px;padding:14px;font-size:12px">
-            <div style="font-weight:700;color:#1d4ed8;margin-bottom:4px">✅ With Google Sheets</div>
-            <ul style="color:#374151;padding-left:16px;line-height:2">
-              <li>Data on every device</li>
-              <li>Auto-saves in background</li>
-              <li>View/edit leads in Sheets</li>
-              <li>Never lose data</li>
-            </ul>
-          </div>
-          <div style="background:#f8fafc;border-radius:8px;padding:14px;font-size:12px">
-            <div style="font-weight:700;color:#64748b;margin-bottom:4px">⚠️ Without (current)</div>
-            <ul style="color:#64748b;padding-left:16px;line-height:2">
-              <li>Browser-only storage</li>
-              <li>Data lost if cache cleared</li>
-              <li>One device only</li>
-              <li>Need manual JSON exports</li>
-            </ul>
-          </div>
+        <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:22px;margin-bottom:4px">🌍</div>
+          <div style="font-size:12px;font-weight:700;color:#6b21a8">Any Device</div>
+          <div style="font-size:11px;color:#7c3aed;margin-top:2px">Open on phone, laptop, anywhere</div>
         </div>
-
-        <div style="background:#0f172a;border-radius:8px;padding:16px;font-family:monospace;font-size:12px;color:#e2e8f0;margin-bottom:16px;line-height:2">
-          <div style="color:#64748b;margin-bottom:4px">// ── Step 1: Create a Google Sheet ──────────────</div>
-          <div style="color:#34d399">sheets.google.com → New blank spreadsheet</div>
-          <div style="color:#64748b;margin-top:8px;margin-bottom:4px">// ── Step 2: Open Apps Script ────────────────────</div>
-          <div>Extensions → Apps Script → paste <strong style="color:#fde68a">Code.gs</strong> file</div>
-          <div style="color:#64748b;margin-top:8px;margin-bottom:4px">// ── Step 3: Deploy ──────────────────────────────</div>
-          <div>Deploy → New deployment → Web App</div>
-          <div style="color:#fde68a">Execute as: Me | Who has access: Anyone</div>
-          <div style="color:#64748b;margin-top:8px;margin-bottom:4px">// ── Step 4: Paste the Web App URL below ─────────</div>
-        </div>
-
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <input id="sheets-url-input" type="url"
-            placeholder="https://script.google.com/macros/s/…/exec"
-            style="flex:1;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none"
-            value="${sheetsUrl}"
-            onfocus="this.style.borderColor='#3b82f6'"
-            onblur="this.style.borderColor='#e2e8f0'"
-          />
-          <button class="btn btn-primary" onclick="connectSheets()">Connect →</button>
-        </div>
-        <p style="font-size:11px;color:#64748b">The <strong>Code.gs</strong> file is at <code>C:\\Users\\Ahmad\\Downloads\\leads\\Code.gs</code> — open it in Notepad and copy the contents.</p>
-      `}
+      </div>
+      <div style="background:#0f172a;border-radius:8px;padding:14px;font-family:monospace;font-size:11px;color:#94a3b8;line-height:1.8">
+        <span style="color:#64748b">Project: </span><span style="color:#34d399">poise (ap-southeast-1)</span><br>
+        <span style="color:#64748b">Tables:  </span><span style="color:#e2e8f0">crm.leads · crm.activities</span><br>
+        <span style="color:#64748b">URL:     </span><span style="color:#60a5fa">https://idxtbwzpodlvwjcslrfw.supabase.co</span>
+      </div>
     </div>
   </div>
 
@@ -1850,43 +1832,10 @@ function renderDeploy(c) {
   </div>`;
 }
 
-async function connectSheets() {
-  const input = document.getElementById('sheets-url-input');
-  const url = (input && input.value.trim()) || '';
-  if (!url || !url.startsWith('https://script.google.com/')) {
-    toast('❌ Paste a valid Apps Script Web App URL'); return;
-  }
-  toast('🔄 Testing connection…');
-  const ok = await testSheetsConnection(url);
-  if (!ok) { toast('❌ Connection failed — check the URL and deployment settings'); return; }
-  sheetsUrl = url;
-  localStorage.setItem('crm_sheets_url', sheetsUrl);
-  toast('✅ Connected! Syncing leads to Google Sheets…');
-  setSyncStatus('syncing');
-  await syncLeadsToSheets();
-  await syncActivitiesToSheets();
-  showView('deploy');
-}
-
-function disconnectSheets() {
-  if (!confirm('Disconnect Google Sheets? Your local data stays intact.')) return;
-  sheetsUrl = '';
-  localStorage.removeItem('crm_sheets_url');
-  setSyncStatus('off');
-  toast('Disconnected from Google Sheets');
-  showView('deploy');
-}
-
 async function forceSyncNow() {
-  if (!sheetsUrl) { toast('No Sheets connection configured'); return; }
-  toast('🔄 Syncing all data…');
-  await syncLeadsToSheets();
-  await syncActivitiesToSheets();
-  toast('✅ All data synced to Google Sheets');
-}
-
-function openSheetsInBrowser() {
-  toast('Copy the spreadsheet URL from your Google Drive to open it');
+  toast('🔄 Syncing all leads to Supabase…');
+  await pushToSupabase();
+  toast('✅ All leads synced to Supabase cloud database');
 }
 
 function copyDeployScript() {
