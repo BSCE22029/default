@@ -1174,7 +1174,8 @@ function renderLeadTable() {
           ${l.emailBounced?'<span class="dot dot-red" title="Bounced"></span>':''}
         </div>
       </td>
-      <td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 10px" onclick="openComposeModal(${l.id})">📨 Send</button>
         <button class="btn btn-secondary btn-sm" onclick="openLeadDetail(${l.id})">View</button>
         <button class="btn btn-danger" onclick="deleteLead(${l.id})">✕</button>
       </td>
@@ -1241,7 +1242,10 @@ function renderEmails(c) {
           <td><input type="checkbox" ${l.emailReplied?'checked':''} onchange="toggleEmail(${l.id},'emailReplied',this.checked)"></td>
           <td><input type="checkbox" ${l.emailBounced?'checked':''} onchange="toggleEmail(${l.id},'emailBounced',this.checked)"></td>
           <td style="font-size:11px;color:#64748b">${l.lastContact ? new Date(l.lastContact).toLocaleDateString() : '—'}</td>
-          <td><button class="btn btn-secondary btn-sm" onclick="openLeadDetail(${l.id})">View</button></td>
+          <td style="display:flex;gap:4px">
+            <button class="btn btn-sm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 10px" onclick="openComposeModal(${l.id})">📨 Send</button>
+            <button class="btn btn-secondary btn-sm" onclick="openLeadDetail(${l.id})">View</button>
+          </td>
         </tr>`).join('')}
       </tbody>
     </table>
