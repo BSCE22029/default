@@ -106,6 +106,31 @@ tr:hover td { background:#fafbff; }
 .toolbar input, .toolbar select { padding:8px 11px; border:1.5px solid var(--border); border-radius:9px; outline:none; }
 .toolbar input:focus, .toolbar select:focus { border-color:var(--primary); }
 
+/* ---------- Filter chips ---------- */
+.filter-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.chip { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px;
+  border:1.5px solid var(--border); background:var(--card); cursor:pointer; font-size:12.5px;
+  font-weight:600; color:var(--muted); transition:all .15s; }
+.chip:hover { border-color:var(--primary); color:var(--primary); }
+.chip.active { background:var(--primary); border-color:var(--primary); color:#fff; }
+.chip-count { font-size:11px; background:rgba(0,0,0,.1); border-radius:20px; padding:1px 6px; }
+.chip.active .chip-count { background:rgba(255,255,255,.25); }
+
+/* ---------- Score badges ---------- */
+.score-badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:12px; font-weight:700; }
+.score-badge.hot  { background:#fef3c7; color:#92400e; }
+.score-badge.warm { background:#eff6ff; color:#1d4ed8; }
+.score-badge.cold { background:#f1f5f9; color:#475569; }
+
+/* ---------- Daily goal / Strike list ---------- */
+.progress-track { height:10px; background:var(--border); border-radius:20px; overflow:hidden; margin-bottom:4px; }
+.progress-bar   { height:100%; border-radius:20px; transition:width .4s ease; }
+.strike-list { display:flex; flex-direction:column; gap:8px; }
+.strike-row { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--bg);
+  border:1px solid var(--border); border-radius:10px; }
+.strike-score { width:40px; height:40px; border-radius:10px; display:flex; align-items:center;
+  justify-content:center; font-weight:800; font-size:15px; flex-shrink:0; }
+
 /* ---------- Pipeline ---------- */
 .kanban { display:grid; grid-auto-flow:column; grid-auto-columns: minmax(220px,1fr); gap:14px; overflow-x:auto; padding-bottom:8px; }
 .kcol { background:#f1f5f9; border-radius:12px; padding:10px; min-height:120px; }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase, sendEmail } from '../../lib/supabase';
 import Page, { Modal, statusPill } from '../../components/Page';
 import { useAuth } from '../../lib/AuthContext';
+import { ANGLES, generateDraft, defaultAngle, extractPhone } from '../../lib/emailDraft';
 
 const STATUSES = ['New Lead', 'Contacted', 'Qualified', 'Proposal Sent', 'Negotiation', 'Closed Won', 'Closed Lost'];
 const BLANK = { company: '', contact: '', email: '', website: '', industry: '', country: '', category: '', lead_score: 50, opportunity_size: '', status: 'New Lead', notes: '' };
@@ -12,96 +13,14 @@ const DEMO = [
   { company: 'Zendesk', contact: 'Tom Eggemeier', email: 'tom@zendesk.com', category: 'SaaS', industry: 'Customer Support', country: 'USA', lead_score: 79, opportunity_size: '$40K–$160K' },
 ];
 
-const ANGLES = [
-  { id: 'website', label: '🌐 No website pitch' },
-  { id: 'app',     label: '📱 Custom app pitch' },
-  { id: 'ai',      label: '🤖 AI automation pitch' },
-  { id: 'tech',    label: '⚡ Tech upgrade pitch' },
+const QUICK_FILTERS = [
+  { id: 'all',     label: 'All' },
+  { id: 'email',   label: '✉️ Has Email' },
+  { id: 'phone',   label: '📞 Has Phone' },
+  { id: 'nosite',  label: '🌐 No Website' },
+  { id: 'hot',     label: '🔥 Hot (≥70)' },
+  { id: 'unsent',  label: '📬 Not Emailed' },
 ];
-
-function extractCity(notes) {
-  return (notes || '').match(/Found in ([^.]+)\./)?.[1] || '';
-}
-
-function generateDraft(lead, angle) {
-  const first = (lead.contact || '').split(' ')[0] || 'there';
-  const co = lead.company || 'your company';
-  const noSite = !lead.website || lead.website === '';
-  const domain = noSite ? '' : lead.website.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
-  const city = extractCity(lead.notes);
-  const inCity = city ? ` in ${city}` : '';
-  const industry = lead.industry || lead.category || 'business';
-  const sig = `<p style="color:#555;font-size:14px">Best regards,<br><strong>Moiz Ahmad</strong><br>Atronm — Web &amp; AI Development<br><a href="https://atronm.com">atronm.com</a></p>`;
-
-  const resolved = angle || (noSite ? 'website' : 'tech');
-
-  if (resolved === 'website') {
-    return {
-      subject: `Quick question about ${co}'s online presence`,
-      body: `<p>Hi ${first},</p>
-<p>I was looking for ${industry.toLowerCase()} businesses${inCity} and came across ${co}. I noticed you don't currently have a website — which means potential customers searching online simply can't find you.</p>
-<p>At <strong>Atronm</strong>, we build clean, fast websites for businesses like yours — delivered in 2–3 weeks, starting from <strong>$1,500</strong>.</p>
-<p>What you'd get:</p>
-<ul>
-  <li>Professional site that ranks on Google</li>
-  <li>Contact/booking form so leads come to you</li>
-  <li>Mobile-friendly, fast-loading design</li>
-</ul>
-<p>Would you be open to a quick 10-minute call this week to see if it's a fit?</p>
-${sig}`,
-    };
-  }
-
-  if (resolved === 'app') {
-    return {
-      subject: `Custom app idea for ${co}`,
-      body: `<p>Hi ${first},</p>
-<p>I came across ${co}${inCity} and had an idea I wanted to share.</p>
-<p>We build custom web apps at <strong>Atronm</strong> that help ${industry.toLowerCase()} businesses automate their operations, serve clients online, and grow without extra headcount. Projects typically run <strong>$2,000–$6,000</strong> and go live in 4–6 weeks.</p>
-<p>Examples of what we've built for similar businesses:</p>
-<ul>
-  <li>Customer portals and booking systems</li>
-  <li>Internal dashboards and reporting tools</li>
-  <li>E-commerce and payment integrations</li>
-</ul>
-<p>Is there a repetitive process at ${co} you wish was automated? Happy to brainstorm — no commitment needed.</p>
-${sig}`,
-    };
-  }
-
-  if (resolved === 'ai') {
-    return {
-      subject: `AI can save ${co} hours every week — quick idea`,
-      body: `<p>Hi ${first},</p>
-<p>I was researching ${industry.toLowerCase()} companies${inCity} and wanted to reach out to ${co} specifically.</p>
-<p>At <strong>Atronm</strong>, we add AI to businesses like yours — think automatic lead follow-ups, smart data extraction, chatbots for your website, or AI-assisted reporting. Most integrations cost <strong>$1,500–$4,000</strong> and pay for themselves within weeks.</p>
-<p>A few things AI could handle for ${co}:</p>
-<ul>
-  <li>Auto-reply to common customer questions 24/7</li>
-  <li>Summarise documents or emails automatically</li>
-  <li>Flag priority leads or tasks without manual review</li>
-</ul>
-<p>Worth a 15-minute call to explore what's possible? I can show you a live demo.</p>
-${sig}`,
-    };
-  }
-
-  // default: tech upgrade
-  return {
-    subject: `Atronm × ${co} — a quick idea`,
-    body: `<p>Hi ${first},</p>
-<p>I visited <a href="${lead.website.startsWith('http') ? lead.website : 'https://' + lead.website}">${domain}</a> and noticed ${co} is already established${inCity}. I wanted to reach out because we've helped similar ${industry.toLowerCase()} businesses take their technology to the next level.</p>
-<p>At <strong>Atronm</strong>, we specialise in web apps, AI integrations, and cloud infrastructure. Our typical engagement is <strong>$2,000–$8,000</strong> and delivers in 4–6 weeks.</p>
-<p>What we could do for ${co}:</p>
-<ul>
-  <li>Speed up or modernise your current site/app</li>
-  <li>Build internal tools that reduce manual work</li>
-  <li>Add AI features your competitors don't have yet</li>
-</ul>
-<p>Happy to jump on a 15-minute call — no pitch, just exploring if there's a fit.</p>
-${sig}`,
-  };
-}
 
 export default function Leads() {
   const { orgId } = useAuth();
@@ -109,6 +28,8 @@ export default function Leads() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [fStatus, setFStatus] = useState('');
+  const [fQuick, setFQuick] = useState('all');
+  const [sortBy, setSortBy] = useState('score');
   const [edit, setEdit] = useState(null);
   const [compose, setCompose] = useState(null);
   const [draft, setDraft] = useState({ subject: '', body: '' });
@@ -119,15 +40,39 @@ export default function Leads() {
   async function load() {
     setLoading(true);
     const { data } = await supabase.from('app_leads').select('*').order('created_at', { ascending: false });
-    setLeads(data || []); setLoading(false);
+    setLeads(data || []);
+    setLoading(false);
   }
   useEffect(() => { load(); }, []);
 
-  const filtered = useMemo(() => leads.filter((l) => {
-    const s = (q || '').toLowerCase();
-    const hit = !s || [l.company, l.contact, l.email, l.category].some((v) => (v || '').toLowerCase().includes(s));
-    return hit && (!fStatus || l.status === fStatus);
-  }), [leads, q, fStatus]);
+  const filtered = useMemo(() => {
+    let rows = leads.filter((l) => {
+      const s = (q || '').toLowerCase();
+      const hit = !s || [l.company, l.contact, l.email, l.category, l.country].some((v) => (v || '').toLowerCase().includes(s));
+      if (!hit) return false;
+      if (fStatus && l.status !== fStatus) return false;
+      if (fQuick === 'email')  return l.email && l.email !== '';
+      if (fQuick === 'phone')  return !!extractPhone(l.notes);
+      if (fQuick === 'nosite') return !l.website || l.website === '';
+      if (fQuick === 'hot')    return (l.lead_score || 0) >= 70;
+      if (fQuick === 'unsent') return !l.email_sent;
+      return true;
+    });
+    if (sortBy === 'score')   rows = [...rows].sort((a, b) => (b.lead_score || 0) - (a.lead_score || 0));
+    if (sortBy === 'company') rows = [...rows].sort((a, b) => (a.company || '').localeCompare(b.company || ''));
+    if (sortBy === 'country') rows = [...rows].sort((a, b) => (a.country || '').localeCompare(b.country || ''));
+    if (sortBy === 'newest')  rows = [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return rows;
+  }, [leads, q, fStatus, fQuick, sortBy]);
+
+  // counts for filter chips
+  const counts = useMemo(() => ({
+    email:  leads.filter((l) => l.email && l.email !== '').length,
+    phone:  leads.filter((l) => !!extractPhone(l.notes)).length,
+    nosite: leads.filter((l) => !l.website || l.website === '').length,
+    hot:    leads.filter((l) => (l.lead_score || 0) >= 70).length,
+    unsent: leads.filter((l) => !l.email_sent).length,
+  }), [leads]);
 
   async function save(e) {
     e.preventDefault();
@@ -153,11 +98,10 @@ export default function Leads() {
   }
 
   function openCompose(l) {
-    const noSite = !l.website || l.website === '';
-    const defaultAngle = noSite ? 'website' : 'tech';
-    setAngle(defaultAngle);
+    const a = defaultAngle(l);
+    setAngle(a);
     setCompose(l);
-    setDraft(generateDraft(l, defaultAngle));
+    setDraft(generateDraft(l, a));
   }
 
   function regen(newAngle) {
@@ -194,44 +138,103 @@ export default function Leads() {
       </>
     }>
       {toast && <div className="alert alert-ok">{toast}</div>}
-      <div className="toolbar">
-        <input placeholder="Search company, contact, email…" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 240 }} />
+
+      {/* Search + status filter row */}
+      <div className="toolbar" style={{ marginBottom: 10 }}>
+        <input placeholder="Search company, contact, email, country…" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 260 }} />
         <select value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s}>{s}</option>)}
         </select>
-        <span style={{ color: 'var(--muted)', fontSize: 13 }}>{filtered.length} of {leads.length}</span>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="score">Sort: Score ↓</option>
+          <option value="newest">Sort: Newest</option>
+          <option value="company">Sort: Company A–Z</option>
+          <option value="country">Sort: Country A–Z</option>
+        </select>
+        <span style={{ color: 'var(--muted)', fontSize: 13, marginLeft: 'auto' }}>{filtered.length} of {leads.length}</span>
+      </div>
+
+      {/* Quick filter chips */}
+      <div className="filter-chips">
+        {QUICK_FILTERS.map((f) => (
+          <button key={f.id} className={`chip ${fQuick === f.id ? 'active' : ''}`} onClick={() => setFQuick(f.id)}>
+            {f.label}
+            {f.id !== 'all' && <span className="chip-count">{counts[f.id]}</span>}
+          </button>
+        ))}
       </div>
 
       <div className="card">
         <div className="card-body" style={{ padding: 0, overflowX: 'auto' }}>
           {loading ? <div className="empty">Loading…</div> :
-            filtered.length === 0 ? <div className="empty">No leads. Click <b>+ Add Lead</b> or <b>+ Demo data</b>.</div> : (
+            filtered.length === 0 ? (
+              <div className="empty">No leads match your filters. <button className="muted-link" onClick={() => { setFQuick('all'); setQ(''); setFStatus(''); }}>Clear filters</button></div>
+            ) : (
             <table>
-              <thead><tr><th>Company</th><th>Contact</th><th>Category</th><th>Status</th><th>Score</th><th>Deal</th><th></th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Contact</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Category</th>
+                  <th>Country</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'center' }}>Score</th>
+                  <th></th>
+                </tr>
+              </thead>
               <tbody>
-                {filtered.map((l) => (
-                  <tr key={l.id}>
-                    <td><b>{l.company}</b><div style={{ fontSize: 11, color: 'var(--muted)' }}>{l.website || <span style={{ color: 'var(--amber, #f59e0b)' }}>No website</span>}</div></td>
-                    <td>{l.contact}<div style={{ fontSize: 11, color: 'var(--muted)' }}>{l.email}</div></td>
-                    <td>{l.category}</td>
-                    <td>{statusPill(l.status)}{l.email_sent && <span title="emailed"> ✉️</span>}</td>
-                    <td><b>{l.lead_score}</b></td>
-                    <td style={{ fontSize: 12 }}>{l.opportunity_size}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <button
-                        className="btn btn-sm"
-                        style={{ background: l.email ? '#f0fdf4' : '#f8fafc', color: l.email ? '#166534' : '#94a3b8', minWidth: 80 }}
-                        disabled={!l.email}
-                        title={l.email ? 'Auto-draft & send email' : 'No email address — add one to enable'}
-                        onClick={() => openCompose(l)}>
-                        ✍️ Email
-                      </button>{' '}
-                      <button className="btn btn-sm btn-ghost" onClick={() => setEdit(l)}>Edit</button>{' '}
-                      <button className="btn btn-sm btn-danger" onClick={() => remove(l)}>✕</button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((l) => {
+                  const phone = extractPhone(l.notes);
+                  return (
+                    <tr key={l.id}>
+                      <td>
+                        <b>{l.company}</b>
+                        {(!l.website || l.website === '') ? (
+                          <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>No website</div>
+                        ) : (
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                            <a href={l.website.startsWith('http') ? l.website : 'https://' + l.website} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>{l.website.replace(/^https?:\/\//, '')}</a>
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ fontSize: 13 }}>{l.contact || <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                      <td style={{ fontSize: 12 }}>
+                        {l.email ? (
+                          <a href={`mailto:${l.email}`} style={{ color: 'var(--primary)' }}>{l.email}</a>
+                        ) : <span style={{ color: 'var(--muted)' }}>—</span>}
+                      </td>
+                      <td style={{ fontSize: 12 }}>
+                        {phone ? <a href={`tel:${phone}`} style={{ color: 'var(--text)' }}>{phone}</a> : <span style={{ color: 'var(--muted)' }}>—</span>}
+                      </td>
+                      <td style={{ fontSize: 12 }}>{l.category}</td>
+                      <td style={{ fontSize: 12 }}>{l.country}</td>
+                      <td>
+                        {statusPill(l.status)}
+                        {l.email_sent && <span title="email sent" style={{ marginLeft: 4 }}>✉️</span>}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className={`score-badge ${l.lead_score >= 80 ? 'hot' : l.lead_score >= 60 ? 'warm' : 'cold'}`}>
+                          {l.lead_score}
+                        </span>
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <button
+                          className="btn btn-sm"
+                          style={{ background: l.email ? '#f0fdf4' : '#f8fafc', color: l.email ? '#166534' : '#94a3b8', minWidth: 80 }}
+                          disabled={!l.email}
+                          title={l.email ? 'Auto-draft & send email' : 'No email — add one to enable'}
+                          onClick={() => openCompose(l)}>
+                          ✍️ Email
+                        </button>{' '}
+                        <button className="btn btn-sm btn-ghost" onClick={() => setEdit(l)}>Edit</button>{' '}
+                        <button className="btn btn-sm btn-danger" onClick={() => remove(l)}>✕</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -269,11 +272,10 @@ export default function Leads() {
       {compose && (
         <Modal title={`✍️ Email — ${compose.company}`} onClose={() => setCompose(null)}>
           <form onSubmit={doSend}>
-            {/* To + pitch angle row */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'flex-end' }}>
               <div className="field" style={{ flex: 1, marginBottom: 0 }}>
                 <label>To</label>
-                <input value={compose.email} readOnly style={{ background: 'var(--surface-2, #f8fafc)' }} />
+                <input value={compose.email} readOnly style={{ background: 'var(--bg)' }} />
               </div>
               <div className="field" style={{ flex: 1, marginBottom: 0 }}>
                 <label>Pitch angle</label>
@@ -285,7 +287,6 @@ export default function Leads() {
                 🔄 New draft
               </button>
             </div>
-
             <div className="field">
               <label>Subject</label>
               <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} required />
@@ -295,7 +296,6 @@ export default function Leads() {
               <textarea rows="12" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} required
                 style={{ fontFamily: 'monospace', fontSize: 12, lineHeight: 1.5 }} />
             </div>
-
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 4px', borderTop: '1px solid var(--border)' }}>
               <span style={{ fontSize: 12, color: 'var(--muted)', flex: 1 }}>Sends via moizahmad1604@gmail.com</span>
               <button type="button" className="btn btn-ghost" onClick={() => setCompose(null)}>Cancel</button>
