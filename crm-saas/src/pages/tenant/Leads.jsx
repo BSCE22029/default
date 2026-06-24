@@ -4,7 +4,8 @@ import Page, { Modal, statusPill } from '../../components/Page';
 import { useAuth } from '../../lib/AuthContext';
 import { ANGLES, generateDraft, defaultAngle, extractPhone } from '../../lib/emailDraft';
 
-const STATUSES = ['New Lead','Contacted','Qualified','Proposal Sent','Negotiation','Closed Won','Closed Lost'];
+const STATUSES  = ['New Lead','Contacted','Qualified','Proposal Sent','Negotiation','Closed Won','Closed Lost'];
+const PAGE_SIZE = 25;
 const BLANK = { company:'', contact:'', email:'', website:'', industry:'', country:'', category:'', lead_score:50, opportunity_size:'', status:'New Lead', notes:'' };
 const DEMO  = [
   { company:'Samsara',   contact:'Sanjit Biswas',    email:'sanjit@samsara.com', category:'IoT',  industry:'Fleet Tech',       country:'USA', lead_score:92, opportunity_size:'$50K–$200K' },
@@ -50,6 +51,7 @@ export default function Leads() {
   const [savingNote,  setSavingNote]  = useState(false);
   const [savingStatus,setSavingStatus]= useState(null);
   const [toast,       setToast]       = useState('');
+  const [page,        setPage]        = useState(1);
 
   async function load() {
     setLoading(true);
@@ -77,6 +79,12 @@ export default function Leads() {
     if (sortBy === 'newest')  rows = [...rows].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
     return rows;
   }, [leads, q, fStatus, fQuick, sortBy]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [q, fStatus, fQuick, sortBy]);
+
+  const pageCount = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const counts = useMemo(() => ({
     email:  leads.filter((l) => l.email && l.email !== '').length,
@@ -196,7 +204,10 @@ export default function Leads() {
           <option value="company">Company A–Z</option>
           <option value="country">Country A–Z</option>
         </select>
-        <span style={{ color:'var(--muted)', fontSize:13, marginLeft:'auto' }}>{filtered.length} of {leads.length}</span>
+        <span style={{ color:'var(--muted)', fontSize:13, marginLeft:'auto' }}>
+          {filtered.length === leads.length ? `${leads.length} leads` : `${filtered.length} of ${leads.length}`}
+          {pageCount > 1 && ` · page ${page}/${pageCount}`}
+        </span>
       </div>
 
       <div className="filter-chips">
@@ -234,7 +245,7 @@ export default function Leads() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((l) => {
+                {paginated.map((l) => {
                   const phone  = extractPhone(l.notes);
                   const domain = (l.website || '').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
                   const style  = STATUS_STYLE[l.status] || {};
@@ -290,6 +301,22 @@ export default function Leads() {
             </table>
           )}
         </div>
+        {/* Pagination */}
+        {pageCount > 1 && (
+          <div className="pagination">
+            <button className="page-btn" disabled={page === 1} onClick={() => setPage(1)}>«</button>
+            <button className="page-btn" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>‹</button>
+            {Array.from({ length: Math.min(pageCount, 7) }, (_, i) => {
+              const start = Math.max(1, Math.min(page - 3, pageCount - 6));
+              const p = start + i;
+              return p <= pageCount ? (
+                <button key={p} className={`page-btn ${page === p ? 'active' : ''}`} onClick={() => setPage(p)}>{p}</button>
+              ) : null;
+            })}
+            <button className="page-btn" disabled={page === pageCount} onClick={() => setPage((p) => p + 1)}>›</button>
+            <button className="page-btn" disabled={page === pageCount} onClick={() => setPage(pageCount)}>»</button>
+          </div>
+        )}
       </div>
 
       {/* Floating bulk action bar */}
