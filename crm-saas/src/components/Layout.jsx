@@ -5,6 +5,7 @@ const tenantNav = [
   { to: '/app', end: true, ico: '📊', label: 'Dashboard' },
   { to: '/app/leads', ico: '👥', label: 'Leads' },
   { to: '/app/pipeline', ico: '📋', label: 'Pipeline' },
+  { to: '/app/generator', ico: '⚡', label: 'Lead Generator' },
   { to: '/app/analytics', ico: '📈', label: 'Analytics' },
   { to: '/app/team', ico: '⚙️', label: 'Team & Settings' },
 ];

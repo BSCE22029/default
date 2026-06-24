@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/tenant/Dashboard';
 import Leads from './pages/tenant/Leads';
 import Pipeline from './pages/tenant/Pipeline';
+import Generator from './pages/tenant/Generator';
 import Analytics from './pages/tenant/Analytics';
 import Team from './pages/tenant/Team';
 import AdminHome from './pages/admin/AdminHome';
@@ -41,6 +42,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="leads" element={<Leads />} />
         <Route path="pipeline" element={<Pipeline />} />
+        <Route path="generator" element={<Generator />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="team" element={<Team />} />
       </Route>

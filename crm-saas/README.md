@@ -12,7 +12,7 @@ This lives alongside the original single-file `crm.html` (which is untouched).
 
 | Panel | Who | What they can do |
 |-------|-----|------------------|
-| **Tenant app** (`/app`) | Business admins & members | Manage their own leads, pipeline, analytics, send emails, invite teammates |
+| **Tenant app** (`/app`) | Business admins & members | Manage their own leads, **generate new leads from the web**, pipeline, analytics, send emails, invite teammates |
 | **Super-admin console** (`/admin`) | Platform owner | See every organization, user counts, lead totals; suspend or delete tenants |
 
 **Data isolation is enforced in the database** (Postgres Row-Level Security),
@@ -87,7 +87,30 @@ React (Vite) ──┬─► Supabase Auth            (login / signup sessions)
                      • signup         → creates a confirmed user (no email step)
                      • invite-member  → admin adds a teammate to their org
                      • send-email      → Gmail SMTP (shared with crm.html)
+                     • generate-leads → real businesses from OpenStreetMap (Nominatim + Overpass)
+                     • autogen-run    → scheduled lead generation per org (pg_cron daily)
 ```
+
+## Lead Generator
+
+The **Lead Generator** (`/app/generator`) finds **real businesses** and adds them
+to a tenant's CRM. It is fully automatable.
+
+- **Manual:** enter a city (required) + optional keyword + count → "Generate".
+  Results come from **OpenStreetMap's public business directory** (Nominatim
+  geocodes the city, Overpass returns offices/companies in the centre). Add any
+  result, or "Add all", to the CRM. No API key, no cost.
+- **Automated:** toggle "Enable auto-generation" and set keyword/city/daily-limit.
+  A **pg_cron job runs daily at 08:00 UTC** → `autogen-run` finds fresh leads for
+  every org that opted in, skips duplicates, and inserts them automatically. Use
+  "Run now" to trigger it immediately.
+
+**Honest limits:** this returns real companies with their **websites/phones, and
+emails only where a business has published one publicly** — it does not harvest
+private personal emails or scrape the entire internet (that's both legally risky
+under spam/privacy law and not what public directories provide). Coverage varies
+by city. To plug in a paid B2B data provider (Apollo, Hunter, etc.) later, swap
+the source inside the `generate-leads` Edge Function.
 
 ### Why server-side signup?
 The Supabase project has email-confirmation on but no auth SMTP, so the normal
@@ -140,6 +163,7 @@ crm-saas/
 - [x] Super-admin console (all orgs, suspend/delete, platform stats)
 - [x] Tenant dashboard with live KPIs
 - [x] Leads: search, filter, add/edit/delete, demo-data seeding
+- [x] **Lead Generator** — pull real businesses from the web by city/keyword + **automated daily generation** (cron)
 - [x] Send real emails per lead (Gmail SMTP via Edge Function)
 - [x] Drag-and-drop pipeline (7 stages)
 - [x] Analytics (funnel + breakdowns by category/country/industry)
