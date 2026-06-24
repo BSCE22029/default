@@ -1,4 +1,5 @@
 import { useAuth } from '../lib/AuthContext';
+import NotifBell from './NotifBell';
 
 function initials(str) {
   if (!str) return '?';
@@ -34,7 +35,7 @@ export function CoAvatar({ company, size = 34 }) {
   const ini   = words.length >= 2
     ? (words[0][0] + words[1][0]).toUpperCase()
     : (words[0] || '?').slice(0, 2).toUpperCase();
-  const h   = hue(company);
+  const h = hue(company);
   return (
     <div title={company} style={{
       width: size, height: size, borderRadius: 9, flexShrink: 0,
@@ -56,6 +57,7 @@ export default function Page({ title, actions, children }) {
         <h2>{title}</h2>
         <div className="row" style={{ gap: 10 }}>
           {actions}
+          <NotifBell />
           <Avatar name={profile?.full_name || profile?.email} size={34} />
         </div>
       </div>
