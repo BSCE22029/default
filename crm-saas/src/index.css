@@ -55,16 +55,44 @@ body {
 a { color: inherit; text-decoration: none; }
 input, select, textarea, button { font-family: inherit; font-size: 14px; }
 
-/* ---------- Auth screens ---------- */
-.auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px;
-  background: linear-gradient(135deg, #eef2ff 0%, #f6f8fb 60%); }
-.auth-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(15,23,42,.08); padding: 32px; width: 100%; max-width: 400px; }
-.auth-card h1 { font-size: 22px; margin-bottom: 4px; }
-.auth-card .sub { color: var(--muted); margin-bottom: 22px; font-size: 13px; }
-.brand { display:flex; align-items:center; gap:10px; margin-bottom: 18px; font-weight: 800; font-size: 18px; }
-.brand .dot { width: 26px; height: 26px; border-radius: 8px;
-  background: linear-gradient(135deg, var(--primary), #7c3aed); }
+/* ---------- Auth — split screen ---------- */
+.auth-split { min-height:100vh; display:grid; grid-template-columns:1fr 1fr; }
+
+.auth-panel {
+  background: linear-gradient(145deg, #3730a3 0%, #6d28d9 55%, #7c3aed 100%);
+  display:flex; align-items:center; justify-content:center; padding:56px 48px;
+  position:relative; overflow:hidden;
+}
+.auth-panel::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse at 25% 85%, rgba(255,255,255,.09) 0%, transparent 55%),
+              radial-gradient(ellipse at 80% 15%, rgba(255,255,255,.07) 0%, transparent 55%);
+}
+.auth-panel-inner { max-width:380px; position:relative; z-index:1; }
+
+.auth-form-panel {
+  display:flex; align-items:center; justify-content:center;
+  padding:48px 32px; background:var(--bg); overflow-y:auto;
+}
+
+.auth-card { background:var(--card); border:1px solid var(--border); border-radius:20px;
+  box-shadow:0 12px 48px rgba(15,23,42,.09); padding:36px; width:100%; max-width:420px; }
+.auth-card h1 { font-size:22px; margin-bottom:4px; }
+.auth-card .sub { color:var(--muted); font-size:13px; }
+
+/* Legacy centered auth (fallback) */
+.auth-wrap { min-height:100vh; display:grid; place-items:center; padding:24px;
+  background:linear-gradient(135deg,#eef2ff 0%,#f6f8fb 60%); }
+
+.brand { display:flex; align-items:center; gap:10px; font-weight:800; font-size:18px; }
+.brand .dot { width:26px; height:26px; border-radius:8px;
+  background:linear-gradient(135deg, var(--primary), #7c3aed); }
+
+@media (max-width:820px) {
+  .auth-split { grid-template-columns:1fr; }
+  .auth-panel { display:none; }
+  .auth-form-panel { min-height:100vh; padding:32px 20px; }
+}
 
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
@@ -100,16 +128,21 @@ input, select, textarea, button { font-family: inherit; font-size: 14px; }
 .sidebar nav a:hover { background:#1e293b; color:#fff; }
 .sidebar nav a.active { background: var(--primary); color:#fff; }
 .sidebar .ico { width:18px; text-align:center; }
+.sidebar nav a { transition:all .15s; }
+.sidebar nav a.active { background:rgba(99,102,241,.18); color:#a5b4fc; position:relative; }
+.sidebar nav a.active::before { content:''; position:absolute; left:0; top:7px; bottom:7px; width:3px; background:#6366f1; border-radius:0 3px 3px 0; }
 .sidebar .who { border-top:1px solid #1e293b; padding-top:14px; margin-top:10px; font-size:12px; color:#94a3b8; }
 .sidebar .who b { color:#fff; display:block; font-size:13px; }
 .badge-role { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px;
   background:#1e293b; color:#a5b4fc; margin-top:6px; text-transform:uppercase; letter-spacing:.04em; }
 
 .main { display:flex; flex-direction:column; min-width:0; }
-.topbar { height:60px; background:var(--card); border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between; padding:0 24px; }
-.topbar h2 { font-size:17px; }
-.content { padding: 24px; }
+.topbar { height:62px; background:var(--card); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; padding:0 26px;
+  position:sticky; top:0; z-index:20; }
+.topbar h2 { font-size:17px; font-weight:700; }
+.content { padding:26px; animation:fadeUp .18s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 
 /* ---------- Cards / grid ---------- */
 .card { background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); }
@@ -288,6 +321,37 @@ table input[type=checkbox] { width:15px; height:15px; cursor:pointer; accent-col
 .page-btn:hover:not(:disabled) { border-color:var(--primary); color:var(--primary); }
 .page-btn.active { background:var(--primary); border-color:var(--primary); color:#fff; }
 .page-btn:disabled { opacity:.35; cursor:not-allowed; }
+
+/* ===== Global transitions & focus ===== */
+input, select, textarea, button, a { transition:all .15s ease; }
+.field input:focus, .field select:focus, .field textarea:focus,
+.toolbar input:focus, .toolbar select:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+  outline: none;
+}
+.btn:active:not(:disabled) { transform:scale(.97); }
+.btn:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+
+/* ===== Card & kanban hover lifts ===== */
+.card { transition:box-shadow .2s ease; }
+.card:hover { box-shadow:0 4px 24px rgba(15,23,42,.09); }
+.kcard { transition:transform .15s ease, box-shadow .15s ease; }
+.kcard:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(15,23,42,.13); }
+
+/* ===== Better scrollbars ===== */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:10px; }
+::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+
+/* ===== Modal close button ===== */
+.x-btn { background:none; border:none; cursor:pointer; color:var(--muted); font-size:22px; line-height:1; padding:0 4px; border-radius:6px; }
+.x-btn:hover { background:var(--bg); color:var(--text); }
+
+/* ===== Dark mode auth ===== */
+[data-theme="dark"] .auth-form-panel { background:var(--bg); }
+[data-theme="dark"] .auth-card { background:var(--card); border-color:var(--border); }
 
 @media (max-width: 820px) {
   .shell { grid-template-columns: 1fr; }

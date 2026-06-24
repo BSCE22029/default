@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, sendEmail } from '../../lib/supabase';
-import Page, { Modal, statusPill } from '../../components/Page';
+import Page, { Modal, statusPill, CoAvatar } from '../../components/Page';
 import { useAuth } from '../../lib/AuthContext';
 import { ANGLES, generateDraft, defaultAngle, extractPhone } from '../../lib/emailDraft';
 
@@ -255,16 +255,21 @@ export default function Leads() {
                         <input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleSelect(l.id)} />
                       </td>
                       <td>
-                        <button className="company-btn" onClick={() => openDetail(l)}>
-                          <b style={{ fontSize:13 }}>{l.company}</b>
-                        </button>
-                        {(!l.website || l.website === '') ? (
-                          <div style={{ fontSize:11, color:'#f59e0b', fontWeight:600 }}>No website</div>
-                        ) : (
-                          <div style={{ fontSize:11 }}>
-                            <a href={l.website.startsWith('http') ? l.website : 'https://'+l.website} target="_blank" rel="noreferrer" style={{ color:'var(--primary)' }}>{domain}</a>
+                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                          <CoAvatar company={l.company} size={32} />
+                          <div>
+                            <button className="company-btn" onClick={() => openDetail(l)}>
+                              <b style={{ fontSize:13 }}>{l.company}</b>
+                            </button>
+                            {(!l.website || l.website === '') ? (
+                              <div style={{ fontSize:11, color:'#f59e0b', fontWeight:600 }}>No website</div>
+                            ) : (
+                              <div style={{ fontSize:11 }}>
+                                <a href={l.website.startsWith('http') ? l.website : 'https://'+l.website} target="_blank" rel="noreferrer" style={{ color:'var(--primary)' }}>{domain}</a>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                       <td style={{ fontSize:13 }}>{l.contact || <span style={{ color:'var(--muted)' }}>—</span>}</td>
                       <td style={{ fontSize:12 }}>
