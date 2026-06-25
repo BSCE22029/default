@@ -78,6 +78,9 @@ export default function Leads() {
   // CSV import
   const [importData,  setImportData]  = useState(null); // { headers, rows, mapping }
   const [importing,   setImporting]   = useState(false);
+  const [sendAllOpen, setSendAllOpen] = useState(false);
+  const [sendAllMode, setSendAllMode] = useState('unsent'); // 'unsent' | 'all'
+  const [sendAllProg, setSendAllProg] = useState({ running:false, done:0, total:0, current:'', errors:0 });
   const fileRef = useRef();
 
   async function load() {
@@ -266,6 +269,29 @@ export default function Leads() {
     toast$(`✅ Sent emails to ${toSend.length} leads`); load();
   }
 
+  async function sendAll() {
+    const pool = leads.filter((l) => l.email && (sendAllMode === 'all' || !l.email_sent));
+    if (!pool.length) { setSendAllOpen(false); return; }
+    setSendAllProg({ running:true, done:0, total:pool.length, current:'', errors:0 });
+    let errors = 0;
+    for (const l of pool) {
+      setSendAllProg((p) => ({ ...p, current: l.company }));
+      const d = generateDraft(l, defaultAngle(l));
+      try {
+        await sendEmail({ to: l.email, subject: d.subject, html: d.body });
+        await supabase.from('app_leads').update({
+          email_sent: true, last_contact: new Date().toISOString(),
+          status: l.status === 'New Lead' ? 'Contacted' : l.status,
+        }).eq('id', l.id);
+      } catch { errors++; }
+      setSendAllProg((p) => ({ ...p, done: p.done + 1, errors }));
+    }
+    setSendAllProg((p) => ({ ...p, running: false }));
+    load();
+  }
+
+  const sendAllPool = leads.filter((l) => l.email && (sendAllMode === 'all' || !l.email_sent));
+
   return (
     <Page title="Leads" actions={
       <>
@@ -273,6 +299,10 @@ export default function Leads() {
         <button className="btn btn-ghost btn-sm" onClick={() => fileRef.current?.click()} title="Import CSV">⬆️ Import</button>
         <button className="btn btn-ghost btn-sm" onClick={exportCSV} title="Export current view as CSV">⬇️ Export</button>
         <button className="btn btn-ghost btn-sm" onClick={seedDemo}>+ Demo</button>
+        <button className="btn btn-sm" style={{ background:'#fef3c7', color:'#92400e', border:'1px solid #fde68a', fontWeight:700 }}
+          onClick={() => { setSendAllMode('unsent'); setSendAllOpen(true); }}>
+          📨 Send All
+        </button>
         <button className="btn btn-primary btn-sm" onClick={() => setEdit({ ...BLANK })}>+ Add Lead</button>
       </>
     }>
@@ -589,6 +619,109 @@ export default function Leads() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Send All modal */}
+      {sendAllOpen && (
+        <div className="overlay" onClick={(e) => { if (e.target.classList.contains('overlay') && !sendAllProg.running) setSendAllOpen(false); }}>
+          <div className="modal" style={{ maxWidth:460 }}>
+            <div className="modal-head">
+              <h3>📨 Send emails to all leads</h3>
+              {!sendAllProg.running && <button className="x-btn" onClick={() => setSendAllOpen(false)}>×</button>}
+            </div>
+            <div className="modal-body">
+              {!sendAllProg.running && !sendAllProg.done ? (<>
+                {/* Mode picker */}
+                <div style={{ display:'flex', gap:10, marginBottom:20 }}>
+                  <button
+                    className={`btn ${sendAllMode==='unsent' ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ flex:1, flexDirection:'column', height:'auto', padding:'14px', gap:4 }}
+                    onClick={() => setSendAllMode('unsent')}>
+                    <div style={{ fontSize:22 }}>📬</div>
+                    <div style={{ fontWeight:800, fontSize:13 }}>Unsent only</div>
+                    <div style={{ fontSize:11, opacity:.8 }}>
+                      {leads.filter((l) => l.email && !l.email_sent).length} leads not yet emailed
+                    </div>
+                  </button>
+                  <button
+                    className={`btn ${sendAllMode==='all' ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ flex:1, flexDirection:'column', height:'auto', padding:'14px', gap:4 }}
+                    onClick={() => setSendAllMode('all')}>
+                    <div style={{ fontSize:22 }}>📤</div>
+                    <div style={{ fontWeight:800, fontSize:13 }}>All with email</div>
+                    <div style={{ fontSize:11, opacity:.8 }}>
+                      {leads.filter((l) => l.email).length} total leads with email
+                    </div>
+                  </button>
+                </div>
+
+                <div className="alert alert-ok" style={{ marginBottom:16 }}>
+                  <b>{sendAllPool.length} email{sendAllPool.length !== 1 ? 's' : ''}</b> will be auto-drafted and sent using your saved templates. Each lead gets a personalised message.
+                </div>
+
+                {sendAllPool.length === 0 ? (
+                  <div style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:'8px 0' }}>
+                    No leads match this filter.
+                  </div>
+                ) : (
+                  <div style={{ fontSize:12, color:'var(--muted)', marginBottom:4 }}>
+                    Sends from: <b>moizahmad1604@gmail.com</b> · Auto-drafts personalised pitch per lead
+                  </div>
+                )}
+              </>) : sendAllProg.running ? (<>
+                {/* Live progress */}
+                <div style={{ textAlign:'center', marginBottom:16 }}>
+                  <div style={{ fontSize:32, marginBottom:8 }}>📨</div>
+                  <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>Sending emails…</div>
+                  <div style={{ fontSize:13, color:'var(--muted)' }}>
+                    {sendAllProg.done} of {sendAllProg.total} sent
+                    {sendAllProg.current && ` · ${sendAllProg.current}`}
+                  </div>
+                </div>
+                <div style={{ height:8, background:'var(--border)', borderRadius:99, overflow:'hidden', marginBottom:8 }}>
+                  <div style={{
+                    height:'100%', borderRadius:99,
+                    width:`${Math.round((sendAllProg.done/sendAllProg.total)*100)}%`,
+                    background:'linear-gradient(90deg,#6366f1,#22c55e)',
+                    transition:'width .3s ease',
+                  }} />
+                </div>
+                <div style={{ fontSize:12, color:'var(--muted)', textAlign:'center' }}>
+                  {Math.round((sendAllProg.done/sendAllProg.total)*100)}% complete
+                  {sendAllProg.errors > 0 && <span style={{ color:'var(--red)', marginLeft:8 }}>{sendAllProg.errors} errors</span>}
+                </div>
+              </>) : (<>
+                {/* Done state */}
+                <div style={{ textAlign:'center', padding:'10px 0' }}>
+                  <div style={{ fontSize:44, marginBottom:10 }}>🎉</div>
+                  <div style={{ fontWeight:800, fontSize:18, marginBottom:6 }}>All done!</div>
+                  <div style={{ fontSize:14, color:'var(--muted)', marginBottom:4 }}>
+                    <b style={{ color:'var(--green)' }}>{sendAllProg.done - sendAllProg.errors}</b> emails sent successfully
+                  </div>
+                  {sendAllProg.errors > 0 && (
+                    <div style={{ fontSize:13, color:'var(--red)' }}>{sendAllProg.errors} failed</div>
+                  )}
+                </div>
+              </>)}
+            </div>
+
+            {!sendAllProg.running && (
+              <div className="modal-foot">
+                {!sendAllProg.done ? (<>
+                  <button className="btn btn-ghost" onClick={() => setSendAllOpen(false)}>Cancel</button>
+                  <button className="btn btn-primary" disabled={sendAllPool.length === 0}
+                    onClick={sendAll} style={{ minWidth:160 }}>
+                    📨 Send {sendAllPool.length} email{sendAllPool.length !== 1 ? 's' : ''}
+                  </button>
+                </>) : (
+                  <button className="btn btn-primary" onClick={() => { setSendAllOpen(false); setSendAllProg({ running:false, done:0, total:0, current:'', errors:0 }); }}>
+                    ✓ Close
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* CSV Import modal */}
