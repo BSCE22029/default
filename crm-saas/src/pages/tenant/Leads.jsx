@@ -78,6 +78,8 @@ export default function Leads() {
   // CSV import
   const [importData,  setImportData]  = useState(null); // { headers, rows, mapping }
   const [importing,   setImporting]   = useState(false);
+  const [confirmLead, setConfirmLead] = useState(null);
+  const [confirming,  setConfirming]  = useState(false);
   const [sendAllOpen, setSendAllOpen] = useState(false);
   const [sendAllMode, setSendAllMode] = useState('unsent'); // 'unsent' | 'all'
   const [sendAllProg, setSendAllProg] = useState({ running:false, done:0, total:0, current:'', errors:0 });
@@ -146,6 +148,22 @@ export default function Leads() {
     setLeads((prev) => prev.map((x) => x.id === l.id ? { ...x, email_replied: true, status: 'Qualified' } : x));
     if (detailLead?.id === l.id) setDetailLead((d) => ({ ...d, email_replied: true, status: 'Qualified' }));
     toast$(`↩ ${l.company} marked as replied — status → Qualified`);
+  }
+
+  async function doConfirm(action) {
+    if (!confirmLead) return;
+    setConfirming(true);
+    const updates = action === 'qualify'
+      ? { status: 'Qualified', confirmed_at: new Date().toISOString() }
+      : { status: 'Closed Lost' };
+    await supabase.from('app_leads').update(updates).eq('id', confirmLead.id);
+    setLeads((prev) => prev.map((x) => x.id === confirmLead.id ? { ...x, ...updates } : x));
+    setConfirming(false);
+    const msg = action === 'qualify'
+      ? `✅ ${confirmLead.company} confirmed — moved to Qualified`
+      : `❌ ${confirmLead.company} rejected — moved to Closed Lost`;
+    toast$(msg);
+    setConfirmLead(null);
   }
 
   async function bulkChangeStatus(status) {
@@ -418,13 +436,17 @@ export default function Leads() {
                         <span className={`score-badge ${l.lead_score >= 80 ? 'hot' : l.lead_score >= 60 ? 'warm' : 'cold'}`}>{l.lead_score}</span>
                       </td>
                       <td style={{ whiteSpace:'nowrap' }}>
-                        {l.email_sent && !l.email_replied ? (
+                        {l.status === 'New Lead' && (
+                          <button className="btn btn-sm" style={{ background:'#f0f9ff', color:'#0369a1', border:'1px solid #bae6fd', marginRight:4, fontWeight:700 }}
+                            onClick={() => setConfirmLead(l)} title="Review & confirm this lead">✓ Confirm</button>
+                        )}
+                        {l.status !== 'New Lead' && (l.email_sent && !l.email_replied ? (
                           <button className="btn btn-sm" style={{ background:'#f0fdf4', color:'#166534', marginRight:4 }}
                             onClick={() => markReplied(l)} title="Mark as replied">↩ Replied</button>
                         ) : (
                           <button className="btn btn-sm" style={{ background: l.email ? '#f0fdf4' : '#f8fafc', color: l.email ? '#166534' : '#94a3b8', minWidth:72, marginRight:4 }}
                             disabled={!l.email} onClick={() => openCompose(l)}>✍️ Email</button>
-                        )}
+                        ))}
                         <button className="btn btn-sm btn-danger" onClick={() => remove(l)}>✕</button>
                       </td>
                     </tr>
@@ -487,6 +509,10 @@ export default function Leads() {
 
           <div className="drawer-body">
             <div className="drawer-actions">
+              {detailLead.status === 'New Lead' && (
+                <button className="btn btn-sm" style={{ background:'#f0f9ff', color:'#0369a1', border:'1px solid #bae6fd', fontWeight:700 }}
+                  onClick={() => { setDetailLead(null); setConfirmLead(detailLead); }}>✓ Confirm Lead</button>
+              )}
               <button className="btn btn-primary btn-sm" disabled={!detailLead.email}
                 onClick={() => { setDetailLead(null); openCompose(detailLead); }}>✍️ Email</button>
               {detailLead.email_sent && !detailLead.email_replied && (
@@ -760,6 +786,114 @@ export default function Leads() {
           </div>
         </Modal>
       )}
+      {/* ── Confirm Lead modal ───────────────────────────────── */}
+      {confirmLead && (() => {
+        const l = confirmLead;
+        const checks = [
+          { label: 'Has email address',   ok: !!l.email },
+          { label: 'Has contact name',    ok: !!l.contact },
+          { label: 'Has website',         ok: !!l.website },
+          { label: 'Lead score ≥ 70',     ok: (l.lead_score || 0) >= 70 },
+          { label: 'Category identified', ok: !!l.category },
+        ];
+        const passCount = checks.filter((c) => c.ok).length;
+        const pct       = Math.round((passCount / checks.length) * 100);
+        const scoreColor = l.lead_score >= 80 ? '#22c55e' : l.lead_score >= 60 ? '#f59e0b' : '#94a3b8';
+        const readyColor = passCount >= 4 ? '#22c55e' : passCount >= 3 ? '#f59e0b' : '#ef4444';
+        const ready      = passCount >= 3;
+        return (
+          <div className="overlay" onClick={(e) => { if (e.target.classList.contains('overlay') && !confirming) setConfirmLead(null); }}>
+            <div className="modal confirm-modal" style={{ maxWidth:500 }}>
+              <div className="modal-head">
+                <h3>Confirm Lead</h3>
+                <button className="x-btn" onClick={() => setConfirmLead(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{ padding:'20px 24px', display:'flex', flexDirection:'column', gap:18 }}>
+
+                {/* Company header */}
+                <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+                  <CoAvatar company={l.company} size={56} />
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:800, fontSize:20, lineHeight:1.2 }}>{l.company}</div>
+                    {l.contact && <div style={{ fontSize:13, color:'var(--muted)', marginTop:2 }}>{l.contact}</div>}
+                    {l.category && <div style={{ fontSize:11, marginTop:4 }}><span className="tag">{l.category}</span></div>}
+                  </div>
+                  {/* Score ring */}
+                  <div style={{ position:'relative', width:64, height:64, flexShrink:0 }}>
+                    <svg width="64" height="64" style={{ transform:'rotate(-90deg)' }}>
+                      <circle cx="32" cy="32" r="26" fill="none" stroke="var(--border)" strokeWidth="6"/>
+                      <circle cx="32" cy="32" r="26" fill="none" stroke={scoreColor} strokeWidth="6"
+                        strokeDasharray={`${2*Math.PI*26}`}
+                        strokeDashoffset={`${2*Math.PI*26 * (1 - (l.lead_score||0)/100)}`}
+                        strokeLinecap="round"/>
+                    </svg>
+                    <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                      <span style={{ fontSize:16, fontWeight:800, color:scoreColor, lineHeight:1 }}>{l.lead_score || 0}</span>
+                      <span style={{ fontSize:9, color:'var(--muted)', fontWeight:600 }}>SCORE</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detail grid */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 16px', background:'var(--bg)', borderRadius:10, padding:'12px 14px', fontSize:13 }}>
+                  {[
+                    { k:'Email',     v: l.email },
+                    { k:'Website',   v: l.website },
+                    { k:'Country',   v: l.country },
+                    { k:'Size',      v: l.opportunity_size },
+                  ].map(({ k, v }) => v ? (
+                    <div key={k}>
+                      <span style={{ color:'var(--muted)', fontSize:11, fontWeight:600 }}>{k} </span>
+                      <span style={{ fontWeight:600, wordBreak:'break-all' }}>{v}</span>
+                    </div>
+                  ) : null)}
+                </div>
+
+                {/* Qualification checklist */}
+                <div>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                    <span style={{ fontWeight:700, fontSize:13 }}>Qualification checklist</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:readyColor, background:readyColor+'18', padding:'2px 10px', borderRadius:20 }}>
+                      {passCount}/{checks.length} checks passed
+                    </span>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    {checks.map((c) => (
+                      <div key={c.label} style={{ display:'flex', alignItems:'center', gap:10, fontSize:13 }}>
+                        <span style={{ width:20, height:20, borderRadius:'50%', background: c.ok ? '#dcfce7' : '#fee2e2', color: c.ok ? '#16a34a' : '#dc2626', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:12, flexShrink:0 }}>
+                          {c.ok ? '✓' : '✕'}
+                        </span>
+                        <span style={{ color: c.ok ? 'var(--text)' : 'var(--muted)' }}>{c.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Readiness banner */}
+                <div style={{ borderRadius:9, padding:'10px 14px', background: ready ? '#f0fdf4' : '#fef9ec', border:`1px solid ${ready ? '#bbf7d0' : '#fde68a'}`, fontSize:13, color: ready ? '#15803d' : '#92400e', fontWeight:600 }}>
+                  {ready
+                    ? `✅ This lead looks qualified. Ready to move to the pipeline.`
+                    : `⚠️ This lead may need more information before confirming.`}
+                </div>
+              </div>
+
+              <div className="modal-foot" style={{ gap:8 }}>
+                <button className="btn btn-ghost" disabled={confirming} onClick={() => setConfirmLead(null)}>Cancel</button>
+                <button className="btn btn-sm" disabled={confirming}
+                  style={{ background:'#fef2f2', color:'#dc2626', border:'1px solid #fecaca', fontWeight:700 }}
+                  onClick={() => doConfirm('reject')}>
+                  {confirming ? '…' : '❌ Not Qualified'}
+                </button>
+                <button className="btn btn-primary" disabled={confirming}
+                  style={{ background:'#22c55e', minWidth:150, fontWeight:700 }}
+                  onClick={() => doConfirm('qualify')}>
+                  {confirming ? 'Saving…' : '✅ Confirm & Qualify'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </Page>
   );
 }
