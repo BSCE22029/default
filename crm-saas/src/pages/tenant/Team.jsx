@@ -3,6 +3,55 @@ import { supabase } from '../../lib/supabase';
 import Page, { Modal } from '../../components/Page';
 import { useAuth } from '../../lib/AuthContext';
 
+function ChangePasswordCard() {
+  const { changePassword } = useAuth();
+  const [form, setForm] = useState({ newPw: '', confirmPw: '' });
+  const [busy, setBusy] = useState(false);
+  const [msg,  setMsg]  = useState('');
+  const [err,  setErr]  = useState('');
+
+  async function submit(e) {
+    e.preventDefault();
+    setMsg(''); setErr('');
+    if (form.newPw.length < 6) return setErr('Password must be at least 6 characters.');
+    if (form.newPw !== form.confirmPw) return setErr('Passwords do not match.');
+    setBusy(true);
+    const { error } = await changePassword(form.newPw);
+    setBusy(false);
+    if (error) return setErr(error.message);
+    setMsg('Password updated successfully ✓');
+    setForm({ newPw: '', confirmPw: '' });
+    setTimeout(() => setMsg(''), 3500);
+  }
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h3>Change Password</h3>
+        {msg && <span style={{ color:'var(--green)', fontSize:12 }}>{msg}</span>}
+      </div>
+      <div className="card-body">
+        <form onSubmit={submit}>
+          {err && <div className="alert alert-error" style={{ marginBottom:12 }}>{err}</div>}
+          <div className="field">
+            <label>New password <span style={{ fontWeight:400, color:'var(--muted)', fontSize:11 }}>(min. 6 chars)</span></label>
+            <input type="password" value={form.newPw} placeholder="••••••••" minLength={6} required
+              onChange={(e) => setForm({ ...form, newPw: e.target.value })} />
+          </div>
+          <div className="field" style={{ marginBottom:16 }}>
+            <label>Confirm new password</label>
+            <input type="password" value={form.confirmPw} placeholder="••••••••" minLength={6} required
+              onChange={(e) => setForm({ ...form, confirmPw: e.target.value })} />
+          </div>
+          <button className="btn btn-primary btn-sm" disabled={busy}>
+            {busy ? 'Saving…' : '🔒 Update password'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Team() {
   const { profile, orgId, refreshProfile } = useAuth();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
@@ -78,6 +127,10 @@ export default function Team() {
             </table>
           </div>
         </div>
+      </div>
+
+      <div className="grid2" style={{ marginTop:20 }}>
+        <ChangePasswordCard />
       </div>
 
       {invite && (

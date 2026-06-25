@@ -60,6 +60,11 @@ export function AuthProvider({ children }) {
     loading,
     refreshProfile: () => loadProfile(session?.user?.id),
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
+    signInWithGoogle: () => supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    }),
+    changePassword: (newPassword) => supabase.auth.updateUser({ password: newPassword }),
     async signUp(email, password, orgName, fullName) {
       localStorage.setItem('pending_org_name', orgName || '');
       localStorage.setItem('pending_full_name', fullName || '');
