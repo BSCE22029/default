@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import Page, { CoAvatar } from '../../components/Page';
 import { useAuth } from '../../lib/AuthContext';
+import { guessEmails } from '../../lib/emailGuess';
 
 const SUPA_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON     = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -22,8 +23,10 @@ export default function Generator() {
   const [existing, setExisting] = useState(new Set());
   const [added,    setAdded]    = useState(new Set());
 
-  const [auto,    setAuto]    = useState({ enabled: false, keyword: '', location: '', daily_limit: 10 });
-  const [autoMsg, setAutoMsg] = useState('');
+  const [auto,       setAuto]       = useState({ enabled: false, keyword: '', location: '', daily_limit: 10 });
+  const [autoMsg,    setAutoMsg]    = useState('');
+  const [emailMap,   setEmailMap]   = useState({}); // company.lower → chosen email
+  const [showSugg,   setShowSugg]   = useState(''); // company.lower showing suggestions
 
   async function loadOrg() {
     const [{ data: org }, { data: leads }] = await Promise.all([
@@ -36,7 +39,7 @@ export default function Generator() {
   useEffect(() => { if (orgId) loadOrg(); }, [orgId]);
 
   async function generate() {
-    setBusy(true); setMsg(''); setResults([]); setAdded(new Set()); setStep(0); setPct(0);
+    setBusy(true); setMsg(''); setResults([]); setAdded(new Set()); setStep(0); setPct(0); setEmailMap({}); setShowSugg('');
     // Animated progress
     let s = 0, p = 0;
     const tick = setInterval(() => {
@@ -58,9 +61,13 @@ export default function Generator() {
     setBusy(false);
   }
 
+  function resolvedEmail(l) {
+    return emailMap[l.company.toLowerCase()] || l.email || '';
+  }
+
   async function addOne(l) {
     await supabase.from('app_leads').insert({
-      org_id: orgId, company: l.company, website: l.website || '', email: l.email || '',
+      org_id: orgId, company: l.company, website: l.website || '', email: resolvedEmail(l),
       industry: l.industry || '', country: l.country || '', category: l.category || '',
       lead_score: l.lead_score || 55, status: 'New Lead',
       notes: 'Generated from ' + (location || 'web'),
@@ -73,7 +80,7 @@ export default function Generator() {
     const fresh = results.filter((l) => !existing.has(l.company.toLowerCase()));
     if (!fresh.length) { setMsg('All generated leads are already in your CRM.'); return; }
     await supabase.from('app_leads').insert(fresh.map((l) => ({
-      org_id: orgId, company: l.company, website: l.website || '', email: l.email || '',
+      org_id: orgId, company: l.company, website: l.website || '', email: resolvedEmail(l),
       industry: l.industry || '', country: l.country || '', category: l.category || '',
       lead_score: l.lead_score || 55, status: 'New Lead',
       notes: 'Generated from ' + (location || 'web'),
@@ -191,7 +198,44 @@ export default function Generator() {
                         style={{ color:'var(--primary)' }}>{domain}</a>
                     </div>
                   )}
-                  {l.email && <div style={{ fontSize:12, color:'var(--muted)', marginBottom:5 }}>✉️ {l.email}</div>}
+
+                  {/* Email display with suggestion picker */}
+                  {(() => {
+                    const key      = l.company.toLowerCase();
+                    const chosen   = emailMap[key];
+                    const hasEmail = chosen || l.email;
+                    const suggs    = guessEmails(l.website);
+                    return (
+                      <div style={{ marginBottom:5 }}>
+                        {hasEmail ? (
+                          <div style={{ fontSize:12, color:'var(--muted)', display:'flex', alignItems:'center', gap:6 }}>
+                            ✉️ <span style={{ color: chosen ? '#6366f1' : undefined }}>{chosen || l.email}</span>
+                            {suggs.length > 0 && (
+                              <button type="button" style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0, textDecoration:'underline' }}
+                                onClick={() => setShowSugg(showSugg === key ? '' : key)}>change</button>
+                            )}
+                          </div>
+                        ) : suggs.length > 0 ? (
+                          <button type="button" className="find-email-btn"
+                            onClick={() => setShowSugg(showSugg === key ? '' : key)}>
+                            🔍 Find email
+                          </button>
+                        ) : null}
+                        {showSugg === key && suggs.length > 0 && (
+                          <div style={{ display:'flex', flexWrap:'wrap', gap:3, marginTop:4 }}>
+                            {suggs.map((s) => (
+                              <button key={s} type="button" className="sugg-chip"
+                                style={{ background: emailMap[key] === s ? '#e0e7ff' : undefined, color: emailMap[key] === s ? '#4338ca' : undefined }}
+                                onClick={() => { setEmailMap((m) => ({ ...m, [key]: s })); setShowSugg(''); }}>
+                                {s}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {l.phone && <div style={{ fontSize:12, color:'var(--muted)', marginBottom:5 }}>📞 {l.phone}</div>}
                   {l.country && <div style={{ fontSize:11, color:'var(--muted)' }}>📍 {l.country}</div>}
 

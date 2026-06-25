@@ -3,6 +3,7 @@ import { supabase, sendEmail } from '../../lib/supabase';
 import Page, { Modal, statusPill, CoAvatar } from '../../components/Page';
 import { useAuth } from '../../lib/AuthContext';
 import { ANGLES, generateDraft, defaultAngle, extractPhone } from '../../lib/emailDraft';
+import { guessEmails, guessFirstEmail } from '../../lib/emailGuess';
 
 const STATUSES  = ['New Lead','Contacted','Qualified','Proposal Sent','Negotiation','Closed Won','Closed Lost'];
 const PAGE_SIZE = 25;
@@ -30,6 +31,18 @@ const QUICK_FILTERS = [
   { id:'unsent',  label:'📬 Not Emailed' },
   { id:'replied', label:'↩ Replied' },
 ];
+
+function parsePhoneFromNotes(notes) {
+  const m = (notes || '').match(/^Phone:\s*(.+)/m);
+  return m ? m[1].trim() : '';
+}
+function parseLinkedinFromNotes(notes) {
+  const m = (notes || '').match(/^LinkedIn:\s*(.+)/m);
+  return m ? m[1].trim() : '';
+}
+function stripMetaFromNotes(notes) {
+  return (notes || '').replace(/^Phone:.*\n?/m, '').replace(/^LinkedIn:.*\n?/m, '').trim();
+}
 
 // CSV parser that handles quoted fields
 function parseCSV(text) {
@@ -83,6 +96,10 @@ export default function Leads() {
   const [sendAllOpen, setSendAllOpen] = useState(false);
   const [sendAllMode, setSendAllMode] = useState('unsent'); // 'unsent' | 'all'
   const [sendAllProg, setSendAllProg] = useState({ running:false, done:0, total:0, current:'', errors:0 });
+  const [emailSuggs,  setEmailSuggs]  = useState([]);
+  const [editPhone,   setEditPhone]   = useState('');
+  const [editLinkedin,setEditLinkedin]= useState('');
+  const [enriching,   setEnriching]   = useState(false);
   const fileRef = useRef();
 
   async function load() {
@@ -134,6 +151,32 @@ export default function Leads() {
   function openDetail(l)  { setDetailLead(l); setDetailNote(l.notes || ''); }
   function openCompose(l) { const a = defaultAngle(l); setAngle(a); setCompose(l); setDraft(generateDraft(l, a)); setEmailTab('edit'); }
   function regen(a)       { const x = a ?? angle; setAngle(x); setDraft(generateDraft(compose, x)); }
+
+  function openEdit(lead) {
+    setEdit(lead);
+    setEditPhone(parsePhoneFromNotes(lead.notes));
+    setEditLinkedin(parseLinkedinFromNotes(lead.notes));
+    setEmailSuggs(guessEmails(lead.website));
+  }
+  function closeEdit() {
+    setEdit(null); setEditPhone(''); setEditLinkedin(''); setEmailSuggs([]);
+  }
+
+  async function doEnrich() {
+    const toEnrich = leads.filter((l) => l.website && !l.email);
+    if (!toEnrich.length) { toast$('All leads with websites already have emails'); return; }
+    setEnriching(true);
+    let count = 0;
+    for (const l of toEnrich) {
+      const email = guessFirstEmail(l.website);
+      if (!email) continue;
+      await supabase.from('app_leads').update({ email }).eq('id', l.id);
+      count++;
+    }
+    setEnriching(false);
+    toast$(`✅ Found ${count} emails using info@domain pattern`);
+    load();
+  }
 
   async function changeStatus(l, status) {
     setSavingStatus(l.id);
@@ -240,10 +283,15 @@ export default function Leads() {
 
   async function save(e) {
     e.preventDefault();
-    const payload = { ...edit, lead_score: Number(edit.lead_score) || 0 };
+    const metaLines = [];
+    if (editPhone.trim())    metaLines.push(`Phone: ${editPhone.trim()}`);
+    if (editLinkedin.trim()) metaLines.push(`LinkedIn: ${editLinkedin.trim()}`);
+    const baseNotes  = stripMetaFromNotes(edit.notes);
+    const finalNotes = [...metaLines, baseNotes].filter(Boolean).join('\n');
+    const payload = { ...edit, lead_score: Number(edit.lead_score) || 0, notes: finalNotes };
     if (edit.id) { const { id, ...rest } = payload; await supabase.from('app_leads').update(rest).eq('id', id); }
     else          await supabase.from('app_leads').insert({ ...payload, org_id: orgId });
-    setEdit(null); load();
+    closeEdit(); load();
   }
 
   async function remove(l) {
@@ -321,7 +369,10 @@ export default function Leads() {
           onClick={() => { setSendAllMode('unsent'); setSendAllOpen(true); }}>
           📨 Send All
         </button>
-        <button className="btn btn-primary btn-sm" onClick={() => setEdit({ ...BLANK })}>+ Add Lead</button>
+        <button className="btn btn-ghost btn-sm" disabled={enriching} onClick={doEnrich} title="Fill info@domain email for leads that have a website but no email">
+          {enriching ? '⏳ Finding…' : '🔍 Find emails'}
+        </button>
+        <button className="btn btn-primary btn-sm" onClick={() => openEdit({ ...BLANK })}>+ Add Lead</button>
       </>
     }>
       {toast && <div className="alert alert-ok" style={{ marginBottom:14 }}>{toast}</div>}
@@ -520,7 +571,7 @@ export default function Leads() {
                   onClick={() => markReplied(detailLead)}>↩ Replied</button>
               )}
               <button className="btn btn-ghost btn-sm"
-                onClick={() => { setDetailLead(null); setEdit(detailLead); }}>✏️ Edit</button>
+                onClick={() => { setDetailLead(null); openEdit(detailLead); }}>✏️ Edit</button>
               <button className="btn btn-danger btn-sm"
                 onClick={() => { setDetailLead(null); remove(detailLead); }}>🗑</button>
             </div>
@@ -577,29 +628,146 @@ export default function Leads() {
         </aside>
       </>)}
 
-      {/* Add / Edit modal */}
-      {edit && (
-        <Modal title={edit.id ? `Edit — ${edit.company}` : 'Add Lead'} onClose={() => setEdit(null)}
-          footer={<><button className="btn btn-ghost" onClick={() => setEdit(null)}>Cancel</button><button className="btn btn-primary" form="leadForm">Save</button></>}>
-          <form id="leadForm" onSubmit={save}>
-            <div className="grid2">
-              <div className="field"><label>Company *</label><input required value={edit.company} onChange={(e) => setEdit({ ...edit, company: e.target.value })} /></div>
-              <div className="field"><label>Website</label><input value={edit.website||''} onChange={(e) => setEdit({ ...edit, website: e.target.value })} /></div>
-              <div className="field"><label>Contact</label><input value={edit.contact||''} onChange={(e) => setEdit({ ...edit, contact: e.target.value })} /></div>
-              <div className="field"><label>Email</label><input type="email" value={edit.email||''} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></div>
-              <div className="field"><label>Category</label><input value={edit.category||''} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /></div>
-              <div className="field"><label>Industry</label><input value={edit.industry||''} onChange={(e) => setEdit({ ...edit, industry: e.target.value })} /></div>
-              <div className="field"><label>Country</label><input value={edit.country||''} onChange={(e) => setEdit({ ...edit, country: e.target.value })} /></div>
-              <div className="field"><label>Deal size</label><input value={edit.opportunity_size||''} onChange={(e) => setEdit({ ...edit, opportunity_size: e.target.value })} /></div>
-              <div className="field"><label>Score (0–100)</label><input type="number" min="0" max="100" value={edit.lead_score} onChange={(e) => setEdit({ ...edit, lead_score: e.target.value })} /></div>
-              <div className="field"><label>Status</label>
-                <select value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })}>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select>
+      {/* Add / Edit modal — enhanced */}
+      {edit && (() => {
+        const dupWarning = !edit.id && edit.company.trim().length > 1
+          && leads.some((l) => l.company.toLowerCase() === edit.company.trim().toLowerCase());
+        const scoreColor = edit.lead_score >= 80 ? '#22c55e' : edit.lead_score >= 60 ? '#f59e0b' : '#94a3b8';
+        const scoreLabel = edit.lead_score >= 80 ? 'Hot' : edit.lead_score >= 60 ? 'Warm' : 'Cold';
+        return (
+          <Modal title={edit.id ? `Edit — ${edit.company}` : '+ Add New Lead'} onClose={closeEdit}
+            footer={<>
+              <button className="btn btn-ghost" onClick={closeEdit}>Cancel</button>
+              <button className="btn btn-primary" form="leadForm" style={{ minWidth:120 }}>
+                {edit.id ? '💾 Save changes' : '➕ Add Lead'}
+              </button>
+            </>}>
+            <form id="leadForm" onSubmit={save}>
+
+              {dupWarning && (
+                <div className="alert" style={{ background:'#fffbeb', color:'#92400e', border:'1px solid #fde68a', marginBottom:14, fontSize:13 }}>
+                  ⚠️ A lead named <b>"{edit.company.trim()}"</b> already exists in your CRM.
+                </div>
+              )}
+
+              {/* Row 1: Company + Website */}
+              <div className="grid2">
+                <div className="field">
+                  <label>Company <span style={{ color:'#ef4444' }}>*</span></label>
+                  <input required autoFocus value={edit.company}
+                    onChange={(e) => setEdit({ ...edit, company: e.target.value })}
+                    placeholder="Acme Corp" />
+                </div>
+                <div className="field">
+                  <label>Website</label>
+                  <input value={edit.website||''}
+                    placeholder="acme.com"
+                    onChange={(e) => {
+                      const w = e.target.value;
+                      setEdit({ ...edit, website: w });
+                      setEmailSuggs(guessEmails(w));
+                    }} />
+                </div>
               </div>
-            </div>
-            <div className="field"><label>Notes</label><textarea rows="3" value={edit.notes||''} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} /></div>
-          </form>
-        </Modal>
-      )}
+
+              {/* Row 2: Contact + Email with suggestions */}
+              <div className="grid2">
+                <div className="field">
+                  <label>Contact name</label>
+                  <input value={edit.contact||''} placeholder="Jane Smith"
+                    onChange={(e) => setEdit({ ...edit, contact: e.target.value })} />
+                </div>
+                <div className="field">
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                    <label style={{ margin:0 }}>Email</label>
+                    {emailSuggs.length > 0 && !edit.email && (
+                      <span style={{ fontSize:11, color:'var(--muted)' }}>Click to use →</span>
+                    )}
+                  </div>
+                  <input type="email" value={edit.email||''} placeholder="info@acme.com"
+                    onChange={(e) => setEdit({ ...edit, email: e.target.value })} />
+                  {emailSuggs.length > 0 && (
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:5 }}>
+                      {emailSuggs.map((s) => (
+                        <button key={s} type="button" className="sugg-chip"
+                          style={{ background: edit.email === s ? '#e0e7ff' : undefined, color: edit.email === s ? '#4338ca' : undefined }}
+                          onClick={() => setEdit({ ...edit, email: s })}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3: Phone + LinkedIn */}
+              <div className="grid2">
+                <div className="field">
+                  <label>Phone</label>
+                  <input value={editPhone} placeholder="+1 555 000 0000"
+                    onChange={(e) => setEditPhone(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>LinkedIn URL</label>
+                  <input value={editLinkedin} placeholder="linkedin.com/in/janesmith"
+                    onChange={(e) => setEditLinkedin(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Row 4: Category + Industry + Country + Deal size */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:'0 12px' }}>
+                <div className="field">
+                  <label>Category</label>
+                  <input value={edit.category||''} placeholder="SaaS"
+                    onChange={(e) => setEdit({ ...edit, category: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label>Industry</label>
+                  <input value={edit.industry||''} placeholder="Tech"
+                    onChange={(e) => setEdit({ ...edit, industry: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label>Country</label>
+                  <input value={edit.country||''} placeholder="USA"
+                    onChange={(e) => setEdit({ ...edit, country: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label>Deal size</label>
+                  <input value={edit.opportunity_size||''} placeholder="$10K–$50K"
+                    onChange={(e) => setEdit({ ...edit, opportunity_size: e.target.value })} />
+                </div>
+              </div>
+
+              {/* Row 5: Score + Status */}
+              <div className="grid2">
+                <div className="field">
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                    <label style={{ margin:0 }}>Lead score</label>
+                    <span style={{ fontSize:12, fontWeight:700, color: scoreColor }}>{edit.lead_score} — {scoreLabel}</span>
+                  </div>
+                  <input type="range" min="0" max="100" value={edit.lead_score}
+                    onChange={(e) => setEdit({ ...edit, lead_score: Number(e.target.value) })}
+                    style={{ width:'100%', accentColor: scoreColor }} />
+                </div>
+                <div className="field">
+                  <label>Status</label>
+                  <select value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })}>
+                    {STATUSES.map((s) => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="field" style={{ marginBottom:0 }}>
+                <label>Notes</label>
+                <textarea rows="2" value={stripMetaFromNotes(edit.notes)}
+                  placeholder="Any context, next steps, or research notes…"
+                  onChange={(e) => setEdit({ ...edit, notes: e.target.value })} />
+              </div>
+            </form>
+          </Modal>
+        );
+      })()}
 
       {/* Email compose modal with Edit / Preview tabs */}
       {compose && (

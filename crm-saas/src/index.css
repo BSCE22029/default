@@ -129,6 +129,26 @@ input, select, textarea, button { font-family: inherit; font-size: 14px; }
 .btn-google:hover { border-color: #4285F4; box-shadow: 0 2px 10px rgba(66,133,244,.18); }
 [data-theme="dark"] .btn-google { background: #1e293b; border-color: #334155; }
 
+/* Email suggestion chips (Add Lead form + Generator cards) */
+.sugg-chip {
+  display: inline-flex; align-items: center; padding: 2px 8px;
+  border: 1px solid var(--border); border-radius: 20px;
+  background: var(--bg); color: var(--muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.sugg-chip:hover { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
+
+/* "Find email" button on generator cards */
+.find-email-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; padding: 3px 9px;
+  border: 1px dashed #6366f1; border-radius: 20px;
+  background: #eef2ff; color: #4338ca; cursor: pointer;
+  transition: background .12s;
+}
+.find-email-btn:hover { background: #e0e7ff; }
+
 /* Auth OR divider */
 .auth-divider {
   display: flex; align-items: center; gap: 12px;
