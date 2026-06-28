@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Task Manager</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0a0a12;color:#f1f5f9;min-height:100vh;display:flex;flex-direction:column}
+.top-bar{background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);padding:.75rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.top-bar a{color:rgba(255,255,255,.5);text-decoration:none;font-size:.85rem}
+.top-bar h1{font-size:1rem;font-weight:700}
+.app{flex:1;padding:2rem;max-width:1100px;margin:0 auto;width:100%}
+.add-row{display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap}
+.add-input{flex:1;min-width:200px;background:#111128;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.8rem 1.2rem;color:#f1f5f9;font-size:.95rem;font-family:inherit;outline:none;transition:border-color .2s}
+.add-input:focus{border-color:#7c3aed}
+.add-select{background:#111128;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.8rem 1rem;color:#94a3b8;font-size:.875rem;cursor:pointer;outline:none}
+.add-btn{background:linear-gradient(135deg,#7c3aed,#3b82f6);border:none;color:#fff;padding:.8rem 1.5rem;border-radius:12px;font-size:.875rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s}
+.add-btn:hover{opacity:.85}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.col{background:#111128;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:1.2rem;min-height:400px}
+.col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:.8rem;border-bottom:1px solid rgba(255,255,255,.06)}
+.col-title{font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
+.col-count{background:rgba(255,255,255,.08);color:#64748b;font-size:.7rem;font-weight:700;padding:.15rem .5rem;border-radius:99px}
+.task-list{display:flex;flex-direction:column;gap:.75rem;min-height:200px}
+.task{background:#1a1a35;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:1rem;cursor:grab;transition:border-color .2s,transform .2s;user-select:none;position:relative}
+.task:hover{border-color:rgba(124,58,237,.3);transform:translateY(-1px)}
+.task.dragging{opacity:.5;transform:rotate(2deg)}
+.task-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;margin-bottom:.6rem}
+.task-text{font-size:.875rem;font-weight:600;flex:1;line-height:1.4}
+.task-del{background:none;border:none;color:#475569;cursor:pointer;font-size:1rem;padding:0 .2rem;flex-shrink:0;transition:color .2s}
+.task-del:hover{color:#ef4444}
+.task-meta{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.priority{font-size:.65rem;font-weight:700;padding:.2rem .5rem;border-radius:99px}
+.p-high{background:rgba(239,68,68,.15);color:#ef4444}
+.p-med{background:rgba(234,179,8,.15);color:#eab308}
+.p-low{background:rgba(34,197,94,.15);color:#22c55e}
+.task-date{font-size:.7rem;color:#475569}
+.move-btns{display:flex;gap:.3rem;margin-top:.6rem}
+.move-btn{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#64748b;font-size:.7rem;padding:.2rem .5rem;border-radius:6px;cursor:pointer;transition:all .2s}
+.move-btn:hover{background:rgba(124,58,237,.15);border-color:#7c3aed;color:#a855f7}
+.empty{text-align:center;color:#334155;font-size:.85rem;padding:2rem 1rem}
+.stats{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:#111128;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.75rem 1.2rem;flex:1;min-width:100px}
+.stat-n{font-size:1.5rem;font-weight:800;color:#a855f7}
+.stat-l{font-size:.7rem;color:#64748b;margin-top:.1rem}
+@media(max-width:700px){.board{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="../index.html">← Portfolio</a>
+  <h1>✅ Task Manager</h1>
+  <span style="font-size:.75rem;color:#64748b">Saved locally</span>
+</div>
+<div class="app">
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="s-total">0</div><div class="stat-l">Total Tasks</div></div>
+    <div class="stat"><div class="stat-n" id="s-todo">0</div><div class="stat-l">To Do</div></div>
+    <div class="stat"><div class="stat-n" id="s-prog">0</div><div class="stat-l">In Progress</div></div>
+    <div class="stat"><div class="stat-n" id="s-done">0</div><div class="stat-l">Done</div></div>
+  </div>
+  <div class="add-row">
+    <input class="add-input" id="new-task" placeholder="Add a new task..." onkeydown="if(event.key==='Enter')addTask()"/>
+    <select class="add-select" id="new-prio">
+      <option value="high">🔴 High</option>
+      <option value="med" selected>🟡 Medium</option>
+      <option value="low">🟢 Low</option>
+    </select>
+    <button class="add-btn" onclick="addTask()">+ Add Task</button>
+  </div>
+  <div class="board">
+    <div class="col" id="col-todo" ondragover="dOver(event)" ondrop="dDrop(event,'todo')">
+      <div class="col-header"><div class="col-title">📋 To Do <span class="col-count" id="cnt-todo">0</span></div></div>
+      <div class="task-list" id="list-todo"></div>
+    </div>
+    <div class="col" id="col-prog" ondragover="dOver(event)" ondrop="dDrop(event,'prog')">
+      <div class="col-header"><div class="col-title">⚡ In Progress <span class="col-count" id="cnt-prog">0</span></div></div>
+      <div class="task-list" id="list-prog"></div>
+    </div>
+    <div class="col" id="col-done" ondragover="dOver(event)" ondrop="dDrop(event,'done')">
+      <div class="col-header"><div class="col-title">✅ Done <span class="col-count" id="cnt-done">0</span></div></div>
+      <div class="task-list" id="list-done"></div>
+    </div>
+  </div>
+</div>
+<script>
+let tasks=JSON.parse(localStorage.getItem('tasks-v1')||'[]');
+let dragId=null;
+const cols=['todo','prog','done'];
+const pMap={todo:'prog',prog:'done',done:'todo'};
+const pLabel={high:'High',med:'Medium',low:'Low'};
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
+function save(){localStorage.setItem('tasks-v1',JSON.stringify(tasks))}
+
+function addTask(){
+  const t=document.getElementById('new-task').value.trim();
+  if(!t)return;
+  tasks.push({id:uid(),text:t,status:'todo',priority:document.getElementById('new-prio').value,created:new Date().toLocaleDateString()});
+  document.getElementById('new-task').value='';
+  save();render();
+}
+
+function del(id){tasks=tasks.filter(t=>t.id!==id);save();render();}
+function move(id,to){const t=tasks.find(x=>x.id===id);if(t){t.status=to;save();render();}}
+
+function render(){
+  cols.forEach(col=>{
+    const list=document.getElementById('list-'+col);
+    const items=tasks.filter(t=>t.status===col);
+    document.getElementById('cnt-'+col).textContent=items.length;
+    list.innerHTML=items.length?items.map(t=>`
+      <div class="task" id="t-${t.id}" draggable="true" ondragstart="dStart('${t.id}')" ondragend="dEnd()">
+        <div class="task-top">
+          <div class="task-text">${t.text}</div>
+          <button class="task-del" onclick="del('${t.id}')">×</button>
+        </div>
+        <div class="task-meta">
+          <span class="priority p-${t.priority}">${pLabel[t.priority]}</span>
+          <span class="task-date">${t.created}</span>
+        </div>
+        <div class="move-btns">
+          ${col!=='todo'?`<button class="move-btn" onclick="move('${t.id}','todo')">← To Do</button>`:''}
+          ${col!=='prog'?`<button class="move-btn" onclick="move('${t.id}','prog')">⚡ Progress</button>`:''}
+          ${col!=='done'?`<button class="move-btn" onclick="move('${t.id}','done')">✅ Done</button>`:''}
+        </div>
+      </div>`).join(''):`<div class="empty">Drop tasks here</div>`;
+  });
+  document.getElementById('s-total').textContent=tasks.length;
+  document.getElementById('s-todo').textContent=tasks.filter(t=>t.status==='todo').length;
+  document.getElementById('s-prog').textContent=tasks.filter(t=>t.status==='prog').length;
+  document.getElementById('s-done').textContent=tasks.filter(t=>t.status==='done').length;
+}
+
+function dStart(id){dragId=id;setTimeout(()=>document.getElementById('t-'+id)?.classList.add('dragging'),0)}
+function dEnd(){document.querySelectorAll('.task').forEach(el=>el.classList.remove('dragging'));dragId=null}
+function dOver(e){e.preventDefault()}
+function dDrop(e,col){e.preventDefault();if(dragId)move(dragId,col)}
+
+if(!tasks.length){
+  tasks=[
+    {id:uid(),text:'Design landing page mockup',status:'todo',priority:'high',created:new Date().toLocaleDateString()},
+    {id:uid(),text:'Set up Supabase database',status:'prog',priority:'high',created:new Date().toLocaleDateString()},
+    {id:uid(),text:'Write project proposal',status:'prog',priority:'med',created:new Date().toLocaleDateString()},
+    {id:uid(),text:'Deploy to Vercel',status:'done',priority:'low',created:new Date().toLocaleDateString()},
+  ];
+  save();
+}
+render();
+</script>
+</body>
+</html>

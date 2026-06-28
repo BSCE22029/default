@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart Temperature Monitor — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg2:#111128;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:1000px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+
+/* DASHBOARD */
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+.metric-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.3rem;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.temp-card::before{background:linear-gradient(90deg,#ef4444,#f97316)}
+.hum-card::before{background:linear-gradient(90deg,#3b82f6,#06b6d4)}
+.heat-card::before{background:linear-gradient(90deg,#a855f7,#ec4899)}
+.metric-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.5rem}
+.metric-val{font-size:2.4rem;font-weight:800;line-height:1}
+.metric-unit{font-size:.9rem;color:var(--muted);margin-left:.2rem}
+.metric-sub{font-size:.72rem;color:var(--muted);margin-top:.4rem}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:.3rem}
+.dot-ok{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot-warn{background:var(--orange);box-shadow:0 0 6px var(--orange)}
+.dot-hot{background:var(--red);box-shadow:0 0 6px var(--red)}
+
+/* CHART */
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.chart-card h3{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.chart-wrap{position:relative;height:160px}
+canvas{width:100%;height:100%}
+.chart-legend{display:flex;gap:1.2rem;margin-top:.7rem}
+.legend-item{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted)}
+.legend-line{width:20px;height:2px;border-radius:2px}
+
+/* GAUGE */
+.gauge-wrap{display:flex;justify-content:center;margin:1rem 0}
+.gauge{position:relative;width:180px;height:100px;overflow:hidden}
+.gauge canvas{position:absolute;top:0;left:0}
+.gauge-val{position:absolute;bottom:0;left:0;right:0;text-align:center}
+.gauge-num{font-size:1.8rem;font-weight:800}
+.gauge-lbl{font-size:.65rem;color:var(--muted)}
+
+/* SERIAL MONITOR */
+.serial-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.serial-card h3{font-size:.88rem;color:var(--purple2);margin-bottom:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.serial-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem}
+.serial-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.serial-out{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:1rem;height:180px;overflow-y:auto;font-family:'Courier New',monospace;font-size:.72rem;line-height:1.7}
+.ser-line{color:#94a3b8}
+.ser-label{color:#a855f7}
+.ser-val{color:#4ade80}
+.ser-warn{color:#f97316}
+.ser-time{color:#475569}
+
+/* CODE */
+.code-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem}
+.code-card h3{font-size:.95rem;margin-bottom:1rem;color:var(--purple2)}
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.73rem;overflow-x:auto;line-height:1.6;color:#cbd5e1}
+.kw{color:#a855f7}.fn{color:#60a5fa}.num{color:#4ade80}.str{color:#fb923c}.comment{color:#475569}
+
+/* CONTROLS */
+.ctrl-row{display:flex;gap:.75rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn.active{background:rgba(34,197,94,.15);border-color:var(--green);color:#4ade80}
+.btn:hover{border-color:var(--purple);color:var(--text)}
+
+@media(max-width:650px){.dash-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Arduino · DHT11 · IoT · Live Simulation</span></div>
+  <h1>Smart Temperature Monitor</h1>
+  <p class="subtitle">Real-time temperature &amp; humidity monitoring system — Arduino Nano + DHT11 + OLED + alerts</p>
+
+  <div class="ctrl-row">
+    <button class="btn active" id="runBtn" onclick="toggleRun()">⏸ Streaming</button>
+    <button class="btn" onclick="setScene('normal')">🌤 Normal</button>
+    <button class="btn" onclick="setScene('hot')">🔥 Heat Event</button>
+    <button class="btn" onclick="setScene('humid')">💧 High Humidity</button>
+  </div>
+
+  <!-- METRICS -->
+  <div class="dash-grid">
+    <div class="metric-card temp-card">
+      <div class="metric-label">Temperature</div>
+      <div class="metric-val" id="tempVal">—<span class="metric-unit">°C</span></div>
+      <div class="metric-sub" id="tempStatus"><span class="status-dot dot-ok"></span>Normal range</div>
+    </div>
+    <div class="metric-card hum-card">
+      <div class="metric-label">Humidity</div>
+      <div class="metric-val" id="humVal">—<span class="metric-unit">%</span></div>
+      <div class="metric-sub" id="humStatus"><span class="status-dot dot-ok"></span>Comfortable</div>
+    </div>
+    <div class="metric-card heat-card">
+      <div class="metric-label">Heat Index</div>
+      <div class="metric-val" id="heatVal">—<span class="metric-unit">°C</span></div>
+      <div class="metric-sub" id="heatStatus"><span class="status-dot dot-ok"></span>Feels like</div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-card">
+    <h3>Live History (last 60 readings)</h3>
+    <div class="chart-wrap"><canvas id="chartCanvas"></canvas></div>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-line" style="background:#ef4444"></div>Temperature (°C)</div>
+      <div class="legend-item"><div class="legend-line" style="background:#3b82f6"></div>Humidity (%)</div>
+    </div>
+  </div>
+
+  <!-- SERIAL MONITOR -->
+  <div class="serial-card">
+    <h3>Serial Monitor <span style="font-size:.65rem;color:var(--muted);font-weight:400;margin-left:.5rem">115200 baud</span></h3>
+    <div class="serial-header">
+      <div class="serial-dot"></div>
+      <span style="font-size:.72rem;color:var(--muted)">COM3 — Arduino Nano connected</span>
+    </div>
+    <div class="serial-out" id="serialOut"></div>
+  </div>
+
+  <!-- CODE -->
+  <div class="code-card">
+    <h3>Arduino Sketch</h3>
+<pre><span class="comment">// Smart Temperature Monitor</span>
+<span class="comment">// Arduino Nano + DHT11 + Serial logging</span>
+<span class="comment">// Author: Muhammad Moiz Ahmad</span>
+
+<span class="kw">#include</span> <span class="str">&lt;DHT.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;Wire.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;Adafruit_SSD1306.h&gt;</span>
+
+<span class="kw">#define</span> DHT_PIN     <span class="num">2</span>
+<span class="kw">#define</span> DHT_TYPE    DHT11
+<span class="kw">#define</span> ALERT_TEMP  <span class="num">35.0</span>
+<span class="kw">#define</span> ALERT_HUM   <span class="num">80.0</span>
+<span class="kw">#define</span> BUZZER_PIN  <span class="num">9</span>
+<span class="kw">#define</span> LED_PIN     <span class="num">13</span>
+
+DHT dht(DHT_PIN, DHT_TYPE);
+Adafruit_SSD1306 display(<span class="num">128</span>, <span class="num">32</span>, &amp;Wire);
+
+<span class="kw">void</span> <span class="fn">setup</span>() {
+  Serial.<span class="fn">begin</span>(<span class="num">115200</span>);
+  dht.<span class="fn">begin</span>();
+  <span class="fn">pinMode</span>(BUZZER_PIN, OUTPUT);
+  <span class="fn">pinMode</span>(LED_PIN, OUTPUT);
+  display.<span class="fn">begin</span>(SSD1306_SWITCHCAPVCC, <span class="num">0x3C</span>);
+  Serial.<span class="fn">println</span>(<span class="str">"[BOOT] Smart Temp Monitor v1.0"</span>);
+}
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+  <span class="kw">float</span> temp = dht.<span class="fn">readTemperature</span>();
+  <span class="kw">float</span> hum  = dht.<span class="fn">readHumidity</span>();
+  <span class="kw">float</span> hi   = dht.<span class="fn">computeHeatIndex</span>(temp, hum, <span class="kw">false</span>);
+
+  <span class="kw">if</span> (<span class="fn">isnan</span>(temp) || <span class="fn">isnan</span>(hum)) {
+    Serial.<span class="fn">println</span>(<span class="str">"[ERR] DHT11 read failed"</span>);
+    <span class="kw">return</span>;
+  }
+
+  Serial.<span class="fn">print</span>(<span class="str">"[DATA] T="</span>); Serial.<span class="fn">print</span>(temp);
+  Serial.<span class="fn">print</span>(<span class="str">"°C  H="</span>);  Serial.<span class="fn">print</span>(hum);
+  Serial.<span class="fn">print</span>(<span class="str">"%  HI="</span>); Serial.<span class="fn">println</span>(hi);
+
+  <span class="kw">bool</span> alert = (temp &gt; ALERT_TEMP || hum &gt; ALERT_HUM);
+  <span class="fn">digitalWrite</span>(LED_PIN, alert);
+  <span class="kw">if</span> (alert) {
+    <span class="fn">tone</span>(BUZZER_PIN, <span class="num">1000</span>, <span class="num">200</span>);
+    Serial.<span class="fn">println</span>(<span class="str">"[WARN] Threshold exceeded!"</span>);
+  }
+
+  <span class="fn">updateDisplay</span>(temp, hum, hi);
+  <span class="fn">delay</span>(<span class="num">2000</span>);
+}</pre>
+  </div>
+</div>
+
+<script>
+const MAX=60;
+let tempHistory=[], humHistory=[], running=true, ticker=null;
+let scene={base:25,noise:1.5,hBase:55,hNoise:5};
+
+const scenes={
+  normal:{base:25,noise:1.5,hBase:55,hNoise:5},
+  hot:{base:38,noise:2,hBase:45,hNoise:4},
+  humid:{base:28,noise:1,hBase:88,hNoise:3}
+};
+
+function setScene(s){scene=scenes[s];}
+
+function rand(base,noise){return +(base+(Math.random()-.5)*2*noise).toFixed(1);}
+
+function computeHI(t,h){
+  if(t<27) return t;
+  return +(-8.78469475556+1.61139411*t+2.33854883889*h
+    -0.14611605*t*h-0.012308094*t*t
+    -0.0164248277778*h*h+0.002211732*t*t*h
+    +0.00072546*t*h*h-0.000003582*t*t*h*h).toFixed(1);
+}
+
+function tick(){
+  const t=rand(scene.base,scene.noise);
+  const h=Math.min(100,Math.max(0,rand(scene.hBase,scene.hNoise)));
+  const hi=computeHI(t,h);
+
+  tempHistory.push(t); humHistory.push(h);
+  if(tempHistory.length>MAX){tempHistory.shift();humHistory.shift();}
+
+  // metrics
+  document.getElementById('tempVal').innerHTML=`${t}<span class="metric-unit">°C</span>`;
+  document.getElementById('humVal').innerHTML=`${h}<span class="metric-unit">%</span>`;
+  document.getElementById('heatVal').innerHTML=`${hi}<span class="metric-unit">°C</span>`;
+
+  const tDot=t>35?'dot-hot':t>30?'dot-warn':'dot-ok';
+  const tLabel=t>35?'High temperature!':t>30?'Warm':'Normal range';
+  document.getElementById('tempStatus').innerHTML=`<span class="status-dot ${tDot}"></span>${tLabel}`;
+
+  const hDot=h>80?'dot-hot':h>70?'dot-warn':'dot-ok';
+  const hLabel=h>80?'Very humid!':h>70?'Humid':'Comfortable';
+  document.getElementById('humStatus').innerHTML=`<span class="status-dot ${hDot}"></span>${hLabel}`;
+
+  document.getElementById('heatStatus').innerHTML=`<span class="status-dot dot-ok"></span>Feels like ${hi}°C`;
+
+  drawChart();
+  addSerial(t,h,hi);
+}
+
+function drawChart(){
+  const canvas=document.getElementById('chartCanvas');
+  const w=canvas.offsetWidth, h=canvas.offsetHeight;
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,w,h);
+
+  // grid
+  ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=h*i/4;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();
+  }
+
+  function drawLine(data,color,min,max){
+    if(data.length<2) return;
+    ctx.strokeStyle=color; ctx.lineWidth=2;
+    ctx.shadowColor=color; ctx.shadowBlur=4;
+    ctx.beginPath();
+    data.forEach((v,i)=>{
+      const x=i/(MAX-1)*w;
+      const y=h-(v-min)/(max-min)*h*.85-h*.05;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    ctx.shadowBlur=0;
+  }
+  drawLine(tempHistory,'#ef4444',15,50);
+  drawLine(humHistory,'#3b82f6',0,100);
+}
+
+let lineCount=0;
+function addSerial(t,h,hi){
+  const out=document.getElementById('serialOut');
+  const now=new Date();
+  const ts=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const warn=(t>35||h>80);
+  const line=`<div class="ser-line"><span class="ser-time">[${ts}]</span> <span class="ser-label">[DATA]</span> <span class="ser-val">T=${t}°C  H=${h}%  HI=${hi}°C</span>${warn?'  <span class="ser-warn">⚠ ALERT</span>':''}</div>`;
+  out.insertAdjacentHTML('beforeend',line);
+  lineCount++;
+  if(lineCount>40) out.firstChild.remove();
+  out.scrollTop=out.scrollHeight;
+}
+
+function toggleRun(){
+  running=!running;
+  document.getElementById('runBtn').textContent=running?'⏸ Streaming':'▶ Start';
+  document.getElementById('runBtn').classList.toggle('active',running);
+  if(running) ticker=setInterval(tick,2000);
+  else clearInterval(ticker);
+}
+
+// boot messages
+const out=document.getElementById('serialOut');
+out.innerHTML=`<div class="ser-line"><span class="ser-time">[00:00:00]</span> <span class="ser-warn">[BOOT]</span> <span class="ser-val">Smart Temp Monitor v1.0</span></div>
+<div class="ser-line"><span class="ser-time">[00:00:00]</span> <span class="ser-label">[INFO]</span> <span class="ser-val">DHT11 sensor initialized on PIN 2</span></div>
+<div class="ser-line"><span class="ser-time">[00:00:00]</span> <span class="ser-label">[INFO]</span> <span class="ser-val">OLED display ready (128x32)</span></div>
+<div class="ser-line"><span class="ser-time">[00:00:01]</span> <span class="ser-label">[INFO]</span> <span class="ser-val">Starting measurement loop...</span></div>`;
+
+ticker=setInterval(tick,2000);
+tick();
+</script>
+</body>
+</html>

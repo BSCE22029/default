@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>4-Bit ALU Simulator — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg2:#111128;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:900px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+
+/* ALU CARD */
+.alu-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;margin-bottom:1.5rem}
+.alu-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:1.5rem;align-items:center}
+
+/* INPUTS */
+.input-panel{display:flex;flex-direction:column;gap:1rem}
+.input-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.3rem}
+.bit-row{display:flex;gap:.4rem;flex-wrap:wrap}
+.bit-btn{width:42px;height:42px;border-radius:8px;border:2px solid var(--border);background:var(--bg3);color:var(--muted);font-size:1rem;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.bit-btn.on{background:rgba(124,58,237,.3);border-color:var(--purple2);color:var(--purple2)}
+.bit-display{font-size:.75rem;color:var(--muted);margin-top:.4rem;font-family:monospace}
+
+/* OP SELECT */
+.op-panel{display:flex;flex-direction:column;gap:.5rem;align-items:center}
+.op-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.3rem}
+.op-btn{width:100px;padding:.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s;text-align:center}
+.op-btn.active{background:rgba(59,130,246,.2);border-color:var(--blue);color:#60a5fa}
+
+/* OUTPUT */
+.output-panel{display:flex;flex-direction:column;gap:.8rem}
+.out-row{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem}
+.out-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.out-val{font-size:1.1rem;font-weight:800;font-family:monospace;margin-top:.2rem}
+.out-bits{display:flex;gap:.3rem;margin-top:.4rem}
+.out-bit{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700}
+.bit-1{background:rgba(124,58,237,.25);color:var(--purple2);border:1px solid rgba(124,58,237,.4)}
+.bit-0{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+
+/* FLAGS */
+.flags{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.5rem}
+.flag{padding:.3rem .7rem;border-radius:6px;font-size:.72rem;font-weight:700;border:1px solid}
+.flag-on{background:rgba(34,197,94,.12);color:#4ade80;border-color:rgba(34,197,94,.3)}
+.flag-off{background:var(--bg3);color:var(--muted);border-color:var(--border)}
+
+/* TRUTH TABLE */
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem}
+.table-card h3{font-size:.95rem;margin-bottom:1rem;color:var(--purple2)}
+table{width:100%;border-collapse:collapse;font-size:.8rem;font-family:monospace}
+th{background:var(--bg3);color:var(--muted);padding:.5rem .8rem;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+td{padding:.45rem .8rem;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)}
+tr.highlight td{background:rgba(124,58,237,.1);color:var(--purple2)}
+tr:hover td{background:rgba(255,255,255,.03)}
+
+/* VERILOG CODE */
+.code-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-top:1.5rem}
+.code-card h3{font-size:.95rem;margin-bottom:1rem;color:var(--purple2)}
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.75rem;overflow-x:auto;line-height:1.6;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}
+
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px;transition:border-color .2s}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+
+@media(max-width:650px){.alu-grid{grid-template-columns:1fr;}.op-panel{flex-direction:row;flex-wrap:wrap;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Verilog HDL · Live Simulator</span></div>
+  <h1>4-Bit ALU Simulator</h1>
+  <p class="subtitle">Interactive simulation of a 4-bit Arithmetic Logic Unit — toggle bits, select operation, see results in real time</p>
+
+  <div class="alu-card">
+    <div class="alu-grid">
+      <!-- INPUT A -->
+      <div class="input-panel">
+        <div>
+          <div class="input-label">Input A</div>
+          <div class="bit-row" id="bitsA"></div>
+          <div class="bit-display" id="dispA"></div>
+        </div>
+        <div>
+          <div class="input-label">Input B</div>
+          <div class="bit-row" id="bitsB"></div>
+          <div class="bit-display" id="dispB"></div>
+        </div>
+      </div>
+
+      <!-- OPERATION -->
+      <div class="op-panel">
+        <div class="op-title">Operation</div>
+        <button class="op-btn active" onclick="setOp('ADD',this)">ADD</button>
+        <button class="op-btn" onclick="setOp('SUB',this)">SUB</button>
+        <button class="op-btn" onclick="setOp('AND',this)">AND</button>
+        <button class="op-btn" onclick="setOp('OR',this)">OR</button>
+        <button class="op-btn" onclick="setOp('XOR',this)">XOR</button>
+        <button class="op-btn" onclick="setOp('NOT',this)">NOT A</button>
+        <button class="op-btn" onclick="setOp('SHL',this)">SHL</button>
+        <button class="op-btn" onclick="setOp('SHR',this)">SHR</button>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="output-panel">
+        <div class="out-row">
+          <div class="out-label">Result (4-bit)</div>
+          <div class="out-bits" id="outBits"></div>
+        </div>
+        <div class="out-row">
+          <div class="out-label">Decimal</div>
+          <div class="out-val" id="outDec">—</div>
+        </div>
+        <div class="out-row">
+          <div class="out-label">Hex</div>
+          <div class="out-val" id="outHex">—</div>
+        </div>
+        <div>
+          <div class="out-label" style="margin-bottom:.4rem">Flags</div>
+          <div class="flags">
+            <div class="flag flag-off" id="flagZ">Z (Zero)</div>
+            <div class="flag flag-off" id="flagC">C (Carry)</div>
+            <div class="flag flag-off" id="flagN">N (Neg)</div>
+            <div class="flag flag-off" id="flagV">V (Overflow)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPERATION TABLE -->
+  <div class="table-card">
+    <h3>Operation Encoding</h3>
+    <table id="opTable">
+      <tr><th>Op Code</th><th>Operation</th><th>Expression</th><th>Description</th></tr>
+      <tr data-op="ADD"><td>000</td><td>ADD</td><td>A + B</td><td>4-bit unsigned addition with carry</td></tr>
+      <tr data-op="SUB"><td>001</td><td>SUB</td><td>A − B</td><td>Subtraction via 2's complement</td></tr>
+      <tr data-op="AND"><td>010</td><td>AND</td><td>A &amp; B</td><td>Bitwise logical AND</td></tr>
+      <tr data-op="OR"><td>011</td><td>OR</td><td>A | B</td><td>Bitwise logical OR</td></tr>
+      <tr data-op="XOR"><td>100</td><td>XOR</td><td>A ^ B</td><td>Bitwise exclusive OR</td></tr>
+      <tr data-op="NOT"><td>101</td><td>NOT A</td><td>~A</td><td>Bitwise complement of A</td></tr>
+      <tr data-op="SHL"><td>110</td><td>SHL</td><td>A &lt;&lt; 1</td><td>Logical left shift by 1</td></tr>
+      <tr data-op="SHR"><td>111</td><td>SHR</td><td>A &gt;&gt; 1</td><td>Logical right shift by 1</td></tr>
+    </table>
+  </div>
+
+  <!-- VERILOG CODE -->
+  <div class="code-card">
+    <h3>Verilog Implementation</h3>
+    <pre><span class="comment">// 4-bit ALU — Verilog HDL</span>
+<span class="comment">// Author: Muhammad Moiz Ahmad</span>
+
+<span class="kw">module</span> <span class="type">alu_4bit</span> (
+    <span class="kw">input</span>  [<span class="num">3</span>:<span class="num">0</span>] A, B,
+    <span class="kw">input</span>  [<span class="num">2</span>:<span class="num">0</span>] op,
+    <span class="kw">output reg</span> [<span class="num">3</span>:<span class="num">0</span>] result,
+    <span class="kw">output reg</span>        carry, zero, negative, overflow
+);
+
+<span class="kw">reg</span> [<span class="num">4</span>:<span class="num">0</span>] tmp;
+
+<span class="kw">always</span> @(*) <span class="kw">begin</span>
+    tmp = <span class="num">5'b0</span>;
+    <span class="kw">case</span> (op)
+        <span class="num">3'b000</span>: tmp = A + B;          <span class="comment">// ADD</span>
+        <span class="num">3'b001</span>: tmp = A - B;          <span class="comment">// SUB</span>
+        <span class="num">3'b010</span>: tmp = A &amp; B;          <span class="comment">// AND</span>
+        <span class="num">3'b011</span>: tmp = A | B;          <span class="comment">// OR</span>
+        <span class="num">3'b100</span>: tmp = A ^ B;          <span class="comment">// XOR</span>
+        <span class="num">3'b101</span>: tmp = ~A;             <span class="comment">// NOT</span>
+        <span class="num">3'b110</span>: tmp = A &lt;&lt; <span class="num">1</span>;        <span class="comment">// SHL</span>
+        <span class="num">3'b111</span>: tmp = A &gt;&gt; <span class="num">1</span>;        <span class="comment">// SHR</span>
+    <span class="kw">endcase</span>
+    result   = tmp[<span class="num">3</span>:<span class="num">0</span>];
+    carry    = tmp[<span class="num">4</span>];
+    zero     = (result == <span class="num">4'b0</span>);
+    negative = result[<span class="num">3</span>];
+    overflow = (op==<span class="num">3'b000</span>) ? (A[<span class="num">3</span>]==B[<span class="num">3</span>] &amp;&amp; result[<span class="num">3</span>]!=A[<span class="num">3</span>]) : <span class="num">1'b0</span>;
+<span class="kw">end</span>
+<span class="kw">endmodule</span></pre>
+  </div>
+</div>
+
+<script>
+let bitsA=[0,0,0,0], bitsB=[0,0,0,0], op='ADD';
+
+function makeBits(containerId, arr, label){
+  const c=document.getElementById(containerId);
+  c.innerHTML='';
+  arr.forEach((v,i)=>{
+    const b=document.createElement('button');
+    b.className='bit-btn'+(v?' on':'');
+    b.textContent=v;
+    b.onclick=()=>{arr[i]=1-arr[i];makeBits(containerId,arr,label);compute()};
+    c.appendChild(b);
+  });
+  const bit3=parseInt(arr.join(''),2);
+  document.getElementById(label).textContent=`0b${arr.join('')}  =  ${bit3}  (0x${bit3.toString(16).toUpperCase()})`;
+}
+
+function setOp(o,btn){
+  op=o;
+  document.querySelectorAll('.op-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#opTable tr[data-op]').forEach(r=>r.classList.remove('highlight'));
+  const row=document.querySelector(`#opTable tr[data-op="${o}"]`);
+  if(row) row.classList.add('highlight');
+  compute();
+}
+
+function compute(){
+  const a=parseInt(bitsA.join(''),2);
+  const b=parseInt(bitsB.join(''),2);
+  let res=0,carry=0,overflow=0;
+  switch(op){
+    case 'ADD': res=a+b; carry=res>15; res&=15; overflow=(a<8&&b<8&&res>=8)||(a>=8&&b>=8&&res<8); break;
+    case 'SUB': res=a-b; carry=a<b; res=(res+16)&15; break;
+    case 'AND': res=a&b; break;
+    case 'OR':  res=a|b; break;
+    case 'XOR': res=a^b; break;
+    case 'NOT': res=(~a)&15; break;
+    case 'SHL': res=(a<<1)&15; carry=(a>>3)&1; break;
+    case 'SHR': res=(a>>1)&15; carry=a&1; break;
+  }
+  const bits=res.toString(2).padStart(4,'0');
+  const outC=document.getElementById('outBits');
+  outC.innerHTML='';
+  bits.split('').forEach(b=>{
+    const d=document.createElement('div');
+    d.className='out-bit '+(b==='1'?'bit-1':'bit-0');
+    d.textContent=b;
+    outC.appendChild(d);
+  });
+  document.getElementById('outDec').textContent=res;
+  document.getElementById('outHex').textContent='0x'+res.toString(16).toUpperCase();
+
+  const setFlag=(id,on)=>{
+    const el=document.getElementById(id);
+    el.className='flag '+(on?'flag-on':'flag-off');
+  };
+  setFlag('flagZ',res===0);
+  setFlag('flagC',carry===1||carry===true);
+  setFlag('flagN',(res>>3)===1);
+  setFlag('flagV',overflow);
+}
+
+// init
+makeBits('bitsA',bitsA,'dispA');
+makeBits('bitsB',bitsB,'dispB');
+// highlight ADD row
+document.querySelector('#opTable tr[data-op="ADD"]').classList.add('highlight');
+compute();
+</script>
+</body>
+</html>

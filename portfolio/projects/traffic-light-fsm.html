@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Traffic Light FSM — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg2:#111128;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:1000px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px;transition:border-color .2s}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+
+/* MAIN LAYOUT */
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem}
+.card h3{font-size:.9rem;color:var(--purple2);margin-bottom:1.2rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+
+/* INTERSECTION */
+.intersection{display:grid;grid-template-columns:1fr 80px 1fr;grid-template-rows:1fr 80px 1fr;gap:0;width:100%;aspect-ratio:1;max-width:320px;margin:0 auto}
+.road-h{background:#1a1a2e;border-top:3px solid #2a2a4a;border-bottom:3px solid #2a2a4a;display:flex;align-items:center;justify-content:center}
+.road-v{background:#1a1a2e;border-left:3px solid #2a2a4a;border-right:3px solid #2a2a4a;display:flex;align-items:center;justify-content:center}
+.road-cross{background:#1a1a2e}
+.corner{background:var(--bg3)}
+.dash-h{width:80%;height:3px;background:repeating-linear-gradient(90deg,#4a4a6a 0,#4a4a6a 12px,transparent 12px,transparent 22px)}
+.dash-v{width:3px;height:80%;background:repeating-linear-gradient(180deg,#4a4a6a 0,#4a4a6a 12px,transparent 12px,transparent 22px)}
+
+/* TRAFFIC LIGHT */
+.tl-box{background:#1a1a1a;border:2px solid #333;border-radius:10px;padding:6px;display:flex;gap:5px;align-items:center}
+.tl-box.vertical{flex-direction:column;padding:6px 5px}
+.bulb{width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.1);transition:all .3s}
+.bulb.r-off{background:#3d0000}
+.bulb.r-on{background:#ef4444;box-shadow:0 0 12px #ef4444,0 0 4px #ef4444}
+.bulb.y-off{background:#3d3000}
+.bulb.y-on{background:#eab308;box-shadow:0 0 12px #eab308,0 0 4px #eab308}
+.bulb.g-off{background:#003d00}
+.bulb.g-on{background:#22c55e;box-shadow:0 0 12px #22c55e,0 0 4px #22c55e}
+
+/* CONTROLS & STATE */
+.controls{display:flex;gap:.75rem;margin-bottom:1.2rem;flex-wrap:wrap}
+.btn{padding:.5rem 1.1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn.primary{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn:hover{border-color:var(--purple);color:var(--text)}
+
+.state-display{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem}
+.state-name{font-size:1.1rem;font-weight:800;color:var(--purple2);margin-bottom:.3rem}
+.state-info{font-size:.78rem;color:var(--muted);line-height:1.6}
+.timer-bar{height:5px;background:var(--border);border-radius:3px;margin-top:.7rem;overflow:hidden}
+.timer-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--blue));border-radius:3px;transition:width .1s linear}
+
+/* STATE DIAGRAM */
+.diagram{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem}
+.state-node{background:var(--bg3);border:2px solid var(--border);border-radius:10px;padding:.6rem .4rem;text-align:center;font-size:.7rem;font-weight:700;transition:all .2s;cursor:default}
+.state-node.active{border-color:var(--purple);background:rgba(124,58,237,.15);color:var(--purple2)}
+.state-node .dot{width:10px;height:10px;border-radius:50%;margin:0 auto .3rem}
+.dot-r{background:var(--red)}
+.dot-y{background:var(--yellow)}
+.dot-g{background:var(--green)}
+.arrow{text-align:center;color:var(--muted);font-size:1.2rem;display:flex;align-items:center;justify-content:center}
+
+/* VERILOG */
+.code-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-top:1.5rem}
+.code-card h3{font-size:.95rem;margin-bottom:1rem;color:var(--purple2)}
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.75rem;overflow-x:auto;line-height:1.6;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}
+
+.signal-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:.5rem}
+.signal-table th{background:var(--bg3);color:var(--muted);padding:.4rem .7rem;text-align:left;font-size:.68rem;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.signal-table td{padding:.4rem .7rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.sig-ns{color:#4ade80}.sig-ew{color:#60a5fa}.sig-y{color:#fbbf24}
+
+@media(max-width:700px){.main-grid{grid-template-columns:1fr}.diagram{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Verilog HDL · FSM · Live Demo</span></div>
+  <h1>Traffic Light FSM</h1>
+  <p class="subtitle">4-state Finite State Machine controlling a two-way intersection — implemented in Verilog HDL</p>
+
+  <div class="main-grid">
+    <!-- LEFT: INTERSECTION -->
+    <div class="card">
+      <h3>Intersection View</h3>
+      <div class="intersection">
+        <div class="corner"></div>
+        <div class="road-v" style="grid-column:2;grid-row:1">
+          <div class="tl-box vertical" id="tl-n">
+            <div class="bulb r-off" id="n-r"></div>
+            <div class="bulb y-off" id="n-y"></div>
+            <div class="bulb g-off" id="n-g"></div>
+          </div>
+        </div>
+        <div class="corner"></div>
+
+        <div class="road-h" style="grid-column:1;grid-row:2">
+          <div class="tl-box" id="tl-w">
+            <div class="bulb r-off" id="w-r"></div>
+            <div class="bulb y-off" id="w-y"></div>
+            <div class="bulb g-off" id="w-g"></div>
+          </div>
+        </div>
+        <div class="road-cross" style="grid-column:2;grid-row:2"></div>
+        <div class="road-h" style="grid-column:3;grid-row:2;justify-content:flex-end;padding-right:8px">
+          <div class="tl-box" id="tl-e">
+            <div class="bulb g-off" id="e-g"></div>
+            <div class="bulb y-off" id="e-y"></div>
+            <div class="bulb r-off" id="e-r"></div>
+          </div>
+        </div>
+
+        <div class="corner"></div>
+        <div class="road-v" style="grid-column:2;grid-row:3;align-items:flex-end;padding-bottom:8px">
+          <div class="tl-box vertical" id="tl-s">
+            <div class="bulb g-off" id="s-g"></div>
+            <div class="bulb y-off" id="s-y"></div>
+            <div class="bulb r-off" id="s-r"></div>
+          </div>
+        </div>
+        <div class="corner"></div>
+      </div>
+
+      <div style="margin-top:1.2rem">
+        <table class="signal-table">
+          <tr><th>Direction</th><th>Red</th><th>Yellow</th><th>Green</th></tr>
+          <tr><td class="sig-ns">N / S</td><td id="sig-ns-r">—</td><td id="sig-ns-y">—</td><td id="sig-ns-g">—</td></tr>
+          <tr><td class="sig-ew">E / W</td><td id="sig-ew-r">—</td><td id="sig-ew-y">—</td><td id="sig-ew-g">—</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- RIGHT: CONTROLS + STATE -->
+    <div class="card">
+      <h3>FSM Controller</h3>
+      <div class="controls">
+        <button class="btn primary" id="startBtn" onclick="toggleRun()">▶ Run</button>
+        <button class="btn" onclick="stepFSM()">Step →</button>
+        <button class="btn" onclick="resetFSM()">Reset</button>
+        <select id="speedSel" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:.4rem .6rem;font-size:.78rem">
+          <option value="1">1× Speed</option>
+          <option value="2">2× Speed</option>
+          <option value="0.5">0.5× Speed</option>
+        </select>
+      </div>
+
+      <div class="state-display">
+        <div class="state-name" id="stateName">S0: NS Green</div>
+        <div class="state-info" id="stateInfo">North-South: GREEN &nbsp;|&nbsp; East-West: RED<br>Duration: 5 seconds</div>
+        <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+      </div>
+
+      <h3 style="margin-bottom:.8rem">State Diagram</h3>
+      <div class="diagram">
+        <div class="state-node" id="node-S0"><div class="dot dot-g"></div>S0<br><span style="color:var(--muted);font-weight:400">NS Green</span></div>
+        <div class="arrow">→</div>
+        <div class="state-node" id="node-S1"><div class="dot dot-y"></div>S1<br><span style="color:var(--muted);font-weight:400">NS Yellow</span></div>
+        <div class="arrow">↓</div>
+
+        <div class="arrow" style="grid-column:1">↑</div>
+        <div></div>
+        <div></div>
+        <div class="arrow" style="grid-column:4">↓</div>
+
+        <div class="state-node" id="node-S3"><div class="dot dot-y"></div>S3<br><span style="color:var(--muted);font-weight:400">EW Yellow</span></div>
+        <div class="arrow">←</div>
+        <div class="state-node" id="node-S2"><div class="dot dot-g"></div>S2<br><span style="color:var(--muted);font-weight:400">EW Green</span></div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VERILOG CODE -->
+  <div class="code-card">
+    <h3>Verilog Implementation</h3>
+    <pre><span class="comment">// Traffic Light FSM — Verilog HDL</span>
+<span class="comment">// 4-state Moore FSM, two-way intersection (NS / EW)</span>
+<span class="comment">// Author: Muhammad Moiz Ahmad</span>
+
+<span class="kw">module</span> <span class="type">traffic_light_fsm</span> (
+    <span class="kw">input</span>       clk, rst,
+    <span class="kw">output reg</span> [<span class="num">1</span>:<span class="num">0</span>] ns_light,  <span class="comment">// 00=Red 01=Yellow 10=Green</span>
+    <span class="kw">output reg</span> [<span class="num">1</span>:<span class="num">0</span>] ew_light
+);
+
+<span class="kw">parameter</span> S0 = <span class="num">2'b00</span>;  <span class="comment">// NS Green, EW Red</span>
+<span class="kw">parameter</span> S1 = <span class="num">2'b01</span>;  <span class="comment">// NS Yellow, EW Red</span>
+<span class="kw">parameter</span> S2 = <span class="num">2'b10</span>;  <span class="comment">// NS Red, EW Green</span>
+<span class="kw">parameter</span> S3 = <span class="num">2'b11</span>;  <span class="comment">// NS Red, EW Yellow</span>
+
+<span class="kw">reg</span> [<span class="num">1</span>:<span class="num">0</span>] state;
+<span class="kw">reg</span> [<span class="num">3</span>:<span class="num">0</span>] timer;
+
+<span class="kw">always</span> @(<span class="kw">posedge</span> clk <span class="kw">or posedge</span> rst) <span class="kw">begin</span>
+    <span class="kw">if</span> (rst) <span class="kw">begin</span>
+        state &lt;= S0; timer &lt;= <span class="num">4'd9</span>;
+    <span class="kw">end else if</span> (timer == <span class="num">0</span>) <span class="kw">begin</span>
+        <span class="kw">case</span> (state)
+            S0: <span class="kw">begin</span> state &lt;= S1; timer &lt;= <span class="num">4'd2</span>; <span class="kw">end</span>
+            S1: <span class="kw">begin</span> state &lt;= S2; timer &lt;= <span class="num">4'd9</span>; <span class="kw">end</span>
+            S2: <span class="kw">begin</span> state &lt;= S3; timer &lt;= <span class="num">4'd2</span>; <span class="kw">end</span>
+            S3: <span class="kw">begin</span> state &lt;= S0; timer &lt;= <span class="num">4'd9</span>; <span class="kw">end</span>
+        <span class="kw">endcase</span>
+    <span class="kw">end else</span>
+        timer &lt;= timer - <span class="num">1</span>;
+<span class="kw">end</span>
+
+<span class="kw">always</span> @(*) <span class="kw">begin</span>
+    <span class="kw">case</span> (state)
+        S0: <span class="kw">begin</span> ns_light=<span class="num">2'b10</span>; ew_light=<span class="num">2'b00</span>; <span class="kw">end</span>
+        S1: <span class="kw">begin</span> ns_light=<span class="num">2'b01</span>; ew_light=<span class="num">2'b00</span>; <span class="kw">end</span>
+        S2: <span class="kw">begin</span> ns_light=<span class="num">2'b00</span>; ew_light=<span class="num">2'b10</span>; <span class="kw">end</span>
+        S3: <span class="kw">begin</span> ns_light=<span class="num">2'b00</span>; ew_light=<span class="num">2'b01</span>; <span class="kw">end</span>
+    <span class="kw">endcase</span>
+<span class="kw">end</span>
+<span class="kw">endmodule</span></pre>
+  </div>
+</div>
+
+<script>
+const STATES=[
+  {name:'S0: NS Green / EW Red',info:'North-South: GREEN &nbsp;|&nbsp; East-West: RED',dur:5000,
+   ns:{r:0,y:0,g:1},ew:{r:1,y:0,g:0}},
+  {name:'S1: NS Yellow / EW Red',info:'North-South: YELLOW &nbsp;|&nbsp; East-West: RED',dur:2000,
+   ns:{r:0,y:1,g:0},ew:{r:1,y:0,g:0}},
+  {name:'S2: NS Red / EW Green',info:'North-South: RED &nbsp;|&nbsp; East-West: GREEN',dur:5000,
+   ns:{r:1,y:0,g:0},ew:{r:0,y:0,g:1}},
+  {name:'S3: NS Red / EW Yellow',info:'North-South: RED &nbsp;|&nbsp; East-West: YELLOW',dur:2000,
+   ns:{r:1,y:0,g:0},ew:{r:0,y:1,g:0}},
+];
+const nodeIds=['node-S0','node-S1','node-S2','node-S3'];
+let curState=0, running=false, timer=null, elapsed=0, interval=100;
+
+function applyState(si){
+  const s=STATES[si];
+  document.getElementById('stateName').textContent=s.name;
+  document.getElementById('stateInfo').innerHTML=s.info+'<br>Duration: '+(s.dur/1000)+' seconds';
+  nodeIds.forEach((id,i)=>{
+    document.getElementById(id).classList.toggle('active',i===si);
+  });
+  // NS lights (N and S facing)
+  setLight('n',s.ns); setLight('s',{r:s.ns.r,y:s.ns.y,g:s.ns.g});
+  setLight('e',s.ew); setLight('w',{r:s.ew.r,y:s.ew.y,g:s.ew.g});
+  // signal table
+  document.getElementById('sig-ns-r').textContent=s.ns.r?'1':'0';
+  document.getElementById('sig-ns-y').textContent=s.ns.y?'1':'0';
+  document.getElementById('sig-ns-g').textContent=s.ns.g?'1':'0';
+  document.getElementById('sig-ew-r').textContent=s.ew.r?'1':'0';
+  document.getElementById('sig-ew-y').textContent=s.ew.y?'1':'0';
+  document.getElementById('sig-ew-g').textContent=s.ew.g?'1':'0';
+}
+function setLight(dir,sig){
+  document.getElementById(dir+'-r').className='bulb '+(sig.r?'r-on':'r-off');
+  document.getElementById(dir+'-y').className='bulb '+(sig.y?'y-on':'y-off');
+  document.getElementById(dir+'-g').className='bulb '+(sig.g?'g-on':'g-off');
+}
+function updateTimer(){
+  const dur=STATES[curState].dur;
+  const pct=Math.max(0,100-(elapsed/dur*100));
+  document.getElementById('timerFill').style.width=pct+'%';
+  const speed=parseFloat(document.getElementById('speedSel').value);
+  elapsed+=interval*speed;
+  if(elapsed>=dur){elapsed=0;curState=(curState+1)%4;applyState(curState);}
+}
+function toggleRun(){
+  running=!running;
+  document.getElementById('startBtn').textContent=running?'⏸ Pause':'▶ Run';
+  if(running){timer=setInterval(updateTimer,interval);}
+  else{clearInterval(timer);}
+}
+function stepFSM(){
+  if(running) toggleRun();
+  elapsed=0;
+  curState=(curState+1)%4;
+  applyState(curState);
+  document.getElementById('timerFill').style.width='100%';
+}
+function resetFSM(){
+  if(running) toggleRun();
+  curState=0; elapsed=0;
+  applyState(0);
+  document.getElementById('timerFill').style.width='100%';
+}
+applyState(0);
+</script>
+</body>
+</html>
