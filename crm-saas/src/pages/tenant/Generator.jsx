@@ -4,6 +4,7 @@ import Page, { CoAvatar } from '../../components/Page';
 import { useAuth } from '../../lib/AuthContext';
 import { guessEmails } from '../../lib/emailGuess';
 import { verifyLeads, genuineRank, domainOf } from '../../lib/verifyLead';
+import { discoverEmails } from '../../lib/emailDiscover';
 
 const SUPA_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON     = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -29,6 +30,7 @@ const SOURCES = [
   { id:'apollo',    label:'Apollo.io',          color:'#5C4EE5', free:false, keyField:'apollo_key',  desc:'B2B leads with direct emails & contacts' },
   { id:'hunter',    label:'Hunter.io',          color:'#f59e0b', free:false, keyField:'hunter_key',  desc:'Verified real emails by domain — 25 free/month' },
   { id:'osm',       label:'OpenStreetMap',      color:'#22c55e', free:true,  desc:'Map-based local discovery (enter a city)' },
+  { id:'emailfind', label:'Real Email Finder',  color:'#0ea5e9', free:true,  desc:'Scrapes each company website (contact / about pages) for their ACTUAL published email — instead of guessing info@. Massively cuts bounces' },
   { id:'ai',        label:'AI Scoring',         color:'#7c3aed', free:false, keyField:'anthropic_key', desc:'Claude AI analyzes every company — ranks HOT / WARM / COLD by fit for IT services' },
   { id:'verify',    label:'Genuine Check',      color:'#059669', free:true,  desc:'Verifies every lead is REAL — live DNS + email deliverability (MX) + domain age + website liveness. Flags dead or fake companies' },
 ];
@@ -176,10 +178,11 @@ export default function Generator() {
   const [added,        setAdded]        = useState(new Set());
   const [emailMap,     setEmailMap]     = useState({});
   const [hunterMap,    setHunterMap]    = useState({});
+  const [foundMap,     setFoundMap]     = useState({}); // scraped real emails
   const [showSugg,     setShowSugg]     = useState('');
   const [hotOnly,      setHotOnly]      = useState(true);
   const [genuineOnly,  setGenuineOnly]  = useState(false);
-  const [enabled,      setEnabled]      = useState({ clearbit:true, github:true, opencorp:true, maps:true, apollo:true, hunter:true, osm:false, ai:true, verify:true });
+  const [enabled,      setEnabled]      = useState({ clearbit:true, github:true, opencorp:true, maps:true, apollo:true, hunter:true, osm:false, emailfind:true, ai:true, verify:true });
   const [showKeys,     setShowKeys]     = useState(false);
 
   const [mapsKey,      setMapsKey]      = useState('');
@@ -217,7 +220,7 @@ export default function Generator() {
   async function generate() {
     const q = query.trim();
     if (!q) { setMsg('Pick a preset or type a keyword first.'); return; }
-    setBusy(true); setMsg(''); setResults([]); setAdded(new Set()); setEmailMap({}); setHunterMap({}); setShowSugg(''); setPct(0);
+    setBusy(true); setMsg(''); setResults([]); setAdded(new Set()); setEmailMap({}); setHunterMap({}); setFoundMap({}); setShowSugg(''); setPct(0);
 
     const all  = [];
     const push = (items) => { all.push(...items); setResults([...all]); };
@@ -243,9 +246,20 @@ export default function Generator() {
 
     // Hunter email enrichment
     if (enabled.hunter && hunterKey && all.length) {
-      setScanning('hunter'); setPct(82);
+      setScanning('hunter'); setPct(80);
       const hMap = await enrichWithHunter(all, hunterKey);
       setHunterMap(hMap);
+      setPct(84);
+    }
+
+    // Real email finder — scrape each company's own site for a published
+    // address instead of guessing info@ (which mostly bounces).
+    if (enabled.emailfind && all.length) {
+      setScanning('emailfind'); setPct(84);
+      const fMap = await discoverEmails(all, (done, total) => {
+        setPct(84 + Math.round((done / total) * 4));
+      });
+      setFoundMap(fMap);
       setPct(88);
     }
 
@@ -280,7 +294,10 @@ export default function Generator() {
 
   function resolvedEmail(l) {
     const key = l.company.toLowerCase();
-    return emailMap[key] || hunterMap[key]?.email || l.email || '';
+    // Priority: user pick → Hunter verified → scraped-from-site → provided → guess
+    const found = foundMap[key];
+    const scraped = found && found.source !== 'guessed' ? found.email : '';
+    return emailMap[key] || hunterMap[key]?.email || scraped || l.email || (found?.email || '');
   }
 
   // Final CRM score: blend topical fit with proof the business is real.
@@ -291,6 +308,7 @@ export default function Generator() {
 
   async function addOne(l) {
     const hEntry = hunterMap[l.company.toLowerCase()];
+    const fEntry = foundMap[l.company.toLowerCase()];
     await supabase.from('app_leads').insert({
       org_id: orgId, company: l.company, website: l.website || '',
       email: resolvedEmail(l), industry: l.industry || '',
@@ -306,6 +324,8 @@ export default function Generator() {
         l.rating    ? `Rating: ${l.rating}/5 (${l.ratingCount || 0} reviews)` : '',
         l.employees ? `Employees: ~${l.employees}` : '',
         hEntry      ? `Email verified by Hunter.io — ${hEntry.confidence}% confidence` : '',
+        !hEntry && fEntry?.source === 'scraped' ? `Email found on company website (${fEntry.all?.length || 1} candidate${(fEntry.all?.length || 1) > 1 ? 's' : ''})` : '',
+        !hEntry && fEntry?.source === 'guessed' ? `Email is a GUESS — no published address found; may bounce` : '',
         l.registered    ? `Incorporated: ${l.registered}` : '',
         l.companyNumber ? `Company #: ${l.companyNumber}` : '',
         l._oc_url       ? `Registry: ${l._oc_url}` : '',
@@ -320,6 +340,7 @@ export default function Generator() {
     if (!toAdd.length) { setMsg('All visible leads are already in your CRM.'); return; }
     await supabase.from('app_leads').insert(toAdd.map((l) => {
       const hEntry = hunterMap[l.company.toLowerCase()];
+      const fEntry = foundMap[l.company.toLowerCase()];
       return {
         org_id: orgId, company: l.company, website: l.website || '',
         email: resolvedEmail(l), industry: l.industry || '',
@@ -332,6 +353,8 @@ export default function Generator() {
           l.phone    ? `Phone: ${l.phone}` : '',
           l.address  ? `Address: ${l.address}` : '',
           hEntry     ? `Email verified by Hunter.io — ${hEntry.confidence}% confidence` : '',
+          !hEntry && fEntry?.source === 'scraped' ? `Email found on company website` : '',
+          !hEntry && fEntry?.source === 'guessed' ? `Email is a GUESS — may bounce` : '',
           l.registered ? `Incorporated: ${l.registered}` : '',
         ].filter(Boolean).join('\n'),
       };
@@ -528,6 +551,7 @@ export default function Generator() {
                 <span style={{ fontWeight:600 }}>
                   {scanning === 'ai' ? 'Claude AI analyzing companies…'
                     : scanning === 'verify' ? 'Verifying leads are genuine — DNS, email deliverability, domain age…'
+                    : scanning === 'emailfind' ? 'Finding real emails — scraping each company’s contact page…'
                     : scanLabel ? `Scanning ${scanLabel}…` : 'Finishing…'}
                 </span>
                 <span>{pct}%</span>
@@ -606,8 +630,11 @@ export default function Generator() {
               const suggs        = guessEmails(l.website);
               const chosen       = emailMap[key];
               const hunter       = hunterMap[key];
-              const displayEmail = chosen || hunter?.email || l.email || '';
+              const found        = foundMap[key];
+              const scraped      = found && found.source !== 'guessed' ? found : null;
+              const displayEmail = chosen || hunter?.email || scraped?.email || l.email || found?.email || '';
               const isVerified   = !!hunter;
+              const isScraped    = !chosen && !hunter && !!scraped && scraped.email === displayEmail;
               const srcColor     = sourceColors[l._source] || '#6366f1';
               const aiScore      = l.ai_score;
               const lvlStyle     = aiScore !== undefined ? levelStyle(aiScore) : null;
@@ -686,7 +713,9 @@ export default function Generator() {
                     {displayEmail ? (
                       <div style={{ fontSize:12, display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
                         {isVerified && <span style={{ fontSize:9, fontWeight:800, color:'#f59e0b', background:'#fef3c7', padding:'2px 7px', borderRadius:20, flexShrink:0 }}>Hunter {hunter.confidence}%</span>}
-                        <span style={{ color: isVerified ? '#d97706' : chosen ? '#6366f1' : 'var(--muted)', wordBreak:'break-all' }}>{displayEmail}</span>
+                        {!isVerified && isScraped && <span title="Found on the company’s own website" style={{ fontSize:9, fontWeight:800, color:'#0369a1', background:'#e0f2fe', padding:'2px 7px', borderRadius:20, flexShrink:0, cursor:'help' }}>✓ Real</span>}
+                        {!isVerified && !isScraped && found?.source === 'guessed' && <span title="No published email found — this is a guess and may bounce" style={{ fontSize:9, fontWeight:800, color:'#92400e', background:'#fef3c7', padding:'2px 7px', borderRadius:20, flexShrink:0, cursor:'help' }}>guess</span>}
+                        <span style={{ color: isVerified ? '#d97706' : isScraped ? '#0369a1' : chosen ? '#6366f1' : 'var(--muted)', wordBreak:'break-all' }}>{displayEmail}</span>
                         {suggs.length > 0 && (
                           <button type="button" style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0, textDecoration:'underline', flexShrink:0 }} onClick={() => setShowSugg(showSugg === key ? '' : key)}>change</button>
                         )}
