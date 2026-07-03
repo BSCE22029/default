@@ -3,51 +3,49 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import CommandPalette from './CommandPalette';
+import {
+  IconLayoutDashboard, IconUsers, IconColumns, IconBolt,
+  IconChartBar, IconSettings, IconSatellite, IconBuilding,
+  IconSun, IconMoon, IconSearch, IconArrowsExchange,
+} from '@tabler/icons-react';
 
 const tenantNav = [
-  { to:'/app',           end:true, ico:'📊', label:'Dashboard'      },
-  { to:'/app/leads',               ico:'👥', label:'Leads'           },
-  { to:'/app/pipeline',            ico:'📋', label:'Pipeline'        },
-  { to:'/app/generator',           ico:'⚡', label:'Lead Generator'  },
-  { to:'/app/analytics',           ico:'📈', label:'Analytics'       },
-  { to:'/app/team',                ico:'⚙️', label:'Team & Settings' },
+  { to: '/app',           end: true, Icon: IconLayoutDashboard, label: 'Dashboard'      },
+  { to: '/app/leads',               Icon: IconUsers,            label: 'Leads'          },
+  { to: '/app/pipeline',            Icon: IconColumns,          label: 'Pipeline'       },
+  { to: '/app/generator',           Icon: IconBolt,             label: 'Lead Generator' },
+  { to: '/app/analytics',           Icon: IconChartBar,         label: 'Analytics'      },
+  { to: '/app/team',                Icon: IconSettings,         label: 'Settings'       },
 ];
 
 const adminNav = [
-  { to:'/admin',      end:true, ico:'🛰️', label:'Platform Overview' },
-  { to:'/admin/orgs',           ico:'🏢', label:'Organizations'     },
+  { to: '/admin',      end: true, Icon: IconSatellite, label: 'Platform Overview' },
+  { to: '/admin/orgs',            Icon: IconBuilding,  label: 'Organizations'    },
 ];
 
 export default function Layout({ admin }) {
   const { profile, signOut } = useAuth();
   const nav   = useNavigate();
   const items = admin ? adminNav : tenantNav;
-  const [dark,   setDark]   = useState(() => localStorage.getItem('theme') === 'dark');
-  const [cp,     setCp]     = useState(false);
-  const [live,   setLive]   = useState(false);
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [cp,   setCp]   = useState(false);
+  const [live, setLive] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     localStorage.setItem('theme', dark ? 'dark' : 'light');
   }, [dark]);
 
-  // Global Ctrl+K handler
   useEffect(() => {
     function handler(e) {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setCp((o) => !o);
-      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setCp((o) => !o); }
     }
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Supabase realtime presence — shows live indicator
   useEffect(() => {
-    const ch = supabase.channel('app-live').subscribe((status) => {
-      setLive(status === 'SUBSCRIBED');
-    });
+    const ch = supabase.channel('app-live').subscribe((status) => setLive(status === 'SUBSCRIBED'));
     return () => supabase.removeChannel(ch);
   }, []);
 
@@ -58,28 +56,28 @@ export default function Layout({ admin }) {
 
         {live && (
           <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'#4ade80', marginBottom:10, paddingLeft:4 }}>
-            <span className="live-dot" />
-            Live
+            <span className="live-dot" /> Live
           </div>
         )}
 
         <nav>
-          {items.map((i) => (
-            <NavLink key={i.to} to={i.to} end={i.end} className={({ isActive }) => isActive ? 'active' : ''}>
-              <span className="ico">{i.ico}</span> {i.label}
+          {items.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => isActive ? 'active' : ''}>
+              <item.Icon size={17} stroke={1.75} className="ico" />
+              {item.label}
             </NavLink>
           ))}
           {profile?.role === 'super_admin' && (
             <NavLink to={admin ? '/app' : '/admin'}>
-              <span className="ico">↔️</span> {admin ? 'Tenant view' : 'Admin console'}
+              <IconArrowsExchange size={17} stroke={1.75} className="ico" />
+              {admin ? 'Tenant view' : 'Admin console'}
             </NavLink>
           )}
         </nav>
 
-        {/* Ctrl+K hint */}
         <button className="cp-trigger-btn" onClick={() => setCp(true)}>
-          <span style={{ fontSize:13 }}>🔍</span>
-          <span style={{ flex:1, textAlign:'left', fontSize:12 }}>Search…</span>
+          <IconSearch size={14} stroke={2} style={{ color:'#64748b', flexShrink:0 }} />
+          <span style={{ flex:1, textAlign:'left', fontSize:12, color:'#64748b' }}>Search…</span>
           <kbd className="cp-trigger-kbd">⌘K</kbd>
         </button>
 
@@ -88,13 +86,15 @@ export default function Layout({ admin }) {
           {profile?.email}
           <div className="badge-role">{(profile?.role || '').replace('_', ' ')}</div>
           <div style={{ display:'flex', gap:8, marginTop:12 }}>
-            <button className="btn btn-ghost btn-sm"
-              style={{ flex:1, color:'#94a3b8', borderColor:'#1e293b' }}
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ flex:1, color:'#94a3b8', borderColor:'#1e293b', display:'flex', alignItems:'center', justifyContent:'center' }}
               title={dark ? 'Light mode' : 'Dark mode'}
               onClick={() => setDark((d) => !d)}>
-              {dark ? '☀️' : '🌙'}
+              {dark ? <IconSun size={14} stroke={2} /> : <IconMoon size={14} stroke={2} />}
             </button>
-            <button className="btn btn-ghost btn-sm"
+            <button
+              className="btn btn-ghost btn-sm"
               style={{ flex:2, color:'#cbd5e1', borderColor:'#1e293b' }}
               onClick={async () => { await signOut(); nav('/login'); }}>
               Sign out

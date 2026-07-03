@@ -92,7 +92,7 @@ export default function Analytics() {
       {/* Trend chart */}
       <div className="card" style={{ marginBottom:16 }}>
         <div className="card-head">
-          <h3>📈 Lead Volume — Last 12 Weeks</h3>
+          <h3>Lead Volume — Last 12 Weeks</h3>
           <span style={{ fontSize:12, color:'var(--muted)' }}>
             {weekData.reduce((s, w) => s + w.count, 0)} leads this period
           </span>
@@ -121,7 +121,7 @@ export default function Analytics() {
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
         {/* Conversion funnel */}
         <div className="card">
-          <div className="card-head"><h3>📊 Conversion Funnel</h3></div>
+          <div className="card-head"><h3>Conversion Funnel</h3></div>
           <div className="card-body">
             {funnel.map((s, i) => {
               const pct  = total > 0 ? Math.round((s.n / total) * 100) : 0;
@@ -151,7 +151,7 @@ export default function Analytics() {
 
         {/* Email performance */}
         <div className="card">
-          <div className="card-head"><h3>✉️ Email Performance</h3></div>
+          <div className="card-head"><h3>Email Performance</h3></div>
           <div className="card-body" style={{ display:'flex', alignItems:'center', gap:28 }}>
             <svg width="96" height="96" viewBox="0 0 96 96" style={{ flexShrink:0 }}>
               <circle cx="48" cy="48" r={r} fill="none" stroke="var(--border)" strokeWidth="10" />
@@ -182,8 +182,8 @@ export default function Analytics() {
       {/* Countries + categories */}
       <div className="grid2">
         {[
-          { title:'🌍 Top Countries', data:countries },
-          { title:'🏷️ Leads by Category', data:categories },
+          { title:'Top Countries', data:countries },
+          { title:'Leads by Category', data:categories },
         ].map(({ title, data }) => (
           <div key={title} className="card">
             <div className="card-head"><h3>{title}</h3></div>
