@@ -6,6 +6,8 @@ import { guessEmails } from '../../lib/emailGuess';
 import { verifyLeads, genuineRank, domainOf } from '../../lib/verifyLead';
 import { discoverEmails } from '../../lib/emailDiscover';
 import { findPeopleBatch } from '../../lib/findPeople';
+import { computeIcpScore } from '../../lib/icpScore';
+import { logActivity } from '../../lib/activity';
 
 const SUPA_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON     = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -337,12 +339,14 @@ export default function Generator() {
     const fEntry = foundMap[key];
     const people = peopleMap[key] || [];
     const top    = bestPerson(key);
-    await supabase.from('app_leads').insert({
+    const contactVal = l.contact || (top ? `${top.name}${top.title ? ` — ${top.title}` : ''}` : '');
+    const icp = computeIcpScore({ ...l, contact: contactVal });
+    const { data: inserted } = await supabase.from('app_leads').insert({
       org_id: orgId, company: l.company, website: l.website || '',
       email: resolvedEmail(l), industry: l.industry || '',
       country: l.country || '', category: l.category || '',
-      lead_score: crmScore(l), status: 'New Lead',
-      contact: l.contact || (top ? `${top.name}${top.title ? ` — ${top.title}` : ''}` : ''),
+      lead_score: crmScore(l), icp_score: icp.score, source: l._source || 'Generator', status: 'New Lead',
+      contact: contactVal,
       notes: [
         `Source: ${l._source || 'Generator'} — ${query}`,
         l.genuine   ? `Genuine check: ${l.genuine} (${l.genuine_score}/100) — ${(l.genuine_reasons || []).join('; ')}` : '',
@@ -359,7 +363,8 @@ export default function Generator() {
         l.companyNumber ? `Company #: ${l.companyNumber}` : '',
         l._oc_url       ? `Registry: ${l._oc_url}` : '',
       ].filter(Boolean).join('\n'),
-    });
+    }).select().single();
+    if (inserted) await logActivity(orgId, inserted.id, 'lead_created', { source: l._source || 'Generator' });
     setExisting((s) => new Set(s).add(l.company.toLowerCase()));
     setAdded((s)    => new Set(s).add(l.company.toLowerCase()));
   }
@@ -367,18 +372,20 @@ export default function Generator() {
   async function addAll() {
     const toAdd = displayResults.filter((l) => !existing.has(l.company.toLowerCase()));
     if (!toAdd.length) { setMsg('All visible leads are already in your CRM.'); return; }
-    await supabase.from('app_leads').insert(toAdd.map((l) => {
+    const { data: insertedRows } = await supabase.from('app_leads').insert(toAdd.map((l) => {
       const key = l.company.toLowerCase();
       const hEntry = hunterMap[key];
       const fEntry = foundMap[key];
       const people = peopleMap[key] || [];
       const top    = bestPerson(key);
+      const contactVal = l.contact || (top ? `${top.name}${top.title ? ` — ${top.title}` : ''}` : '');
+      const icp = computeIcpScore({ ...l, contact: contactVal });
       return {
         org_id: orgId, company: l.company, website: l.website || '',
         email: resolvedEmail(l), industry: l.industry || '',
         country: l.country || '', category: l.category || '',
-        lead_score: crmScore(l), status: 'New Lead',
-        contact: l.contact || (top ? `${top.name}${top.title ? ` — ${top.title}` : ''}` : ''),
+        lead_score: crmScore(l), icp_score: icp.score, source: l._source || 'Generator', status: 'New Lead',
+        contact: contactVal,
         notes: [
           `Source: ${l._source || 'Generator'} — ${query}`,
           l.genuine  ? `Genuine check: ${l.genuine} (${l.genuine_score}/100) — ${(l.genuine_reasons || []).join('; ')}` : '',
@@ -392,7 +399,8 @@ export default function Generator() {
           l.registered ? `Incorporated: ${l.registered}` : '',
         ].filter(Boolean).join('\n'),
       };
-    }));
+    })).select();
+    await Promise.all((insertedRows || []).map((row) => logActivity(orgId, row.id, 'lead_created', { source: row.source })));
     const names = new Set(toAdd.map((l) => l.company.toLowerCase()));
     setExisting((s) => { const n = new Set(s); names.forEach((x) => n.add(x)); return n; });
     setAdded((s)    => { const n = new Set(s); names.forEach((x) => n.add(x)); return n; });

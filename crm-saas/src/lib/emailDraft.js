@@ -25,7 +25,14 @@ export function generateDraft(lead, angle) {
   const city = extractCity(lead.notes);
   const inCity = city ? ` in ${city}` : '';
   const industry = lead.industry || lead.category || 'business';
-  const sig = `<p style="color:#555;font-size:14px">Best regards,<br><strong>Moiz Ahmad</strong><br>Atronm — Web &amp; AI Development<br><a href="https://atronm.com">atronm.com</a></p>`;
+  // CAN-SPAM / good-practice footer: a working opt-out and a real postal
+  // address are legally required for commercial email in most jurisdictions.
+  // TODO: replace [Business Postal Address] with your actual registered
+  // business address before sending at volume.
+  const sig = `<p style="color:#555;font-size:14px">Best regards,<br><strong>Moiz Ahmad</strong><br>Atronm — Web &amp; AI Development<br><a href="https://atronm.com">atronm.com</a></p>
+<p style="color:#999;font-size:11px;margin-top:18px;border-top:1px solid #eee;padding-top:8px">
+[Business Postal Address] · <a href="mailto:moizahmad1604@gmail.com?subject=Unsubscribe" style="color:#999">Unsubscribe</a>
+</p>`;
   const resolved = angle || defaultAngle(lead);
 
   if (resolved === 'website') {

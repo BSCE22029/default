@@ -4,13 +4,22 @@ import Page from '../../components/Page';
 
 const FUNNEL_STAGES = ['New Lead','Contacted','Qualified','Proposal Sent','Negotiation','Closed Won'];
 const FUNNEL_COLORS = ['#6366f1','#3b82f6','#0ea5e9','#06b6d4','#f59e0b','#22c55e'];
+const ANGLE_LABELS  = { website:'No-website pitch', app:'Custom app pitch', ai:'AI automation pitch', tech:'Tech upgrade pitch' };
 
 export default function Analytics() {
   const [leads, setLeads] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from('app_leads').select('*').then(({ data }) => { setLeads(data || []); setLoading(false); });
+    Promise.all([
+      supabase.from('app_leads').select('*'),
+      supabase.from('app_messages').select('lead_id, direction, angle, sequence_step').eq('direction', 'out'),
+    ]).then(([leadsRes, msgRes]) => {
+      setLeads(leadsRes.data || []);
+      setMessages(msgRes.data || []);
+      setLoading(false);
+    });
   }, []);
 
   const total   = leads.length;
@@ -46,6 +55,42 @@ export default function Analytics() {
   const funnelMax  = Math.max(1, ...funnel.map((s) => s.n));
   const countries  = groupBy('country');
   const categories = groupBy('category');
+
+  // Which pitch angle / lead source / sequence step actually gets replies —
+  // this is the feedback loop the old CRM had zero visibility into. Reply
+  // rate is approximated per-dimension: among leads that received at least
+  // one send in that bucket, what fraction ever replied.
+  const leadById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
+
+  function replyRateBy(keyFn, label) {
+    const buckets = {}; // key -> { sent:Set(leadIds), replied:Set(leadIds) }
+    messages.forEach((m) => {
+      const key = keyFn(m);
+      if (key == null) return;
+      const lead = leadById[m.lead_id];
+      if (!lead) return;
+      buckets[key] = buckets[key] || { sent: new Set(), replied: new Set() };
+      buckets[key].sent.add(m.lead_id);
+      if (lead.email_replied) buckets[key].replied.add(m.lead_id);
+    });
+    return Object.entries(buckets)
+      .map(([key, v]) => ({ key: label ? label(key) : key, sent: v.sent.size, replied: v.replied.size, rate: v.sent.size ? Math.round((v.replied.size / v.sent.size) * 100) : 0 }))
+      .sort((a, b) => b.sent - a.sent);
+  }
+
+  const byAngle  = replyRateBy((m) => m.angle, (k) => ANGLE_LABELS[k] || k);
+  const bySource = useMemo(() => {
+    const buckets = {};
+    leads.forEach((l) => {
+      const key = l.source || 'Unknown';
+      buckets[key] = buckets[key] || { sent: 0, replied: 0 };
+      if (l.email_sent) { buckets[key].sent++; if (l.email_replied) buckets[key].replied++; }
+    });
+    return Object.entries(buckets).filter(([, v]) => v.sent > 0)
+      .map(([key, v]) => ({ key, sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
+      .sort((a, b) => b.sent - a.sent);
+  }, [leads]);
+  const byStep = replyRateBy((m) => (m.sequence_step != null ? m.sequence_step : null), (k) => `Touch ${Number(k) + 1}`);
 
   // SVG trend chart
   const W = 500, H = 100, PAD = 8;
@@ -199,6 +244,35 @@ export default function Analytics() {
                       width:`${(d.n / (data[0]?.n || 1)) * 100}%`, height:'100%',
                       background: i < 3 ? 'var(--primary)' : '#a5b4fc',
                     }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* What's actually working — the feedback loop the old CRM lacked */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginTop:16 }}>
+        {[
+          { title:'Reply Rate by Angle',  data:byAngle,  empty:'No sends yet — send some emails to see which pitch works.' },
+          { title:'Reply Rate by Source', data:bySource, empty:'No sends yet.' },
+          { title:'Reply Rate by Touch #', data:byStep,  empty:'No sequence sends yet — start a sequence on a lead to populate this.' },
+        ].map(({ title, data, empty }) => (
+          <div key={title} className="card">
+            <div className="card-head"><h3 style={{ fontSize:14 }}>{title}</h3></div>
+            <div className="card-body">
+              {data.length === 0 ? <div className="empty" style={{ fontSize:12 }}>{empty}</div> : data.map((d) => (
+                <div key={d.key} style={{ marginBottom:10 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:4 }}>
+                    <span style={{ fontWeight:600 }}>{d.key}</span>
+                    <span>
+                      <b style={{ color: d.rate >= 20 ? '#22c55e' : d.rate >= 8 ? '#f59e0b' : 'var(--muted)' }}>{d.rate}%</b>
+                      <span style={{ color:'var(--muted)', marginLeft:5 }}>({d.replied}/{d.sent})</span>
+                    </span>
+                  </div>
+                  <div className="progress-track" style={{ height:6 }}>
+                    <div className="progress-bar" style={{ width:`${d.rate}%`, height:'100%', background: d.rate >= 20 ? '#22c55e' : d.rate >= 8 ? '#f59e0b' : '#94a3b8' }} />
                   </div>
                 </div>
               ))}

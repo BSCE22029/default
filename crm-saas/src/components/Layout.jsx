@@ -6,12 +6,13 @@ import CommandPalette from './CommandPalette';
 import {
   IconLayoutDashboard, IconUsers, IconColumns, IconBolt,
   IconChartBar, IconSettings, IconSatellite, IconBuilding,
-  IconSun, IconMoon, IconSearch, IconArrowsExchange,
+  IconSun, IconMoon, IconSearch, IconArrowsExchange, IconChecklist,
 } from '@tabler/icons-react';
 
 const tenantNav = [
   { to: '/app',           end: true, Icon: IconLayoutDashboard, label: 'Dashboard'      },
   { to: '/app/leads',               Icon: IconUsers,            label: 'Leads'          },
+  { to: '/app/tasks',               Icon: IconChecklist,        label: 'Tasks'          },
   { to: '/app/pipeline',            Icon: IconColumns,          label: 'Pipeline'       },
   { to: '/app/generator',           Icon: IconBolt,             label: 'Lead Generator' },
   { to: '/app/analytics',           Icon: IconChartBar,         label: 'Analytics'      },

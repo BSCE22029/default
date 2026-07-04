@@ -4,6 +4,28 @@ import Page, { Modal, statusPill, CoAvatar } from '../../components/Page';
 import { useAuth } from '../../lib/AuthContext';
 import { ANGLES, generateDraft, defaultAngle, extractPhone } from '../../lib/emailDraft';
 import { guessEmails, guessFirstEmail } from '../../lib/emailGuess';
+import { domainOf } from '../../lib/verifyLead';
+import { logActivity, getTimeline, ACTIVITY_META } from '../../lib/activity';
+import { isSuppressed, filterSuppressed, suppress } from '../../lib/suppression';
+import { createTask } from '../../lib/tasks';
+import { pauseSequenceForLead, stopSequenceForLead, getDefaultSequence, enrollInSequence } from '../../lib/sequences';
+import { computeIcpScore, icpLabel, icpColor } from '../../lib/icpScore';
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const SEND_THROTTLE_MS = 2500;
+
+const REPLY_INTENTS = [
+  { id:'positive',     label:'Positive — wants to talk',   color:'#16a34a', bg:'#f0fdf4', nextStatus:'Qualified' },
+  { id:'neutral',      label:'Neutral — needs more info',  color:'#0369a1', bg:'#f0f9ff', nextStatus:null },
+  { id:'negative',     label:'Not interested',              color:'#dc2626', bg:'#fef2f2', nextStatus:'Closed Lost', lostReason:'Not interested (reply)' },
+  { id:'wrong_person', label:'Wrong contact / person',      color:'#92400e', bg:'#fffbeb', nextStatus:'Closed Lost', lostReason:'Wrong contact' },
+  { id:'ooo',          label:'Out of office / later',       color:'#6d28d9', bg:'#f5f3ff', nextStatus:null },
+];
+
+const LOST_REASONS = [
+  'No budget', 'Bad timing', 'No response after follow-ups', 'Went with a competitor',
+  'Not a decision-maker', 'Not interested (reply)', 'Wrong contact', 'Other',
+];
 
 const STATUSES  = ['New Lead','Contacted','Qualified','Proposal Sent','Negotiation','Closed Won','Closed Lost'];
 const PAGE_SIZE = 25;
@@ -100,6 +122,15 @@ export default function Leads() {
   const [editPhone,   setEditPhone]   = useState('');
   const [editLinkedin,setEditLinkedin]= useState('');
   const [enriching,   setEnriching]   = useState(false);
+  const [replyLead,   setReplyLead]   = useState(null);
+  const [replyIntent, setReplyIntent] = useState('positive');
+  const [replyNote,   setReplyNote]   = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+  const [lostPrompt,  setLostPrompt]  = useState(null); // { lead, resolve }
+  const [lostReason,  setLostReason]  = useState(LOST_REASONS[0]);
+  const [timeline,    setTimeline]    = useState([]);
+  const [dupSkipped,  setDupSkipped]  = useState(0);
+  const [enrolling,   setEnrolling]   = useState(false);
   const fileRef = useRef();
 
   async function load() {
@@ -148,7 +179,10 @@ export default function Leads() {
   function toggleSelect(id) { setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
   function toggleAll()       { setSelected(selected.size === filtered.length ? new Set() : new Set(filtered.map((l) => l.id))); }
 
-  function openDetail(l)  { setDetailLead(l); setDetailNote(l.notes || ''); }
+  function openDetail(l)  {
+    setDetailLead(l); setDetailNote(l.notes || ''); setTimeline([]);
+    getTimeline(l.id).then(setTimeline);
+  }
   function openCompose(l) { const a = defaultAngle(l); setAngle(a); setCompose(l); setDraft(generateDraft(l, a)); setEmailTab('edit'); }
   function regen(a)       { const x = a ?? angle; setAngle(x); setDraft(generateDraft(compose, x)); }
 
@@ -178,19 +212,65 @@ export default function Leads() {
     load();
   }
 
-  async function changeStatus(l, status) {
+  // Applies a status change for real — factored out so both the direct path
+  // and the lost-reason-gated path can call it.
+  async function commitStatus(l, status, extra = {}) {
     setSavingStatus(l.id);
-    await supabase.from('app_leads').update({ status }).eq('id', l.id);
-    setLeads((prev) => prev.map((x) => x.id === l.id ? { ...x, status } : x));
-    if (detailLead?.id === l.id) setDetailLead((d) => ({ ...d, status }));
+    await supabase.from('app_leads').update({ status, ...extra }).eq('id', l.id);
+    setLeads((prev) => prev.map((x) => x.id === l.id ? { ...x, status, ...extra } : x));
+    if (detailLead?.id === l.id) setDetailLead((d) => ({ ...d, status, ...extra }));
+    await logActivity(orgId, l.id, 'stage_changed', { from: l.status, to: status });
+    if (status === 'Closed Lost' || status === 'Closed Won') await stopSequenceForLead(l.id);
     setSavingStatus(null);
   }
 
-  async function markReplied(l) {
-    await supabase.from('app_leads').update({ email_replied: true, status: 'Qualified' }).eq('id', l.id);
-    setLeads((prev) => prev.map((x) => x.id === l.id ? { ...x, email_replied: true, status: 'Qualified' } : x));
-    if (detailLead?.id === l.id) setDetailLead((d) => ({ ...d, email_replied: true, status: 'Qualified' }));
-    toast$(`↩ ${l.company} marked as replied — status → Qualified`);
+  // Moving to Closed Lost without a reason is exactly how the old CRM lost
+  // all its loss analytics — this gate makes a reason mandatory.
+  async function changeStatus(l, status) {
+    if (status === 'Closed Lost' && !l.lost_reason) {
+      setLostReason(LOST_REASONS[0]);
+      setLostPrompt(l);
+      return;
+    }
+    await commitStatus(l, status);
+  }
+
+  async function confirmLostReason() {
+    if (!lostPrompt) return;
+    await commitStatus(lostPrompt, 'Closed Lost', { lost_reason: lostReason });
+    setLostPrompt(null);
+  }
+
+  // Opens the reply-intent modal instead of blindly force-moving every reply
+  // to Qualified — a "not interested" reply and a "let's talk" reply used to
+  // produce the identical system state, silently corrupting the pipeline.
+  function openReplyModal(l) { setReplyLead(l); setReplyIntent('positive'); setReplyNote(''); }
+
+  async function submitReply() {
+    if (!replyLead) return;
+    setSubmittingReply(true);
+    const meta = REPLY_INTENTS.find((r) => r.id === replyIntent);
+    const updates = {
+      email_replied: true, replied_at: new Date().toISOString(), reply_intent: replyIntent,
+      ...(meta.nextStatus ? { status: meta.nextStatus } : {}),
+      ...(meta.lostReason ? { lost_reason: meta.lostReason } : {}),
+    };
+    await supabase.from('app_leads').update(updates).eq('id', replyLead.id);
+    setLeads((prev) => prev.map((x) => x.id === replyLead.id ? { ...x, ...updates } : x));
+    if (detailLead?.id === replyLead.id) setDetailLead((d) => ({ ...d, ...updates }));
+
+    await supabase.from('app_messages').insert({
+      org_id: orgId, lead_id: replyLead.id, direction: 'in', body: replyNote || null,
+    });
+    await logActivity(orgId, replyLead.id, 'reply_logged', { intent: replyIntent, note: replyNote });
+    // Any reply — positive or negative — means a human conversation has
+    // started, so the automated cadence should stop nudging them.
+    await pauseSequenceForLead(orgId, replyLead.id, replyIntent);
+    if (meta.nextStatus === 'Closed Lost' || meta.nextStatus === 'Closed Won') await stopSequenceForLead(replyLead.id);
+
+    setSubmittingReply(false);
+    toast$(`↩ ${replyLead.company} — ${meta.label}${meta.nextStatus ? ` · status → ${meta.nextStatus}` : ''}`);
+    setReplyLead(null);
   }
 
   async function doConfirm(action) {
@@ -198,15 +278,45 @@ export default function Leads() {
     setConfirming(true);
     const updates = action === 'qualify'
       ? { status: 'Qualified', confirmed_at: new Date().toISOString() }
-      : { status: 'Closed Lost' };
+      : { status: 'Closed Lost', lost_reason: 'Failed qualification checklist' };
     await supabase.from('app_leads').update(updates).eq('id', confirmLead.id);
     setLeads((prev) => prev.map((x) => x.id === confirmLead.id ? { ...x, ...updates } : x));
+    await logActivity(orgId, confirmLead.id, 'stage_changed', { from: confirmLead.status, to: updates.status });
+    if (action !== 'qualify') await stopSequenceForLead(confirmLead.id);
     setConfirming(false);
     const msg = action === 'qualify'
       ? `✅ ${confirmLead.company} confirmed — moved to Qualified`
       : `❌ ${confirmLead.company} rejected — moved to Closed Lost`;
     toast$(msg);
     setConfirmLead(null);
+  }
+
+  async function enrollSelectedInSequence() {
+    const seq = await getDefaultSequence(orgId);
+    if (!seq) { toast$('No sequence found for this workspace yet — run the DB migration first.'); return; }
+    setEnrolling(true);
+    let count = 0;
+    for (const id of selected) {
+      const { alreadyEnrolled } = await enrollInSequence(orgId, id, seq.id);
+      if (!alreadyEnrolled) count++;
+    }
+    setEnrolling(false); setSelected(new Set());
+    toast$(`🔁 Enrolled ${count} lead${count !== 1 ? 's' : ''} in "${seq.name}" — first touch sends next time follow-ups run.`);
+  }
+
+  async function enrollOneInSequence(l) {
+    const seq = await getDefaultSequence(orgId);
+    if (!seq) { toast$('No sequence found — run the DB migration first.'); return; }
+    const { alreadyEnrolled } = await enrollInSequence(orgId, l.id, seq.id);
+    toast$(alreadyEnrolled ? `${l.company} is already in an active sequence.` : `🔁 ${l.company} enrolled in "${seq.name}"`);
+  }
+
+  async function unsubscribeLead(l) {
+    if (!l.email) return;
+    if (!confirm(`Suppress ${l.email}? No future email — manual, bulk, or sequence — will ever be sent to this address again.`)) return;
+    await suppress(orgId, l.email);
+    await stopSequenceForLead(l.id);
+    toast$(`🚫 ${l.email} suppressed — will never be emailed again`);
   }
 
   async function bulkChangeStatus(status) {
@@ -255,11 +365,21 @@ export default function Leads() {
     e.target.value = '';
   }
 
+  // Duplicate check by DOMAIN, not exact company-name string — "Comvex" and
+  // "Comvex Inc" used to slip past the old name-only check as two leads.
+  function findDuplicate(company, website) {
+    const dom = domainOf(website);
+    return leads.find((l) =>
+      (dom && domainOf(l.website) === dom) ||
+      l.company.toLowerCase().trim() === (company || '').toLowerCase().trim()
+    );
+  }
+
   async function doImport() {
     if (!importData) return;
     setImporting(true);
     const { rows, mapping } = importData;
-    const records = rows.filter((r) => r[mapping.company]).map((r) => ({
+    const candidates = rows.filter((r) => r[mapping.company]).map((r) => ({
       org_id:           orgId,
       company:          r[mapping.company]          || '',
       contact:          r[mapping.contact]          || '',
@@ -272,13 +392,24 @@ export default function Leads() {
       opportunity_size: r[mapping.opportunity_size] || '',
       status:           STATUSES.includes(r[mapping.status]) ? r[mapping.status] : 'New Lead',
       notes:            r[mapping.notes]            || '',
+      source:           'CSV Import',
     }));
+    const seenDomains = new Set();
+    const records = candidates.filter((c) => {
+      const dom = domainOf(c.website);
+      if (findDuplicate(c.company, c.website)) return false;   // already in CRM
+      if (dom && seenDomains.has(dom)) return false;             // dup within this same file
+      if (dom) seenDomains.add(dom);
+      return true;
+    });
+    const skipped = candidates.length - records.length;
     const CHUNK = 50;
     for (let i = 0; i < records.length; i += CHUNK) {
       await supabase.from('app_leads').insert(records.slice(i, i + CHUNK));
     }
-    setImporting(false); setImportData(null);
-    toast$(`✅ Imported ${records.length} leads`); load();
+    setImporting(false); setImportData(null); setDupSkipped(skipped);
+    toast$(`✅ Imported ${records.length} leads${skipped ? ` — skipped ${skipped} duplicate${skipped > 1 ? 's' : ''}` : ''}`);
+    load();
   }
 
   async function save(e) {
@@ -289,8 +420,13 @@ export default function Leads() {
     const baseNotes  = stripMetaFromNotes(edit.notes);
     const finalNotes = [...metaLines, baseNotes].filter(Boolean).join('\n');
     const payload = { ...edit, lead_score: Number(edit.lead_score) || 0, notes: finalNotes };
-    if (edit.id) { const { id, ...rest } = payload; await supabase.from('app_leads').update(rest).eq('id', id); }
-    else          await supabase.from('app_leads').insert({ ...payload, org_id: orgId });
+    if (edit.id) {
+      const { id, ...rest } = payload;
+      await supabase.from('app_leads').update(rest).eq('id', id);
+    } else {
+      const { data } = await supabase.from('app_leads').insert({ ...payload, org_id: orgId, source: payload.source || 'Manual' }).select().single();
+      if (data) await logActivity(orgId, data.id, 'lead_created', { source: 'Manual' });
+    }
     closeEdit(); load();
   }
 
@@ -306,51 +442,67 @@ export default function Leads() {
     load();
   }
 
+  // Every manual send logs the actual message (for per-template analytics),
+  // records an activity, and creates a real 3-day follow-up task — replacing
+  // the old "nothing happens until you remember" behavior.
+  async function afterSend(l, d, angle) {
+    await supabase.from('app_leads').update({ email_sent: true, last_contact: new Date().toISOString(),
+      status: l.status === 'New Lead' ? 'Contacted' : l.status }).eq('id', l.id);
+    await supabase.from('app_messages').insert({ org_id: orgId, lead_id: l.id, direction: 'out', subject: d.subject, body: d.body, angle });
+    await logActivity(orgId, l.id, 'email_sent', { angle });
+    const due = new Date(); due.setDate(due.getDate() + 3);
+    await createTask(orgId, l.id, `Follow up with ${l.company}`, due.toISOString());
+  }
+
   async function doSend(e) {
     e.preventDefault(); setSending(true);
     try {
+      if (await isSuppressed(orgId, compose.email)) throw new Error(`${compose.email} has unsubscribed — blocked from sending.`);
       await sendEmail({ to: compose.email, subject: draft.subject, html: draft.body });
-      await supabase.from('app_leads').update({ email_sent: true, last_contact: new Date().toISOString(),
-        status: compose.status === 'New Lead' ? 'Contacted' : compose.status }).eq('id', compose.id);
+      await afterSend(compose, draft, angle);
       setCompose(null); toast$(`✅ Email sent to ${compose.email}`); load();
     } catch (err) { alert('Send failed: ' + err.message); }
     finally { setSending(false); }
   }
 
   async function sendBulk() {
-    const toSend = filtered.filter((l) => selected.has(l.id) && l.email);
-    if (!toSend.length) { alert('None of the selected leads have an email address.'); return; }
+    const raw = filtered.filter((l) => selected.has(l.id) && l.email);
+    const toSend = await filterSuppressed(orgId, raw);
+    if (!toSend.length) { alert('None of the selected leads have a sendable email address (or all are unsubscribed).'); return; }
     setBulkSending(true); setBulkProg({ done: 0, total: toSend.length, current: '' });
-    for (const l of toSend) {
+    for (let i = 0; i < toSend.length; i++) {
+      const l = toSend[i];
       setBulkProg((p) => ({ ...p, current: l.company }));
-      const d = generateDraft(l, defaultAngle(l));
+      const angle = defaultAngle(l);
+      const d = generateDraft(l, angle);
       try {
         await sendEmail({ to: l.email, subject: d.subject, html: d.body });
-        await supabase.from('app_leads').update({ email_sent: true, last_contact: new Date().toISOString(),
-          status: l.status === 'New Lead' ? 'Contacted' : l.status }).eq('id', l.id);
+        await afterSend(l, d, angle);
       } catch {}
       setBulkProg((p) => ({ ...p, done: p.done + 1 }));
+      if (i < toSend.length - 1) await sleep(SEND_THROTTLE_MS);
     }
     setSelected(new Set()); setBulkSending(false);
     toast$(`✅ Sent emails to ${toSend.length} leads`); load();
   }
 
   async function sendAll() {
-    const pool = leads.filter((l) => l.email && (sendAllMode === 'all' || !l.email_sent));
+    const raw = leads.filter((l) => l.email && (sendAllMode === 'all' || !l.email_sent));
+    const pool = await filterSuppressed(orgId, raw);
     if (!pool.length) { setSendAllOpen(false); return; }
     setSendAllProg({ running:true, done:0, total:pool.length, current:'', errors:0 });
     let errors = 0;
-    for (const l of pool) {
+    for (let i = 0; i < pool.length; i++) {
+      const l = pool[i];
       setSendAllProg((p) => ({ ...p, current: l.company }));
-      const d = generateDraft(l, defaultAngle(l));
+      const angle = defaultAngle(l);
+      const d = generateDraft(l, angle);
       try {
         await sendEmail({ to: l.email, subject: d.subject, html: d.body });
-        await supabase.from('app_leads').update({
-          email_sent: true, last_contact: new Date().toISOString(),
-          status: l.status === 'New Lead' ? 'Contacted' : l.status,
-        }).eq('id', l.id);
+        await afterSend(l, d, angle);
       } catch { errors++; }
       setSendAllProg((p) => ({ ...p, done: p.done + 1, errors }));
+      if (i < pool.length - 1) await sleep(SEND_THROTTLE_MS);
     }
     setSendAllProg((p) => ({ ...p, running: false }));
     load();
@@ -493,7 +645,7 @@ export default function Leads() {
                         )}
                         {l.status !== 'New Lead' && (l.email_sent && !l.email_replied ? (
                           <button className="btn btn-sm" style={{ background:'#f0fdf4', color:'#166534', marginRight:4 }}
-                            onClick={() => markReplied(l)} title="Mark as replied">↩ Replied</button>
+                            onClick={() => openReplyModal(l)} title="Log a reply">↩ Replied</button>
                         ) : (
                           <button className="btn btn-sm" style={{ background: l.email ? '#f0fdf4' : '#f8fafc', color: l.email ? '#166534' : '#94a3b8', minWidth:72, marginRight:4 }}
                             disabled={!l.email} onClick={() => openCompose(l)}>✍️ Email</button>
@@ -536,6 +688,10 @@ export default function Leads() {
           <button className="btn btn-primary btn-sm" onClick={sendBulk} disabled={bulkSending} style={{ minWidth:140 }}>
             {bulkSending ? `📨 ${bulkProg.done}/${bulkProg.total} — ${bulkProg.current}` : `📨 Email all ${selected.size}`}
           </button>
+          <button className="btn btn-ghost btn-sm" onClick={enrollSelectedInSequence} disabled={enrolling}
+            title="Schedule the standard 4-touch follow-up cadence for these leads">
+            {enrolling ? '⏳ Enrolling…' : '🔁 Start sequence'}
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={exportCSV}>⬇️ CSV</button>
           <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>✕ Clear</button>
         </div>
@@ -550,6 +706,14 @@ export default function Leads() {
               <div style={{ fontWeight:800, fontSize:18 }}>{detailLead.company}</div>
               <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap', alignItems:'center' }}>
                 <span className={`score-badge ${detailLead.lead_score >= 80 ? 'hot' : detailLead.lead_score >= 60 ? 'warm' : 'cold'}`}>{detailLead.lead_score} pts</span>
+                {(() => {
+                  const icp = computeIcpScore(detailLead);
+                  return (
+                    <span title={icp.reasons.join(' · ')} style={{ fontSize:11, fontWeight:700, color: icpColor(icp.score), background: icpColor(icp.score)+'18', padding:'3px 8px', borderRadius:20, cursor:'help' }}>
+                      ICP {icp.score} — {icpLabel(icp.score)}
+                    </span>
+                  );
+                })()}
                 {!detailLead.website && <span style={{ fontSize:11, fontWeight:700, color:'#f59e0b', padding:'3px 8px', background:'#fef3c7', borderRadius:20 }}>No website</span>}
                 {detailLead.email_replied && <span style={{ fontSize:11, fontWeight:700, color:'#166534', padding:'3px 8px', background:'#dcfce7', borderRadius:20 }}>↩ Replied</span>}
                 {detailLead.opportunity_size && <span style={{ fontSize:11, color:'var(--muted)' }}>{detailLead.opportunity_size}</span>}
@@ -568,10 +732,14 @@ export default function Leads() {
                 onClick={() => { setDetailLead(null); openCompose(detailLead); }}>✍️ Email</button>
               {detailLead.email_sent && !detailLead.email_replied && (
                 <button className="btn btn-sm" style={{ background:'#f0fdf4', color:'#166534' }}
-                  onClick={() => markReplied(detailLead)}>↩ Replied</button>
+                  onClick={() => openReplyModal(detailLead)}>↩ Replied</button>
               )}
+              <button className="btn btn-ghost btn-sm" disabled={!detailLead.email}
+                onClick={() => enrollOneInSequence(detailLead)} title="Schedule the standard 4-touch follow-up cadence">🔁 Sequence</button>
               <button className="btn btn-ghost btn-sm"
                 onClick={() => { setDetailLead(null); openEdit(detailLead); }}>✏️ Edit</button>
+              <button className="btn btn-ghost btn-sm" disabled={!detailLead.email} style={{ color:'#94a3b8' }}
+                onClick={() => unsubscribeLead(detailLead)} title="Never email this address again">🚫</button>
               <button className="btn btn-danger btn-sm"
                 onClick={() => { setDetailLead(null); remove(detailLead); }}>🗑</button>
             </div>
@@ -606,7 +774,34 @@ export default function Leads() {
               {detailLead.email_sent && (
                 <div style={{ marginTop:8, fontSize:12, color:'var(--muted)' }}>
                   ✉️ Emailed {detailLead.last_contact ? new Date(detailLead.last_contact).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : ''}
-                  {detailLead.email_replied && <span style={{ color:'#22c55e', marginLeft:8, fontWeight:700 }}>· ↩ Replied</span>}
+                  {detailLead.email_replied && <span style={{ color:'#22c55e', marginLeft:8, fontWeight:700 }}>· ↩ {detailLead.reply_intent || 'Replied'}</span>}
+                </div>
+              )}
+              {detailLead.lost_reason && (
+                <div style={{ marginTop:6, fontSize:12, color:'#dc2626' }}>❌ Lost reason: {detailLead.lost_reason}</div>
+              )}
+            </div>
+
+            <div className="drawer-section">
+              <div className="drawer-label">Activity</div>
+              {timeline.length === 0 ? (
+                <div style={{ fontSize:12, color:'var(--muted)' }}>No activity logged yet.</div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:220, overflowY:'auto' }}>
+                  {timeline.map((a) => {
+                    const meta = ACTIVITY_META[a.type] || { icon:'•', label:() => a.type };
+                    return (
+                      <div key={a.id} style={{ display:'flex', gap:8, fontSize:12 }}>
+                        <span style={{ flexShrink:0 }}>{meta.icon}</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div>{meta.label(a.payload || {})}</div>
+                          <div style={{ color:'var(--muted)', fontSize:11 }}>
+                            {new Date(a.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1062,6 +1257,56 @@ export default function Leads() {
           </div>
         );
       })()}
+
+      {/* ── Reply intent modal ──────────────────────────────── */}
+      {replyLead && (
+        <Modal title={`↩ Log reply — ${replyLead.company}`} onClose={() => !submittingReply && setReplyLead(null)}
+          footer={<>
+            <button className="btn btn-ghost" disabled={submittingReply} onClick={() => setReplyLead(null)}>Cancel</button>
+            <button className="btn btn-primary" disabled={submittingReply} style={{ minWidth:140 }} onClick={submitReply}>
+              {submittingReply ? 'Saving…' : 'Save & route lead'}
+            </button>
+          </>}>
+          <div style={{ fontSize:13, color:'var(--muted)', marginBottom:14 }}>
+            What did they actually say? This decides where the lead goes next — a "not interested" reply
+            and a "let's talk" reply should never end up in the same place.
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
+            {REPLY_INTENTS.map((r) => (
+              <label key={r.id} style={{
+                display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:9, cursor:'pointer',
+                border: `1.5px solid ${replyIntent === r.id ? r.color : 'var(--border)'}`,
+                background: replyIntent === r.id ? r.bg : 'transparent',
+              }}>
+                <input type="radio" name="replyIntent" checked={replyIntent === r.id} onChange={() => setReplyIntent(r.id)} style={{ accentColor: r.color }} />
+                <span style={{ fontWeight:700, fontSize:13, color: replyIntent === r.id ? r.color : 'var(--text)' }}>{r.label}</span>
+                {r.nextStatus && <span style={{ marginLeft:'auto', fontSize:11, color:'var(--muted)' }}>→ {r.nextStatus}</span>}
+              </label>
+            ))}
+          </div>
+          <div className="field" style={{ marginBottom:0 }}>
+            <label>What they said (optional)</label>
+            <textarea rows={3} value={replyNote} onChange={(e) => setReplyNote(e.target.value)}
+              placeholder="Paste or summarize their reply — saved to this lead's message history" />
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Lost-reason gate ────────────────────────────────── */}
+      {lostPrompt && (
+        <Modal title={`Why is ${lostPrompt.company} lost?`} onClose={() => setLostPrompt(null)}
+          footer={<>
+            <button className="btn btn-ghost" onClick={() => setLostPrompt(null)}>Cancel</button>
+            <button className="btn btn-primary" style={{ background:'#dc2626' }} onClick={confirmLostReason}>Move to Closed Lost</button>
+          </>}>
+          <div style={{ fontSize:13, color:'var(--muted)', marginBottom:12 }}>
+            A reason is required — this is the only way loss analytics ever become useful.
+          </div>
+          <select value={lostReason} onChange={(e) => setLostReason(e.target.value)} style={{ width:'100%' }}>
+            {LOST_REASONS.map((r) => <option key={r}>{r}</option>)}
+          </select>
+        </Modal>
+      )}
     </Page>
   );
 }

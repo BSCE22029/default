@@ -4,8 +4,14 @@ import { supabase, sendEmail } from '../../lib/supabase';
 import Page, { Modal, statusPill } from '../../components/Page';
 import { useAuth } from '../../lib/AuthContext';
 import { ANGLES, generateDraft, defaultAngle, extractPhone } from '../../lib/emailDraft';
+import { isSuppressed, filterSuppressed } from '../../lib/suppression';
+import { logActivity } from '../../lib/activity';
+import { createTask, listOpenTasks, completeTask, taskUrgency, URGENCY_STYLE } from '../../lib/tasks';
+import { runDueSequenceSteps, countDueSequenceSteps } from '../../lib/sequences';
 
 const GOAL = 5;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const SEND_THROTTLE_MS = 2500;
 
 function useCountUp(target, active) {
   const [val, setVal] = useState(0);
@@ -34,7 +40,7 @@ function greeting(name) {
 }
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { profile, orgId } = useAuth();
   const [leads,   setLeads]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [compose, setCompose] = useState(null);
@@ -42,7 +48,10 @@ export default function Dashboard() {
   const [angle,   setAngle]   = useState('');
   const [sending, setSending] = useState(false);
   const [toast,   setToast]   = useState('');
-  const [batchBusy, setBatchBusy] = useState(false);
+  const [openTasks, setOpenTasks] = useState([]);
+  const [dueSeqCount, setDueSeqCount] = useState(0);
+  const [seqRunning, setSeqRunning] = useState(false);
+  const [seqProg, setSeqProg] = useState({ done: 0, total: 0 });
 
   async function load() {
     const { data } = await supabase.from('app_leads').select('*').order('lead_score', { ascending: false });
@@ -50,6 +59,28 @@ export default function Dashboard() {
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
+
+  async function loadQueue() {
+    if (!orgId) return;
+    const { data } = await listOpenTasks(orgId);
+    setOpenTasks(data);
+    setDueSeqCount(await countDueSequenceSteps(orgId));
+  }
+  useEffect(() => { loadQueue(); }, [orgId]);
+
+  async function runFollowupsNow() {
+    if (!orgId || seqRunning) return;
+    setSeqRunning(true);
+    const res = await runDueSequenceSteps(orgId, (done, total) => setSeqProg({ done, total }));
+    setSeqRunning(false);
+    toast$(res.total ? `🔁 Sent ${res.sent}/${res.total} follow-ups${res.errors ? ` — ${res.errors} failed` : ''}` : 'No follow-ups due right now.');
+    load(); loadQueue();
+  }
+
+  async function finishTask(t) {
+    await completeTask(t);
+    setOpenTasks((ts) => ts.filter((x) => x.id !== t.id));
+  }
 
   useEffect(() => {
     const ch = supabase.channel('dashboard-rt')
@@ -72,11 +103,6 @@ export default function Dashboard() {
   const goalDone  = sentToday >= GOAL;
 
   const strikeList   = leads.filter((l) => l.email && !l.email_sent && l.status === 'New Lead').slice(0, GOAL);
-  const needFollowup = useMemo(() => leads.filter((l) => {
-    if (!l.email_sent || !l.last_contact) return false;
-    if (!['Contacted','Qualified'].includes(l.status)) return false;
-    return (Date.now() - new Date(l.last_contact)) / 86400000 >= 2;
-  }).slice(0, 8), [leads]);
 
   const weekData = useMemo(() => {
     const today = new Date();
@@ -139,28 +165,16 @@ export default function Dashboard() {
   async function doSend(e) {
     e.preventDefault(); setSending(true);
     try {
+      if (await isSuppressed(orgId, compose.email)) throw new Error(`${compose.email} has unsubscribed — blocked from sending.`);
       await sendEmail({ to: compose.email, subject: draft.subject, html: draft.body });
       await supabase.from('app_leads').update({ email_sent: true, last_contact: new Date().toISOString(), status: 'Contacted' }).eq('id', compose.id);
-      setCompose(null); toast$(`Email sent to ${compose.email}`); load();
+      await supabase.from('app_messages').insert({ org_id: orgId, lead_id: compose.id, direction: 'out', subject: draft.subject, body: draft.body, angle });
+      await logActivity(orgId, compose.id, 'email_sent', { angle });
+      const due = new Date(); due.setDate(due.getDate() + 3);
+      await createTask(orgId, compose.id, `Follow up with ${compose.company}`, due.toISOString());
+      setCompose(null); toast$(`Email sent to ${compose.email}`); load(); loadQueue();
     } catch (err) { alert('Send failed: ' + err.message); }
     finally { setSending(false); }
-  }
-
-  async function sendBatchFollowup() {
-    setBatchBusy(true);
-    let count = 0;
-    for (const l of needFollowup) {
-      if (!l.email) continue;
-      const d = generateDraft(l, defaultAngle(l));
-      try {
-        await sendEmail({ to: l.email, subject: d.subject, html: d.body });
-        await supabase.from('app_leads').update({ email_sent: true, last_contact: new Date().toISOString() }).eq('id', l.id);
-        count++;
-      } catch {}
-    }
-    setBatchBusy(false);
-    toast$(`Sent ${count} follow-up email${count > 1 ? 's' : ''}`);
-    load();
   }
 
   return (
@@ -175,7 +189,7 @@ export default function Dashboard() {
             {loading ? 'Loading your workspace…'
               : total === 0 ? 'Add your first lead to get started.'
               : goalDone ? `Daily goal reached — ${sentToday} emails sent today.`
-              : `${needFollowup.length} follow-up${needFollowup.length !== 1 ? 's' : ''} pending · ${strikeList.length} leads ready to contact.`}
+              : `${openTasks.length} open task${openTasks.length !== 1 ? 's' : ''} · ${dueSeqCount} follow-up${dueSeqCount !== 1 ? 's' : ''} due · ${strikeList.length} leads ready to contact.`}
           </div>
         </div>
         {!loading && total > 0 && (
@@ -276,31 +290,43 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Follow-up radar */}
-        {needFollowup.length > 0 && (
+        {/* Today's Queue — real tasks with due dates, not a computed guess */}
+        {openTasks.length > 0 && (
           <div className="card" style={{ marginBottom:18 }}>
             <div className="card-head">
-              <h3>Follow-up Radar — {needFollowup.length} waiting</h3>
-              <button className="btn btn-sm" style={{ background:'#fff7ed', color:'#c2410c', border:'1px solid #fed7aa' }}
-                onClick={sendBatchFollowup} disabled={batchBusy}>
-                {batchBusy ? 'Sending…' : `Send all ${needFollowup.length} follow-ups`}
-              </button>
+              <h3>Today's Queue — {openTasks.length} open task{openTasks.length !== 1 ? 's' : ''}</h3>
+              {dueSeqCount > 0 && (
+                <button className="btn btn-sm" style={{ background:'#eef2ff', color:'#4338ca', border:'1px solid #c7d2fe' }}
+                  onClick={runFollowupsNow} disabled={seqRunning}>
+                  {seqRunning ? `Sending ${seqProg.done}/${seqProg.total}…` : `Run ${dueSeqCount} due sequence step${dueSeqCount !== 1 ? 's' : ''}`}
+                </button>
+              )}
             </div>
             <div className="card-body">
-              {needFollowup.map((l) => {
-                const days = Math.floor((Date.now() - new Date(l.last_contact)) / 86400000);
+              {openTasks.slice(0, 8).map((t) => {
+                const urgency = taskUrgency(t.due_at);
+                const style = URGENCY_STYLE[urgency];
+                const lead = t.app_leads;
                 return (
-                  <div key={l.id} className="followup-row">
-                    <div className="followup-days">{days}d</div>
+                  <div key={t.id} className="followup-row">
+                    <div className="followup-days" style={{ background: style.bg, color: style.color }}>{style.label}</div>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:700, fontSize:13 }}>{l.company}</div>
-                      <div style={{ fontSize:11, color:'#92400e' }}>{l.email} · {l.country}</div>
+                      <div style={{ fontWeight:700, fontSize:13 }}>{t.title}</div>
+                      <div style={{ fontSize:11, color:'var(--muted)' }}>{lead?.email} · due {new Date(t.due_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}</div>
                     </div>
-                    <button className="btn btn-sm" style={{ background:'#fff7ed', color:'#c2410c', border:'1px solid #fed7aa' }}
-                      onClick={() => openCompose(l)}>Follow up</button>
+                    {lead?.email && (
+                      <button className="btn btn-sm" style={{ background: style.bg, color: style.color, border:`1px solid ${style.border}` }}
+                        onClick={() => openCompose(lead)}>Email</button>
+                    )}
+                    <button className="btn btn-ghost btn-sm" onClick={() => finishTask(t)} title="Mark done">✓</button>
                   </div>
                 );
               })}
+              {openTasks.length > 8 && (
+                <div style={{ textAlign:'center', marginTop:8 }}>
+                  <Link className="muted-link" to="/app/tasks" style={{ fontSize:12 }}>View all {openTasks.length} tasks →</Link>
+                </div>
+              )}
             </div>
           </div>
         )}

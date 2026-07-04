@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import Page from '../../components/Page';
+import Page, { Modal } from '../../components/Page';
 import { burst } from '../../lib/confetti';
+import { logActivity } from '../../lib/activity';
+import { stopSequenceForLead } from '../../lib/sequences';
+
+const LOST_REASONS = [
+  'No budget', 'Bad timing', 'No response after follow-ups', 'Went with a competitor',
+  'Not a decision-maker', 'Not interested (reply)', 'Wrong contact', 'Other',
+];
 
 const STAGES = ['New Lead','Contacted','Qualified','Proposal Sent','Negotiation','Closed Won','Closed Lost'];
 const STAGE_META = {
@@ -45,6 +52,8 @@ export default function Pipeline() {
   const [drag,     setDrag]     = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const [wonAnim,  setWonAnim]  = useState(false);
+  const [lostPrompt, setLostPrompt] = useState(null); // lead pending a Closed Lost drop
+  const [lostReason, setLostReason] = useState(LOST_REASONS[0]);
 
   async function load() {
     const { data } = await supabase.from('app_leads').select('*').order('lead_score', { ascending: false });
@@ -52,16 +61,37 @@ export default function Pipeline() {
   }
   useEffect(() => { load(); }, []);
 
-  async function moveTo(stage) {
-    if (!drag || drag.status === stage) { setDrag(null); setDragOver(null); return; }
-    setLeads((ls) => ls.map((l) => l.id === drag.id ? { ...l, status: stage } : l));
-    await supabase.from('app_leads').update({ status: stage }).eq('id', drag.id);
+  async function commitMove(lead, stage, extra = {}) {
+    setLeads((ls) => ls.map((l) => l.id === lead.id ? { ...l, status: stage, ...extra } : l));
+    await supabase.from('app_leads').update({ status: stage, ...extra }).eq('id', lead.id);
+    await logActivity(lead.org_id, lead.id, 'stage_changed', { from: lead.status, to: stage });
+    if (stage === 'Closed Won' || stage === 'Closed Lost') await stopSequenceForLead(lead.id);
     if (stage === 'Closed Won') {
       burst();
       setWonAnim(true);
       setTimeout(() => setWonAnim(false), 2800);
     }
+  }
+
+  async function moveTo(stage) {
+    if (!drag || drag.status === stage) { setDrag(null); setDragOver(null); return; }
+    // A drop into Closed Lost without a reason is exactly how loss analytics
+    // die — gate it behind a required reason instead of silently flipping status.
+    if (stage === 'Closed Lost' && !drag.lost_reason) {
+      setLostReason(LOST_REASONS[0]);
+      setLostPrompt(drag);
+      setDrag(null); setDragOver(null);
+      return;
+    }
+    const lead = drag;
     setDrag(null); setDragOver(null);
+    await commitMove(lead, stage);
+  }
+
+  async function confirmLostReason() {
+    if (!lostPrompt) return;
+    await commitMove(lostPrompt, 'Closed Lost', { lost_reason: lostReason });
+    setLostPrompt(null);
   }
 
   const active = leads.filter((l) => !['Closed Won','Closed Lost'].includes(l.status)).length;
@@ -177,6 +207,21 @@ export default function Pipeline() {
           })}
         </div>
       </>)}
+
+      {lostPrompt && (
+        <Modal title={`Why is ${lostPrompt.company} lost?`} onClose={() => setLostPrompt(null)}
+          footer={<>
+            <button className="btn btn-ghost" onClick={() => setLostPrompt(null)}>Cancel</button>
+            <button className="btn btn-primary" style={{ background:'#dc2626' }} onClick={confirmLostReason}>Move to Closed Lost</button>
+          </>}>
+          <div style={{ fontSize:13, color:'var(--muted)', marginBottom:12 }}>
+            A reason is required — this is the only way loss analytics ever become useful.
+          </div>
+          <select value={lostReason} onChange={(e) => setLostReason(e.target.value)} style={{ width:'100%' }}>
+            {LOST_REASONS.map((r) => <option key={r}>{r}</option>)}
+          </select>
+        </Modal>
+      )}
     </Page>
   );
 }
