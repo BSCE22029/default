@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { guessEmails } from '../../lib/emailGuess';
 import { verifyLeads, genuineRank, domainOf } from '../../lib/verifyLead';
 import { discoverEmails } from '../../lib/emailDiscover';
+import { findPeopleBatch } from '../../lib/findPeople';
 
 const SUPA_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON     = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -31,6 +32,7 @@ const SOURCES = [
   { id:'hunter',    label:'Hunter.io',          color:'#f59e0b', free:false, keyField:'hunter_key',  desc:'Verified real emails by domain — 25 free/month' },
   { id:'osm',       label:'OpenStreetMap',      color:'#22c55e', free:true,  desc:'Map-based local discovery (enter a city)' },
   { id:'emailfind', label:'Real Email Finder',  color:'#0ea5e9', free:true,  desc:'Scrapes each company website (contact / about pages) for their ACTUAL published email — instead of guessing info@. Massively cuts bounces' },
+  { id:'people',    label:'Contact Finder',     color:'#db2777', free:true,  desc:'Like Apollo, without the price tag — finds real named people (founders, CEOs, managers) on the company’s team/about page, then reverse-engineers the email pattern from any known address to build their personal email' },
   { id:'ai',        label:'AI Scoring',         color:'#7c3aed', free:false, keyField:'anthropic_key', desc:'Claude AI analyzes every company — ranks HOT / WARM / COLD by fit for IT services' },
   { id:'verify',    label:'Genuine Check',      color:'#059669', free:true,  desc:'Verifies every lead is REAL — live DNS + email deliverability (MX) + domain age + website liveness. Flags dead or fake companies' },
 ];
@@ -179,10 +181,11 @@ export default function Generator() {
   const [emailMap,     setEmailMap]     = useState({});
   const [hunterMap,    setHunterMap]    = useState({});
   const [foundMap,     setFoundMap]     = useState({}); // scraped real emails
+  const [peopleMap,    setPeopleMap]    = useState({}); // named people + pattern-built emails
   const [showSugg,     setShowSugg]     = useState('');
   const [hotOnly,      setHotOnly]      = useState(true);
   const [genuineOnly,  setGenuineOnly]  = useState(false);
-  const [enabled,      setEnabled]      = useState({ clearbit:true, github:true, opencorp:true, maps:true, apollo:true, hunter:true, osm:false, emailfind:true, ai:true, verify:true });
+  const [enabled,      setEnabled]      = useState({ clearbit:true, github:true, opencorp:true, maps:true, apollo:true, hunter:true, osm:false, emailfind:true, people:true, ai:true, verify:true });
   const [showKeys,     setShowKeys]     = useState(false);
 
   const [mapsKey,      setMapsKey]      = useState('');
@@ -263,6 +266,18 @@ export default function Generator() {
       setPct(88);
     }
 
+    // Contact finder — real named people (founders/execs) from each
+    // company's team/about page, with an email built from the company's
+    // actual naming pattern (learned from any known address on that domain).
+    if (enabled.people && all.length) {
+      setScanning('people');
+      const pMap = await findPeopleBatch(all, (done, total) => {
+        setPct(88 + Math.round((done / total) * 2));
+      });
+      setPeopleMap(pMap);
+      setPct(90);
+    }
+
     // AI scoring — analyze every company, rank by IT services fit
     if (enabled.ai && anthropicKey && all.length) {
       setScanning('ai'); setPct(86);
@@ -292,12 +307,22 @@ export default function Generator() {
     if (!all.length) setMsg('No results. Try a different keyword or enable more sources.');
   }
 
+  // Best named contact for a lead — pattern-matched (learned from a real,
+  // known address on that domain) ranks above a mere pattern-guess.
+  function bestPerson(key) {
+    const people = peopleMap[key] || [];
+    if (!people.length) return null;
+    return people.find((p) => p.confidence === 'pattern-matched') || people[0];
+  }
+
   function resolvedEmail(l) {
     const key = l.company.toLowerCase();
-    // Priority: user pick → Hunter verified → scraped-from-site → provided → guess
+    // Priority: user pick → Hunter verified → scraped-from-site → provided
+    // → a real named person's pattern-matched email → guess
     const found = foundMap[key];
     const scraped = found && found.source !== 'guessed' ? found.email : '';
-    return emailMap[key] || hunterMap[key]?.email || scraped || l.email || (found?.email || '');
+    const matchedPerson = (peopleMap[key] || []).find((p) => p.confidence === 'pattern-matched');
+    return emailMap[key] || hunterMap[key]?.email || scraped || l.email || matchedPerson?.email || (found?.email || '');
   }
 
   // Final CRM score: blend topical fit with proof the business is real.
@@ -307,14 +332,17 @@ export default function Generator() {
   }
 
   async function addOne(l) {
-    const hEntry = hunterMap[l.company.toLowerCase()];
-    const fEntry = foundMap[l.company.toLowerCase()];
+    const key = l.company.toLowerCase();
+    const hEntry = hunterMap[key];
+    const fEntry = foundMap[key];
+    const people = peopleMap[key] || [];
+    const top    = bestPerson(key);
     await supabase.from('app_leads').insert({
       org_id: orgId, company: l.company, website: l.website || '',
       email: resolvedEmail(l), industry: l.industry || '',
       country: l.country || '', category: l.category || '',
       lead_score: crmScore(l), status: 'New Lead',
-      contact: l.contact || '',
+      contact: l.contact || (top ? `${top.name}${top.title ? ` — ${top.title}` : ''}` : ''),
       notes: [
         `Source: ${l._source || 'Generator'} — ${query}`,
         l.genuine   ? `Genuine check: ${l.genuine} (${l.genuine_score}/100) — ${(l.genuine_reasons || []).join('; ')}` : '',
@@ -326,6 +354,7 @@ export default function Generator() {
         hEntry      ? `Email verified by Hunter.io — ${hEntry.confidence}% confidence` : '',
         !hEntry && fEntry?.source === 'scraped' ? `Email found on company website (${fEntry.all?.length || 1} candidate${(fEntry.all?.length || 1) > 1 ? 's' : ''})` : '',
         !hEntry && fEntry?.source === 'guessed' ? `Email is a GUESS — no published address found; may bounce` : '',
+        people.length ? `Contacts found:\n${people.slice(0, 3).map((p) => `  • ${p.name}${p.title ? ` (${p.title})` : ''} — ${p.email} [${p.confidence === 'pattern-matched' ? 'verified pattern' : 'unconfirmed guess'}]`).join('\n')}` : '',
         l.registered    ? `Incorporated: ${l.registered}` : '',
         l.companyNumber ? `Company #: ${l.companyNumber}` : '',
         l._oc_url       ? `Registry: ${l._oc_url}` : '',
@@ -339,13 +368,17 @@ export default function Generator() {
     const toAdd = displayResults.filter((l) => !existing.has(l.company.toLowerCase()));
     if (!toAdd.length) { setMsg('All visible leads are already in your CRM.'); return; }
     await supabase.from('app_leads').insert(toAdd.map((l) => {
-      const hEntry = hunterMap[l.company.toLowerCase()];
-      const fEntry = foundMap[l.company.toLowerCase()];
+      const key = l.company.toLowerCase();
+      const hEntry = hunterMap[key];
+      const fEntry = foundMap[key];
+      const people = peopleMap[key] || [];
+      const top    = bestPerson(key);
       return {
         org_id: orgId, company: l.company, website: l.website || '',
         email: resolvedEmail(l), industry: l.industry || '',
         country: l.country || '', category: l.category || '',
-        lead_score: crmScore(l), status: 'New Lead', contact: l.contact || '',
+        lead_score: crmScore(l), status: 'New Lead',
+        contact: l.contact || (top ? `${top.name}${top.title ? ` — ${top.title}` : ''}` : ''),
         notes: [
           `Source: ${l._source || 'Generator'} — ${query}`,
           l.genuine  ? `Genuine check: ${l.genuine} (${l.genuine_score}/100) — ${(l.genuine_reasons || []).join('; ')}` : '',
@@ -355,6 +388,7 @@ export default function Generator() {
           hEntry     ? `Email verified by Hunter.io — ${hEntry.confidence}% confidence` : '',
           !hEntry && fEntry?.source === 'scraped' ? `Email found on company website` : '',
           !hEntry && fEntry?.source === 'guessed' ? `Email is a GUESS — may bounce` : '',
+          people.length ? `Contacts found:\n${people.slice(0, 3).map((p) => `  • ${p.name}${p.title ? ` (${p.title})` : ''} — ${p.email} [${p.confidence === 'pattern-matched' ? 'verified pattern' : 'unconfirmed guess'}]`).join('\n')}` : '',
           l.registered ? `Incorporated: ${l.registered}` : '',
         ].filter(Boolean).join('\n'),
       };
@@ -552,6 +586,7 @@ export default function Generator() {
                   {scanning === 'ai' ? 'Claude AI analyzing companies…'
                     : scanning === 'verify' ? 'Verifying leads are genuine — DNS, email deliverability, domain age…'
                     : scanning === 'emailfind' ? 'Finding real emails — scraping each company’s contact page…'
+                    : scanning === 'people' ? 'Finding real decision-makers — team pages + email pattern matching…'
                     : scanLabel ? `Scanning ${scanLabel}…` : 'Finishing…'}
                 </span>
                 <span>{pct}%</span>
@@ -632,9 +667,12 @@ export default function Generator() {
               const hunter       = hunterMap[key];
               const found        = foundMap[key];
               const scraped      = found && found.source !== 'guessed' ? found : null;
-              const displayEmail = chosen || hunter?.email || scraped?.email || l.email || found?.email || '';
+              const people       = peopleMap[key] || [];
+              const matchedPerson = people.find((p) => p.confidence === 'pattern-matched');
+              const displayEmail = chosen || hunter?.email || scraped?.email || l.email || matchedPerson?.email || found?.email || '';
               const isVerified   = !!hunter;
               const isScraped    = !chosen && !hunter && !!scraped && scraped.email === displayEmail;
+              const isPersonPick = !chosen && !hunter && !isScraped && people.some((p) => p.email === displayEmail);
               const srcColor     = sourceColors[l._source] || '#6366f1';
               const aiScore      = l.ai_score;
               const lvlStyle     = aiScore !== undefined ? levelStyle(aiScore) : null;
@@ -708,14 +746,42 @@ export default function Generator() {
                   )}
                   {l.registered && <div style={{ fontSize:11, color:'var(--muted)', marginBottom:4 }}>Inc. {l.registered}{l.companyNumber ? ` · #${l.companyNumber}` : ''}</div>}
 
+                  {/* Contacts — real named people, like Apollo */}
+                  {people.length > 0 && (
+                    <div style={{ marginBottom:8, padding:'7px 9px', background:'#fdf2f8', border:'1px solid #fbcfe8', borderRadius:8 }}>
+                      <div style={{ fontSize:9, fontWeight:800, color:'#be185d', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:5 }}>
+                        {people.length} contact{people.length > 1 ? 's' : ''} found
+                      </div>
+                      {people.slice(0, 3).map((p) => {
+                        const picked = emailMap[key] === p.email;
+                        return (
+                          <div key={p.email} style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, marginBottom:3, flexWrap:'wrap' }}>
+                            <span title={p.confidence === 'pattern-matched' ? 'Email pattern confirmed from a real known address at this company' : 'Named person is real; email format is an educated guess (unconfirmed)'}
+                              style={{ cursor:'help', fontWeight:800, color: p.confidence === 'pattern-matched' ? '#047857' : '#b45309' }}>
+                              {p.confidence === 'pattern-matched' ? '✓' : '~'}
+                            </span>
+                            <span style={{ fontWeight:700 }}>{p.name}</span>
+                            {p.title && <span style={{ color:'var(--muted)' }}>· {p.title}</span>}
+                            <button type="button"
+                              style={{ fontSize:10, fontWeight:700, color: picked ? '#be185d' : 'var(--primary)', background: picked ? '#fce7f3' : 'none', border: picked ? '1px solid #f9a8d4' : 'none', borderRadius:20, padding: picked ? '1px 8px' : 0, cursor:'pointer', textDecoration: picked ? 'none' : 'underline' }}
+                              onClick={() => setEmailMap((m) => ({ ...m, [key]: p.email }))}>
+                              {picked ? 'Using this' : p.email}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {/* Email */}
                   <div style={{ marginBottom:6 }}>
                     {displayEmail ? (
                       <div style={{ fontSize:12, display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
                         {isVerified && <span style={{ fontSize:9, fontWeight:800, color:'#f59e0b', background:'#fef3c7', padding:'2px 7px', borderRadius:20, flexShrink:0 }}>Hunter {hunter.confidence}%</span>}
                         {!isVerified && isScraped && <span title="Found on the company’s own website" style={{ fontSize:9, fontWeight:800, color:'#0369a1', background:'#e0f2fe', padding:'2px 7px', borderRadius:20, flexShrink:0, cursor:'help' }}>✓ Real</span>}
-                        {!isVerified && !isScraped && found?.source === 'guessed' && <span title="No published email found — this is a guess and may bounce" style={{ fontSize:9, fontWeight:800, color:'#92400e', background:'#fef3c7', padding:'2px 7px', borderRadius:20, flexShrink:0, cursor:'help' }}>guess</span>}
-                        <span style={{ color: isVerified ? '#d97706' : isScraped ? '#0369a1' : chosen ? '#6366f1' : 'var(--muted)', wordBreak:'break-all' }}>{displayEmail}</span>
+                        {!isVerified && !isScraped && isPersonPick && <span title="A named person's email, built from the company's confirmed pattern" style={{ fontSize:9, fontWeight:800, color:'#be185d', background:'#fdf2f8', padding:'2px 7px', borderRadius:20, flexShrink:0, cursor:'help' }}>👤 Contact</span>}
+                        {!isVerified && !isScraped && !isPersonPick && found?.source === 'guessed' && <span title="No published email found — this is a guess and may bounce" style={{ fontSize:9, fontWeight:800, color:'#92400e', background:'#fef3c7', padding:'2px 7px', borderRadius:20, flexShrink:0, cursor:'help' }}>guess</span>}
+                        <span style={{ color: isVerified ? '#d97706' : isScraped ? '#0369a1' : isPersonPick ? '#be185d' : chosen ? '#6366f1' : 'var(--muted)', wordBreak:'break-all' }}>{displayEmail}</span>
                         {suggs.length > 0 && (
                           <button type="button" style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0, textDecoration:'underline', flexShrink:0 }} onClick={() => setShowSugg(showSugg === key ? '' : key)}>change</button>
                         )}

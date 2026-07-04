@@ -17,8 +17,8 @@
 
 import { domainFromWebsite } from './emailGuess';
 
-const EMAIL_RE   = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-const EMAIL_FULL = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+export const EMAIL_RE   = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+export const EMAIL_FULL = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
 // Invisible chars (zero-width space/joiners, line/para separators, nbsp, BOM)
 // built from code points so no literal invisibles live in this source file.
 const INVISIBLE = new RegExp('[' + [0x200b, 0x200c, 0x200d, 0x2028, 0x2029, 0x00a0, 0xfeff].map((c) => '\\u' + c.toString(16).padStart(4, '0')).join('') + ']', 'g');
@@ -35,11 +35,11 @@ const JUNK = [
 // Prefixes worth reaching out to, best first.
 const GOOD_PREFIX = ['contact', 'hello', 'hi', 'sales', 'info', 'team', 'business', 'partnerships', 'careers', 'jobs', 'support'];
 
-function isJunk(e) { return JUNK.some((re) => re.test(e)); }
+export function isJunk(e) { return JUNK.some((re) => re.test(e)); }
 
 // Normalize a raw match: strip URL-encoding, invisible chars, and any
 // leading/trailing punctuation that regex/HTML dragged in.
-function cleanEmail(raw) {
+export function cleanEmail(raw) {
   let e = raw;
   try { e = decodeURIComponent(e); } catch { /* keep as-is */ }
   return e
@@ -50,7 +50,7 @@ function cleanEmail(raw) {
     .replace(/[).,;:>'"\]]+$/, '');   // trailing punctuation/brackets
 }
 
-function rootDomain(d) {
+export function rootDomain(d) {
   const parts = d.split('.');
   return parts.length > 2 ? parts.slice(-2).join('.') : d;
 }
@@ -67,7 +67,7 @@ function scoreEmail(email, domain) {
 }
 
 // Fetch a URL's text through public reader/CORS proxies (first that works).
-async function readPage(url, timeoutMs = 8000) {
+export async function readPage(url, timeoutMs = 8000) {
   const proxies = [
     (u) => `https://r.jina.ai/${u}`,                                      // clean markdown/text
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, // raw HTML
@@ -86,7 +86,7 @@ async function readPage(url, timeoutMs = 8000) {
   return '';
 }
 
-function extractEmails(text, domain) {
+export function extractEmails(text, domain) {
   if (!text) return [];
   const found = new Set();
   const add = (raw) => {
