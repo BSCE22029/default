@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>POS Pro — Retail Point of Sale</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0a0a12;color:#f1f5f9;min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit}
+/* ---------- Login ---------- */
+#login-screen{flex:1;display:flex;align-items:center;justify-content:center}
+.login-card{background:#111128;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:2.5rem;width:340px}
+.login-card h1{font-size:1.3rem;margin-bottom:.3rem}
+.login-card p.sub{color:#64748b;font-size:.8rem;margin-bottom:1.5rem}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.4rem}
+.field input{width:100%;background:#0a0a12;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.7rem .9rem;color:#f1f5f9;font-size:.9rem;outline:none}
+.field input:focus{border-color:#7c3aed}
+.login-btn{width:100%;background:linear-gradient(135deg,#7c3aed,#3b82f6);border:none;color:#fff;padding:.8rem;border-radius:10px;font-size:.9rem;font-weight:800;cursor:pointer;margin-top:.5rem}
+.login-btn:hover{opacity:.9}
+.login-error{color:#ef4444;font-size:.8rem;margin-top:.8rem;min-height:1.2em}
+.demo-accounts{margin-top:1.5rem;padding-top:1.2rem;border-top:1px solid rgba(255,255,255,.06);font-size:.72rem;color:#475569;line-height:1.6}
+.demo-accounts b{color:#94a3b8}
+/* ---------- App shell ---------- */
+#app-screen{display:none;flex:1;flex-direction:column}
+.top-bar{background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);padding:.75rem 2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.top-bar a.back{color:rgba(255,255,255,.5);text-decoration:none;font-size:.85rem}
+.top-bar h1{font-size:1rem;font-weight:700}
+.top-right{display:flex;align-items:center;gap:1.2rem;font-size:.78rem;color:#94a3b8}
+.top-right b{color:#22c55e}
+.tabs{display:flex;gap:.4rem;margin-left:1rem}
+.tab-btn{background:none;border:1px solid rgba(255,255,255,.1);color:#94a3b8;padding:.4rem .9rem;border-radius:99px;font-size:.75rem;font-weight:700;cursor:pointer}
+.tab-btn.active{background:linear-gradient(135deg,#7c3aed,#3b82f6);color:#fff;border-color:transparent}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,.1);color:#94a3b8;padding:.4rem .8rem;border-radius:8px;font-size:.75rem;cursor:pointer}
+.logout-btn:hover{border-color:#ef4444;color:#ef4444}
+.view{display:none;flex:1;padding:1.5rem 2rem;max-width:1300px;margin:0 auto;width:100%}
+.view.active{display:flex;flex-direction:column}
+/* ---------- POS view ---------- */
+#view-pos.active{display:grid;grid-template-columns:1fr 380px;gap:1.5rem}
+.panel{background:#111128;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:1.2rem}
+.search-input{width:100%;background:#0a0a12;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.7rem 1rem;color:#f1f5f9;font-size:.9rem;outline:none;margin-bottom:1rem}
+.search-input:focus{border-color:#7c3aed}
+.cats{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+.cat-btn{background:#0a0a12;border:1px solid rgba(255,255,255,.08);color:#94a3b8;padding:.4rem .9rem;border-radius:99px;font-size:.75rem;font-weight:600;cursor:pointer}
+.cat-btn.active{background:linear-gradient(135deg,#7c3aed,#3b82f6);color:#fff;border-color:transparent}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.9rem}
+.product{background:#1a1a35;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:1rem;cursor:pointer;transition:border-color .2s,transform .2s;position:relative}
+.product:hover{border-color:#7c3aed;transform:translateY(-2px)}
+.product.out{opacity:.4;cursor:not-allowed;pointer-events:none}
+.p-icon{font-size:1.8rem;margin-bottom:.5rem}
+.p-name{font-size:.82rem;font-weight:700;margin-bottom:.3rem;line-height:1.3}
+.p-price{font-size:.9rem;font-weight:800;color:#22c55e}
+.p-stock{font-size:.65rem;color:#64748b;margin-top:.3rem}
+.p-stock.low{color:#eab308}
+.cart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:.8rem;border-bottom:1px solid rgba(255,255,255,.06)}
+.cart-title{font-size:.95rem;font-weight:700}
+.clear-cart{background:none;border:none;color:#475569;font-size:.75rem;cursor:pointer}
+.cart-items{max-height:230px;overflow-y:auto;margin-bottom:1rem}
+.cart-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.ci-info{flex:1;min-width:0}
+.ci-name{font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-price{font-size:.7rem;color:#64748b}
+.qty-ctrl{display:flex;align-items:center;gap:.4rem}
+.qty-btn{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#f1f5f9;cursor:pointer;font-size:.8rem}
+.qty-val{font-size:.8rem;font-weight:700;width:18px;text-align:center;display:inline-block}
+.ci-total{font-size:.8rem;font-weight:700;width:55px;text-align:right}
+.ci-del{background:none;border:none;color:#475569;cursor:pointer;font-size:1rem}
+.empty-cart{text-align:center;color:#334155;font-size:.85rem;padding:2rem 0}
+.customer-select{width:100%;background:#0a0a12;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.5rem .7rem;color:#f1f5f9;font-size:.8rem;margin-bottom:.8rem}
+.totals{border-top:1px solid rgba(255,255,255,.08);padding-top:.8rem}
+.t-row{display:flex;justify-content:space-between;font-size:.85rem;color:#94a3b8;padding:.25rem 0}
+.t-row.grand{font-size:1.15rem;font-weight:800;color:#f1f5f9;padding-top:.5rem}
+.pay-methods{display:flex;gap:.5rem;margin:.9rem 0}
+.pay-btn{flex:1;background:#0a0a12;border:1px solid rgba(255,255,255,.1);color:#94a3b8;padding:.6rem;border-radius:10px;font-size:.8rem;font-weight:700;cursor:pointer;text-align:center}
+.pay-btn.active{background:linear-gradient(135deg,#7c3aed,#3b82f6);color:#fff;border-color:transparent}
+.cash-row{display:none;gap:.5rem;margin-bottom:.9rem}
+.cash-row.show{display:flex}
+.cash-row input{flex:1;background:#0a0a12;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.5rem .7rem;color:#f1f5f9;font-size:.85rem}
+.change-line{font-size:.8rem;color:#22c55e;margin-bottom:.7rem;min-height:1.1em}
+.checkout-btn{width:100%;background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#fff;padding:.9rem;border-radius:12px;font-size:.95rem;font-weight:800;cursor:pointer}
+.checkout-btn:disabled{opacity:.35;cursor:not-allowed}
+.err-line{color:#ef4444;font-size:.78rem;margin-top:.5rem;min-height:1.1em}
+/* ---------- Reports view ---------- */
+.stats-row{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:#111128;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:1rem 1.4rem;flex:1;min-width:150px}
+.stat-n{font-size:1.5rem;font-weight:800;color:#a855f7}
+.stat-l{font-size:.72rem;color:#64748b;margin-top:.1rem}
+.report-panels{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{text-align:left;color:#64748b;font-size:.7rem;text-transform:uppercase;padding:.4rem .5rem;border-bottom:1px solid rgba(255,255,255,.08)}
+td{padding:.5rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.low-badge{color:#eab308;font-weight:700}
+/* ---------- Sales history view ---------- */
+.sales-table td.right,.sales-table th.right{text-align:right}
+.badge{padding:.15rem .5rem;border-radius:99px;font-size:.65rem;font-weight:700}
+.badge-paid{background:rgba(34,197,94,.15);color:#22c55e}
+.badge-credit{background:rgba(234,179,8,.15);color:#eab308}
+/* ---------- Receipt ---------- */
+.receipt-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:50}
+.receipt-overlay.show{display:flex}
+.receipt{background:#fff;color:#111;width:300px;padding:1.5rem;border-radius:8px;font-family:'Courier New',monospace;max-height:85vh;overflow-y:auto}
+.receipt h2{text-align:center;font-size:1rem;margin-bottom:.2rem}
+.receipt .sub{text-align:center;font-size:.7rem;color:#555;margin-bottom:.8rem}
+.receipt hr{border:none;border-top:1px dashed #999;margin:.6rem 0}
+.r-row{display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:.2rem}
+.r-grand{font-weight:800;font-size:.95rem}
+.receipt-actions{display:flex;gap:.6rem;margin-top:1rem}
+.receipt-actions button{flex:1;padding:.6rem;border-radius:8px;border:none;font-weight:700;cursor:pointer;font-size:.8rem}
+.btn-new{background:#7c3aed;color:#fff}
+.btn-print{background:#111;color:#fff}
+@media print{ body *{visibility:hidden} .receipt,.receipt *{visibility:visible} .receipt{position:absolute;top:0;left:0;width:100%} .receipt-actions{display:none} }
+@media(max-width:900px){#view-pos.active{grid-template-columns:1fr}.report-panels{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>🛒 POS Pro</h1>
+    <p class="sub">Sign in to your terminal</p>
+    <div class="field"><label>Email</label><input id="li-email" type="email" value="cashier@pos.local"/></div>
+    <div class="field"><label>Password</label><input id="li-pass" type="password" value="Cashier123!"/></div>
+    <button class="login-btn" onclick="login()">Sign In</button>
+    <div class="login-error" id="li-error"></div>
+    <div class="demo-accounts">
+      <b>Demo accounts</b> (seeded locally):<br/>
+      admin@pos.local / Admin123!<br/>
+      manager@pos.local / Manager123!<br/>
+      cashier@pos.local / Cashier123!
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <div class="top-bar">
+    <a class="back" href="../index.html">← Portfolio</a>
+    <h1>🛒 POS Pro</h1>
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-pos" onclick="switchView('pos')">Terminal</button>
+      <button class="tab-btn" id="tab-sales" onclick="switchView('sales')">Sales</button>
+      <button class="tab-btn" id="tab-reports" onclick="switchView('reports')">Reports</button>
+    </div>
+    <div class="top-right">
+      <span id="whoami"></span>
+      <button class="logout-btn" onclick="logout()">Log out</button>
+    </div>
+  </div>
+
+  <div class="view active" id="view-pos">
+    <div class="panel">
+      <input class="search-input" id="search" placeholder="🔍 Search products or SKU..." oninput="renderProducts()"/>
+      <div class="cats" id="cats"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+    <div class="panel">
+      <div class="cart-header">
+        <div class="cart-title">🧾 Current Sale</div>
+        <button class="clear-cart" onclick="clearCart()">Clear</button>
+      </div>
+      <select class="customer-select" id="customer-select"></select>
+      <div class="cart-items" id="cart-items"></div>
+      <div class="totals">
+        <div class="t-row"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
+        <div class="t-row"><span>Tax</span><span id="tax">$0.00</span></div>
+        <div class="t-row grand"><span>Total</span><span id="grand">$0.00</span></div>
+      </div>
+      <div class="pay-methods">
+        <div class="pay-btn active" id="pay-cash" onclick="setPay('cash')">💵 Cash</div>
+        <div class="pay-btn" id="pay-card" onclick="setPay('card')">💳 Card</div>
+        <div class="pay-btn" id="pay-credit" onclick="setPay('credit')">📒 Credit</div>
+      </div>
+      <div class="cash-row show" id="cash-row">
+        <input type="number" id="tendered" placeholder="Cash tendered" oninput="calcChange()"/>
+      </div>
+      <div class="change-line" id="change-line"></div>
+      <button class="checkout-btn" id="checkout-btn" onclick="checkout()" disabled>Complete Sale</button>
+      <div class="err-line" id="err-line"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-sales">
+    <table class="sales-table">
+      <thead><tr><th>Invoice</th><th>Date</th><th>Cashier</th><th>Customer</th><th class="right">Total</th><th>Payment</th><th>Status</th></tr></thead>
+      <tbody id="sales-body"></tbody>
+    </table>
+  </div>
+
+  <div class="view" id="view-reports">
+    <div class="stats-row" id="stats-row"></div>
+    <div class="report-panels">
+      <div class="panel">
+        <h3 style="margin-bottom:.8rem;font-size:.9rem">🏆 Top Products</h3>
+        <table><thead><tr><th>Product</th><th class="right">Units</th><th class="right">Revenue</th></tr></thead><tbody id="top-products"></tbody></table>
+      </div>
+      <div class="panel">
+        <h3 style="margin-bottom:.8rem;font-size:.9rem">⚠️ Low Stock</h3>
+        <table><thead><tr><th>Product</th><th class="right">Stock</th><th class="right">Min</th></tr></thead><tbody id="low-stock"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="receipt-overlay" id="receipt-overlay">
+  <div class="receipt" id="receipt"></div>
+</div>
+
+<script>
+const API = '/api';
+let me = null;
+let products = [];
+let categories = [];
+let customers = [];
+let cart = []; // [{product_id, name, price, tax_rate, qty}]
+let activeCat = 'All';
+let payMethod = 'cash';
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    ...opts,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+async function login() {
+  const email = document.getElementById('li-email').value.trim();
+  const password = document.getElementById('li-pass').value;
+  const errEl = document.getElementById('li-error');
+  errEl.textContent = '';
+  try {
+    me = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    await boot();
+  } catch (e) {
+    errEl.textContent = e.message;
+  }
+}
+async function logout() {
+  await api('/auth/logout', { method: 'POST' });
+  location.reload();
+}
+
+async function boot() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'flex';
+  document.getElementById('whoami').innerHTML = `${me.name} &middot; <b>${me.role}</b>`;
+  [products, categories, customers] = await Promise.all([
+    api('/products'), api('/categories'), api('/customers'),
+  ]);
+  document.getElementById('customer-select').innerHTML =
+    customers.map(c => `<option value="${c.id}">${c.name}${c.customer_type === 'wholesale' ? ' (wholesale)' : ''}</option>`).join('');
+  renderCats();
+  renderProducts();
+  await loadSales();
+  await loadReports();
+}
+
+function switchView(v) {
+  ['pos', 'sales', 'reports'].forEach(x => {
+    document.getElementById('view-' + x).classList.toggle('active', x === v);
+    document.getElementById('tab-' + x).classList.toggle('active', x === v);
+  });
+  if (v === 'sales') loadSales();
+  if (v === 'reports') loadReports();
+}
+
+function renderCats() {
+  const cats = ['All', ...new Set(categories.map(c => c.name))];
+  document.getElementById('cats').innerHTML = cats.map(c =>
+    `<div class="cat-btn ${c === activeCat ? 'active' : ''}" onclick="setCat('${c}')">${c}</div>`).join('');
+}
+function setCat(c) { activeCat = c; renderCats(); renderProducts(); }
+function setPay(m) {
+  payMethod = m;
+  ['cash', 'card', 'credit'].forEach(p => document.getElementById('pay-' + p).classList.toggle('active', p === m));
+  document.getElementById('cash-row').classList.toggle('show', m === 'cash');
+  calcChange();
+}
+
+function addToCart(id) {
+  const p = products.find(x => x.id === id);
+  const inCartQty = cart.filter(c => c.product_id === id).reduce((a, c) => a + c.qty, 0);
+  if (inCartQty >= p.stock) return;
+  const existing = cart.find(c => c.product_id === id);
+  if (existing) existing.qty++;
+  else cart.push({ product_id: p.id, name: p.name, price: p.sell_price, tax_rate: p.tax_rate, qty: 1 });
+  renderCart(); renderProducts();
+}
+function changeQty(id, delta) {
+  const item = cart.find(c => c.product_id === id);
+  const p = products.find(x => x.id === id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(c => c.product_id !== id);
+  else if (item.qty > p.stock) item.qty = p.stock;
+  renderCart(); renderProducts();
+}
+function removeItem(id) { cart = cart.filter(c => c.product_id !== id); renderCart(); renderProducts(); }
+function clearCart() { cart = []; renderCart(); renderProducts(); }
+
+function totals() {
+  const sub = cart.reduce((a, c) => a + c.price * c.qty, 0);
+  const tax = cart.reduce((a, c) => a + c.price * c.qty * c.tax_rate, 0);
+  return { sub, tax, grand: sub + tax };
+}
+function calcChange() {
+  const { grand } = totals();
+  const line = document.getElementById('change-line');
+  const btn = document.getElementById('checkout-btn');
+  if (payMethod !== 'cash') {
+    line.textContent = '';
+    btn.disabled = cart.length === 0;
+    return;
+  }
+  const tendered = +(document.getElementById('tendered').value || 0);
+  if (tendered <= 0) { line.textContent = ''; btn.disabled = true; return; }
+  if (tendered < grand) { line.style.color = '#ef4444'; line.textContent = `Need $${(grand - tendered).toFixed(2)} more`; btn.disabled = true; return; }
+  line.style.color = '#22c55e';
+  line.textContent = `Change due: $${(tendered - grand).toFixed(2)}`;
+  btn.disabled = cart.length === 0;
+}
+
+function renderProducts() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const filtered = products.filter(p =>
+    (activeCat === 'All' || p.category_name === activeCat) &&
+    (p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)));
+  document.getElementById('grid').innerHTML = filtered.map(p => {
+    const inCart = cart.filter(c => c.product_id === p.id).reduce((a, c) => a + c.qty, 0);
+    const avail = p.stock - inCart;
+    return `<div class="product ${avail <= 0 ? 'out' : ''}" onclick="addToCart(${p.id})">
+      <div class="p-icon">${p.icon}</div>
+      <div class="p-name">${p.name}</div>
+      <div class="p-price">$${p.sell_price.toFixed(2)}</div>
+      <div class="p-stock ${avail > 0 && avail <= p.min_stock ? 'low' : ''}">${avail <= 0 ? 'Out of stock' : avail + ' left'}</div>
+    </div>`;
+  }).join('') || '<div style="color:#475569;padding:2rem;grid-column:1/-1;text-align:center">No products match.</div>';
+}
+
+function renderCart() {
+  document.getElementById('cart-items').innerHTML = cart.length ? cart.map(c => `
+    <div class="cart-item">
+      <div class="ci-info"><div class="ci-name">${c.name}</div><div class="ci-price">$${c.price.toFixed(2)} each</div></div>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="changeQty(${c.product_id},-1)">−</button>
+        <span class="qty-val">${c.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${c.product_id},1)">+</button>
+      </div>
+      <div class="ci-total">$${(c.price * c.qty).toFixed(2)}</div>
+      <button class="ci-del" onclick="removeItem(${c.product_id})">×</button>
+    </div>`).join('') : '<div class="empty-cart">Cart is empty<br>Tap a product to add it</div>';
+
+  const { sub, tax, grand } = totals();
+  document.getElementById('subtotal').textContent = '$' + sub.toFixed(2);
+  document.getElementById('tax').textContent = '$' + tax.toFixed(2);
+  document.getElementById('grand').textContent = '$' + grand.toFixed(2);
+  calcChange();
+}
+
+async function checkout() {
+  const errEl = document.getElementById('err-line');
+  errEl.textContent = '';
+  const tendered = payMethod === 'cash' ? +document.getElementById('tendered').value : undefined;
+  try {
+    const sale = await api('/sales', {
+      method: 'POST',
+      body: JSON.stringify({
+        items: cart.map(c => ({ product_id: c.product_id, qty: c.qty })),
+        customer_id: +document.getElementById('customer-select').value || null,
+        payment_method: payMethod,
+        amount_tendered: tendered,
+      }),
+    });
+    showReceipt(sale, [...cart]);
+    cart = [];
+    document.getElementById('tendered').value = '';
+    products = await api('/products');
+    renderCart(); renderProducts();
+  } catch (e) {
+    errEl.textContent = e.message;
+  }
+}
+
+function showReceipt(sale, items) {
+  const itemsHtml = items.map(i => `<div class="r-row"><span>${i.qty}x ${i.name}</span><span>$${(i.price * i.qty).toFixed(2)}</span></div>`).join('');
+  document.getElementById('receipt').innerHTML = `
+    <h2>MOIZ RETAIL POS</h2>
+    <div class="sub">${sale.invoiceNo} &middot; ${new Date().toLocaleString()}</div>
+    <hr/>${itemsHtml}<hr/>
+    <div class="r-row"><span>Subtotal</span><span>$${sale.subtotal.toFixed(2)}</span></div>
+    <div class="r-row"><span>Tax</span><span>$${sale.taxTotal.toFixed(2)}</span></div>
+    <div class="r-row r-grand"><span>TOTAL</span><span>$${sale.grandTotal.toFixed(2)}</span></div>
+    <hr/>
+    <div class="r-row"><span>Paid via</span><span>${sale.status === 'credit' ? 'Credit' : payMethod}</span></div>
+    ${payMethod === 'cash' ? `<div class="r-row"><span>Change</span><span>$${sale.changeDue.toFixed(2)}</span></div>` : ''}
+    <div class="sub" style="margin-top:1rem">Thank you for your purchase!</div>
+    <div class="receipt-actions">
+      <button class="btn-print" onclick="window.print()">🖨️ Print</button>
+      <button class="btn-new" onclick="document.getElementById('receipt-overlay').classList.remove('show')">New Sale</button>
+    </div>`;
+  document.getElementById('receipt-overlay').classList.add('show');
+}
+
+async function loadSales() {
+  const sales = await api('/sales');
+  document.getElementById('sales-body').innerHTML = sales.map(s => `
+    <tr>
+      <td>${s.invoice_no}</td>
+      <td>${new Date(s.created_at + 'Z').toLocaleString()}</td>
+      <td>${s.cashier_name || '—'}</td>
+      <td>${s.customer_name || 'Walk-in'}</td>
+      <td class="right">$${s.grand_total.toFixed(2)}</td>
+      <td>${s.payment_method}</td>
+      <td><span class="badge badge-${s.status === 'credit' ? 'credit' : 'paid'}">${s.status}</span></td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:#475569;padding:2rem">No sales yet.</td></tr>';
+}
+
+async function loadReports() {
+  const r = await api('/reports/sales-summary');
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat"><div class="stat-n">$${r.today_revenue.toFixed(2)}</div><div class="stat-l">Today's Revenue</div></div>
+    <div class="stat"><div class="stat-n">${r.today_transactions}</div><div class="stat-l">Transactions</div></div>
+    <div class="stat"><div class="stat-n">$${r.today_gross_profit.toFixed(2)}</div><div class="stat-l">Gross Profit</div></div>
+    <div class="stat"><div class="stat-n">${r.low_stock.length}</div><div class="stat-l">Low Stock Items</div></div>`;
+  document.getElementById('top-products').innerHTML = r.top_products.map(p => `
+    <tr><td>${p.product_name}</td><td class="right">${p.units_sold}</td><td class="right">$${p.revenue.toFixed(2)}</td></tr>`).join('') ||
+    '<tr><td colspan="3" style="text-align:center;color:#475569">No sales yet.</td></tr>';
+  document.getElementById('low-stock').innerHTML = r.low_stock.map(p => `
+    <tr><td>${p.name}</td><td class="right low-badge">${p.stock}</td><td class="right">${p.min_stock}</td></tr>`).join('') ||
+    '<tr><td colspan="3" style="text-align:center;color:#475569">All stocked up.</td></tr>';
+}
+
+// Restore session on reload
+(async () => {
+  try { me = await api('/auth/me'); await boot(); } catch (e) { /* not logged in */ }
+})();
+</script>
+</body>
+</html>

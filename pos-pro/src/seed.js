@@ -1,0 +1,72 @@
+const bcrypt = require('bcryptjs');
+const db = require('./db');
+
+function reset() {
+  db.exec(`
+    DELETE FROM refunds;
+    DELETE FROM inventory_transactions;
+    DELETE FROM audit_logs;
+    DELETE FROM sale_items;
+    DELETE FROM sales;
+    DELETE FROM products;
+    DELETE FROM categories;
+    DELETE FROM customers;
+    DELETE FROM users;
+  `);
+}
+
+function seed() {
+  reset();
+
+  const insertUser = db.prepare(
+    `INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)`
+  );
+  const users = [
+    ['Admin User', 'admin@pos.local', 'Admin123!', 'admin'],
+    ['Store Manager', 'manager@pos.local', 'Manager123!', 'manager'],
+    ['Cashier One', 'cashier@pos.local', 'Cashier123!', 'cashier'],
+  ];
+  for (const [name, email, pw, role] of users) {
+    insertUser.run(name, email, bcrypt.hashSync(pw, 10), role);
+  }
+
+  const insertCat = db.prepare(`INSERT INTO categories (name) VALUES (?)`);
+  const cats = ['Drinks', 'Bakery', 'Food', 'Snacks'];
+  const catIds = {};
+  for (const c of cats) catIds[c] = insertCat.run(c).lastInsertRowid;
+
+  const insertProduct = db.prepare(`
+    INSERT INTO products (sku, name, category_id, cost_price, sell_price, tax_rate, stock, min_stock, icon)
+    VALUES (@sku, @name, @category_id, @cost_price, @sell_price, @tax_rate, @stock, @min_stock, @icon)
+  `);
+  const products = [
+    { sku: 'SKU001', name: 'Espresso', category_id: catIds.Drinks, cost_price: 1.20, sell_price: 3.50, tax_rate: 0.08, stock: 40, min_stock: 10, icon: '☕' },
+    { sku: 'SKU002', name: 'Cappuccino', category_id: catIds.Drinks, cost_price: 1.50, sell_price: 4.25, tax_rate: 0.08, stock: 32, min_stock: 10, icon: '☕' },
+    { sku: 'SKU003', name: 'Iced Latte', category_id: catIds.Drinks, cost_price: 1.75, sell_price: 4.75, tax_rate: 0.08, stock: 5, min_stock: 8, icon: '🥤' },
+    { sku: 'SKU004', name: 'Orange Juice', category_id: catIds.Drinks, cost_price: 1.00, sell_price: 3.00, tax_rate: 0.08, stock: 18, min_stock: 8, icon: '🧃' },
+    { sku: 'SKU005', name: 'Croissant', category_id: catIds.Bakery, cost_price: 1.10, sell_price: 3.25, tax_rate: 0.08, stock: 14, min_stock: 6, icon: '🥐' },
+    { sku: 'SKU006', name: 'Bagel', category_id: catIds.Bakery, cost_price: 0.90, sell_price: 2.75, tax_rate: 0.08, stock: 20, min_stock: 6, icon: '🥯' },
+    { sku: 'SKU007', name: 'Chocolate Muffin', category_id: catIds.Bakery, cost_price: 1.20, sell_price: 3.50, tax_rate: 0.08, stock: 0, min_stock: 6, icon: '🧁' },
+    { sku: 'SKU008', name: 'Cinnamon Roll', category_id: catIds.Bakery, cost_price: 1.30, sell_price: 4.00, tax_rate: 0.08, stock: 9, min_stock: 6, icon: '🌀' },
+    { sku: 'SKU009', name: 'Club Sandwich', category_id: catIds.Food, cost_price: 3.00, sell_price: 7.50, tax_rate: 0.08, stock: 12, min_stock: 5, icon: '🥪' },
+    { sku: 'SKU010', name: 'Caesar Salad', category_id: catIds.Food, cost_price: 3.20, sell_price: 8.25, tax_rate: 0.08, stock: 7, min_stock: 5, icon: '🥗' },
+    { sku: 'SKU011', name: 'Margherita Pizza Slice', category_id: catIds.Food, cost_price: 2.10, sell_price: 5.50, tax_rate: 0.08, stock: 10, min_stock: 5, icon: '🍕' },
+    { sku: 'SKU012', name: 'Chips', category_id: catIds.Snacks, cost_price: 0.60, sell_price: 2.00, tax_rate: 0.08, stock: 25, min_stock: 10, icon: '🍟' },
+    { sku: 'SKU013', name: 'Cookie', category_id: catIds.Snacks, cost_price: 0.50, sell_price: 1.75, tax_rate: 0.08, stock: 30, min_stock: 10, icon: '🍪' },
+    { sku: 'SKU014', name: 'Granola Bar', category_id: catIds.Snacks, cost_price: 0.70, sell_price: 2.25, tax_rate: 0.08, stock: 3, min_stock: 10, icon: '🍫' },
+  ];
+  for (const p of products) insertProduct.run(p);
+
+  const insertCustomer = db.prepare(`
+    INSERT INTO customers (name, phone, email, customer_type, credit_limit, balance) VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  insertCustomer.run('Walk-in Customer', null, null, 'walk-in', 0, 0);
+  insertCustomer.run('Sarah Khan', '+92 300 1234567', 'sarah@example.com', 'retail', 0, 0);
+  insertCustomer.run('Bilal Traders', '+92 321 9876543', 'bilal@traders.com', 'wholesale', 500, 120.50);
+
+  console.log('Seed complete.');
+  console.log('Dev logins:');
+  for (const [name, email, pw, role] of users) console.log(`  ${role.padEnd(8)} ${email}  /  ${pw}`);
+}
+
+seed();
