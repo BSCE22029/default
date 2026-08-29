@@ -132,6 +132,252 @@ app.post('/api/customers', requireAuth, (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid });
 });
 
+// ---------- Suppliers ----------
+app.get('/api/suppliers', requireAuth, (req, res) => {
+  res.json(db.prepare(`SELECT * FROM suppliers WHERE active = 1 ORDER BY name`).all());
+});
+
+app.get('/api/suppliers/:id', requireAuth, (req, res) => {
+  const supplier = db.prepare(`SELECT * FROM suppliers WHERE id = ?`).get(+req.params.id);
+  if (!supplier) return res.status(404).json({ error: 'Not found' });
+  const purchaseOrders = db.prepare(`
+    SELECT id, po_number, status, grand_total, created_at FROM purchase_orders
+    WHERE supplier_id = ? ORDER BY id DESC
+  `).all(supplier.id);
+  const payments = db.prepare(`
+    SELECT p.*, u.name AS user_name FROM purchase_payments p LEFT JOIN users u ON u.id = p.user_id
+    WHERE p.supplier_id = ? ORDER BY p.id DESC
+  `).all(supplier.id);
+  res.json({ ...supplier, purchase_orders: purchaseOrders, payments });
+});
+
+app.post('/api/suppliers', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const { name, company, phone, email, address, tax_id, payment_terms } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const info = db.prepare(`
+    INSERT INTO suppliers (name, company, phone, email, address, tax_id, payment_terms)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(name, company || null, phone || null, email || null, address || null, tax_id || null, payment_terms || null);
+  audit(req.session.userId, 'supplier_create', 'supplier', info.lastInsertRowid, req.body);
+  res.status(201).json({ id: info.lastInsertRowid });
+});
+
+app.patch('/api/suppliers/:id', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const id = +req.params.id;
+  const existing = db.prepare(`SELECT * FROM suppliers WHERE id = ?`).get(id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+  const fields = ['name', 'company', 'phone', 'email', 'address', 'tax_id', 'payment_terms', 'active'];
+  const updates = [];
+  const values = [];
+  for (const f of fields) {
+    if (req.body[f] !== undefined) { updates.push(`${f} = ?`); values.push(req.body[f]); }
+  }
+  if (!updates.length) return res.status(400).json({ error: 'No fields to update' });
+  values.push(id);
+  db.prepare(`UPDATE suppliers SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+  audit(req.session.userId, 'supplier_update', 'supplier', id, req.body);
+  res.json({ ok: true });
+});
+
+// ---------- Purchase Orders (transactional) ----------
+app.get('/api/purchase-orders', requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT po.*, s.name AS supplier_name, s.company AS supplier_company
+    FROM purchase_orders po JOIN suppliers s ON s.id = po.supplier_id
+    ORDER BY po.id DESC
+  `).all();
+  res.json(rows);
+});
+
+app.get('/api/purchase-orders/:id', requireAuth, (req, res) => {
+  const po = db.prepare(`
+    SELECT po.*, s.name AS supplier_name, s.company AS supplier_company
+    FROM purchase_orders po JOIN suppliers s ON s.id = po.supplier_id WHERE po.id = ?
+  `).get(+req.params.id);
+  if (!po) return res.status(404).json({ error: 'Not found' });
+  const items = db.prepare(`SELECT * FROM purchase_order_items WHERE po_id = ?`).all(po.id);
+  res.json({ ...po, items });
+});
+
+app.post('/api/purchase-orders', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const { supplier_id, expected_date, items } = req.body || {};
+  if (!supplier_id) return res.status(400).json({ error: 'supplier_id required' });
+  if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'items required' });
+
+  const runCreate = db.transaction(() => {
+    const supplier = db.prepare(`SELECT * FROM suppliers WHERE id = ? AND active = 1`).get(supplier_id);
+    if (!supplier) throw new Error('Supplier not found');
+
+    let subtotal = 0, taxTotal = 0;
+    const lineData = [];
+    for (const it of items) {
+      const product = db.prepare(`SELECT * FROM products WHERE id = ? AND active = 1`).get(it.product_id);
+      if (!product) throw new Error(`Product ${it.product_id} not found`);
+      const qty = Number(it.qty);
+      const unitCost = Number(it.unit_cost);
+      if (!Number.isInteger(qty) || qty <= 0) throw new Error(`Invalid quantity for ${product.name}`);
+      if (!(unitCost >= 0)) throw new Error(`Invalid unit cost for ${product.name}`);
+      const lineSubtotal = unitCost * qty;
+      const lineTax = lineSubtotal * (product.tax_rate || 0);
+      subtotal += lineSubtotal;
+      taxTotal += lineTax;
+      lineData.push({ product, qty, unitCost, taxRate: product.tax_rate || 0, lineTotal: lineSubtotal + lineTax });
+    }
+    const grandTotal = subtotal + taxTotal;
+
+    const poNumber = 'PO-' + Date.now().toString(36).toUpperCase();
+    const poInfo = db.prepare(`
+      INSERT INTO purchase_orders (po_number, supplier_id, status, expected_date, subtotal, tax_total, grand_total, user_id)
+      VALUES (?, ?, 'ordered', ?, ?, ?, ?, ?)
+    `).run(poNumber, supplier_id, expected_date || null, subtotal, taxTotal, grandTotal, req.session.userId);
+    const poId = poInfo.lastInsertRowid;
+
+    for (const { product, qty, unitCost, taxRate, lineTotal } of lineData) {
+      db.prepare(`
+        INSERT INTO purchase_order_items (po_id, product_id, product_name, qty, unit_cost, tax_rate, line_total)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(poId, product.id, product.name, qty, unitCost, taxRate, lineTotal);
+    }
+
+    audit(req.session.userId, 'po_create', 'purchase_order', poId, { poNumber, grandTotal });
+    return { id: poId, poNumber, grandTotal };
+  });
+
+  try {
+    res.status(201).json(runCreate());
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/purchase-orders/:id/receive', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const poId = +req.params.id;
+  const { items } = req.body || {}; // [{ po_item_id, qty }]
+  if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'items required' });
+
+  const runReceive = db.transaction(() => {
+    const po = db.prepare(`SELECT * FROM purchase_orders WHERE id = ?`).get(poId);
+    if (!po) throw new Error('Purchase order not found');
+    if (po.status === 'cancelled') throw new Error('Cannot receive a cancelled purchase order');
+    if (po.status === 'received') throw new Error('Purchase order already fully received');
+
+    let amountReceived = 0;
+    for (const it of items) {
+      const poItem = db.prepare(`SELECT * FROM purchase_order_items WHERE id = ? AND po_id = ?`).get(it.po_item_id, poId);
+      if (!poItem) throw new Error(`Line item ${it.po_item_id} not found on this order`);
+      const qty = Number(it.qty);
+      if (!Number.isInteger(qty) || qty <= 0) throw new Error('Invalid receive quantity');
+      const remaining = poItem.qty - poItem.received_qty;
+      if (qty > remaining) throw new Error(`Cannot receive ${qty} of ${poItem.product_name} -- only ${remaining} outstanding`);
+
+      db.prepare(`UPDATE purchase_order_items SET received_qty = received_qty + ? WHERE id = ?`).run(qty, poItem.id);
+      db.prepare(`UPDATE products SET stock = stock + ? WHERE id = ?`).run(qty, poItem.product_id);
+      db.prepare(`
+        INSERT INTO inventory_transactions (product_id, change_qty, reason, ref_po_id, user_id)
+        VALUES (?, ?, 'purchase_receive', ?, ?)
+      `).run(poItem.product_id, qty, poId, req.session.userId);
+
+      amountReceived += qty * poItem.unit_cost * (1 + poItem.tax_rate);
+    }
+
+    db.prepare(`UPDATE suppliers SET balance = balance + ? WHERE id = ?`).run(amountReceived, po.supplier_id);
+
+    const allItems = db.prepare(`SELECT * FROM purchase_order_items WHERE po_id = ?`).all(poId);
+    const fullyReceived = allItems.every(i => i.received_qty >= i.qty);
+    const anyReceived = allItems.some(i => i.received_qty > 0);
+    const newStatus = fullyReceived ? 'received' : anyReceived ? 'partially_received' : po.status;
+    db.prepare(`UPDATE purchase_orders SET status = ? WHERE id = ?`).run(newStatus, poId);
+
+    audit(req.session.userId, 'po_receive', 'purchase_order', poId, { items, amountReceived, newStatus });
+    return { status: newStatus, amountReceived };
+  });
+
+  try {
+    res.json(runReceive());
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/purchase-orders/:id/cancel', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const poId = +req.params.id;
+  const po = db.prepare(`SELECT * FROM purchase_orders WHERE id = ?`).get(poId);
+  if (!po) return res.status(404).json({ error: 'Not found' });
+  const anyReceived = db.prepare(`SELECT COUNT(*) AS n FROM purchase_order_items WHERE po_id = ? AND received_qty > 0`).get(poId).n;
+  if (anyReceived > 0) return res.status(400).json({ error: 'Cannot cancel a purchase order with received items' });
+  db.prepare(`UPDATE purchase_orders SET status = 'cancelled' WHERE id = ?`).run(poId);
+  audit(req.session.userId, 'po_cancel', 'purchase_order', poId);
+  res.json({ ok: true });
+});
+
+app.post('/api/purchase-orders/:id/return', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const poId = +req.params.id;
+  const { po_item_id, qty, reason } = req.body || {};
+
+  const runReturn = db.transaction(() => {
+    const po = db.prepare(`SELECT * FROM purchase_orders WHERE id = ?`).get(poId);
+    if (!po) throw new Error('Purchase order not found');
+    const poItem = db.prepare(`SELECT * FROM purchase_order_items WHERE id = ? AND po_id = ?`).get(po_item_id, poId);
+    if (!poItem) throw new Error('Line item not found on this order');
+    const returnQty = Number(qty);
+    if (!Number.isInteger(returnQty) || returnQty <= 0) throw new Error('Invalid return quantity');
+    const returnable = poItem.received_qty - poItem.returned_qty;
+    if (returnQty > returnable) throw new Error(`Cannot return ${returnQty} -- only ${returnable} available to return`);
+
+    const product = db.prepare(`SELECT * FROM products WHERE id = ?`).get(poItem.product_id);
+    if (product.stock < returnQty) throw new Error(`Cannot return ${returnQty} of ${poItem.product_name} -- only ${product.stock} in stock`);
+
+    const returnAmount = returnQty * poItem.unit_cost * (1 + poItem.tax_rate);
+
+    db.prepare(`UPDATE purchase_order_items SET returned_qty = returned_qty + ? WHERE id = ?`).run(returnQty, poItem.id);
+    db.prepare(`UPDATE products SET stock = stock - ? WHERE id = ?`).run(returnQty, poItem.product_id);
+    db.prepare(`
+      INSERT INTO inventory_transactions (product_id, change_qty, reason, ref_po_id, user_id)
+      VALUES (?, ?, 'purchase_return', ?, ?)
+    `).run(poItem.product_id, -returnQty, poId, req.session.userId);
+    db.prepare(`UPDATE suppliers SET balance = balance - ? WHERE id = ?`).run(returnAmount, po.supplier_id);
+
+    const info = db.prepare(`
+      INSERT INTO purchase_returns (po_id, po_item_id, supplier_id, qty, amount, reason, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(poId, poItem.id, po.supplier_id, returnQty, returnAmount, reason || null, req.session.userId);
+
+    audit(req.session.userId, 'po_return', 'purchase_order', poId, { po_item_id, returnQty, returnAmount });
+    return { id: info.lastInsertRowid, returnAmount };
+  });
+
+  try {
+    res.status(201).json(runReturn());
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ---------- Purchase Payments ----------
+app.post('/api/purchase-payments', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const { supplier_id, po_id, amount, method, note } = req.body || {};
+  const amt = Number(amount);
+  if (!supplier_id || !(amt > 0)) return res.status(400).json({ error: 'supplier_id and a positive amount are required' });
+
+  const runPayment = db.transaction(() => {
+    const supplier = db.prepare(`SELECT * FROM suppliers WHERE id = ?`).get(supplier_id);
+    if (!supplier) throw new Error('Supplier not found');
+    const info = db.prepare(`
+      INSERT INTO purchase_payments (supplier_id, po_id, amount, method, note, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(supplier_id, po_id || null, amt, method || 'cash', note || null, req.session.userId);
+    db.prepare(`UPDATE suppliers SET balance = balance - ? WHERE id = ?`).run(amt, supplier_id);
+    audit(req.session.userId, 'supplier_payment', 'supplier', supplier_id, { amount: amt, po_id });
+    return { id: info.lastInsertRowid };
+  });
+
+  try {
+    res.status(201).json(runPayment());
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // ---------- Sales (transactional) ----------
 app.post('/api/sales', requireAuth, (req, res) => {
   const { items, customer_id, payment_method, amount_tendered, discount_total } = req.body || {};
@@ -276,6 +522,8 @@ app.get('/api/reports/sales-summary', requireAuth, (req, res) => {
     GROUP BY si.product_id ORDER BY units_sold DESC LIMIT 5
   `).all();
   const lowStock = db.prepare(`SELECT id, name, stock, min_stock FROM products WHERE active = 1 AND stock <= min_stock`).all();
+  const payables = db.prepare(`SELECT COALESCE(SUM(balance),0) AS total FROM suppliers WHERE active = 1 AND balance > 0`).get();
+  const openPOs = db.prepare(`SELECT COUNT(*) AS n FROM purchase_orders WHERE status IN ('ordered','partially_received')`).get();
 
   res.json({
     today_revenue: today.revenue,
@@ -284,6 +532,8 @@ app.get('/api/reports/sales-summary', requireAuth, (req, res) => {
     today_gross_profit: today.revenue - cogsRow.cogs,
     top_products: topProducts,
     low_stock: lowStock,
+    total_payables: payables.total,
+    open_purchase_orders: openPOs.n,
   });
 });
 

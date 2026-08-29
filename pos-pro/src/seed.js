@@ -3,14 +3,19 @@ const db = require('./db');
 
 function reset() {
   db.exec(`
+    DELETE FROM purchase_returns;
+    DELETE FROM purchase_payments;
     DELETE FROM refunds;
     DELETE FROM inventory_transactions;
     DELETE FROM audit_logs;
     DELETE FROM sale_items;
     DELETE FROM sales;
+    DELETE FROM purchase_order_items;
+    DELETE FROM purchase_orders;
     DELETE FROM products;
     DELETE FROM categories;
     DELETE FROM customers;
+    DELETE FROM suppliers;
     DELETE FROM users;
   `);
 }
@@ -63,6 +68,24 @@ function seed() {
   insertCustomer.run('Walk-in Customer', null, null, 'walk-in', 0, 0);
   insertCustomer.run('Sarah Khan', '+92 300 1234567', 'sarah@example.com', 'retail', 0, 0);
   insertCustomer.run('Bilal Traders', '+92 321 9876543', 'bilal@traders.com', 'wholesale', 500, 120.50);
+
+  const insertSupplier = db.prepare(`
+    INSERT INTO suppliers (name, company, phone, email, address, tax_id, payment_terms, balance)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const supplierIds = {};
+  supplierIds.roastworks = insertSupplier.run(
+    'Ahsan Malik', 'Roastworks Coffee Co.', '+92 300 5551234', 'orders@roastworks.pk',
+    'Plot 22, Industrial Area, Lahore', 'NTN-4471123', 'Net 30', 0
+  ).lastInsertRowid;
+  supplierIds.freshbake = insertSupplier.run(
+    'Nadia Farooq', 'FreshBake Wholesale', '+92 321 5559876', 'sales@freshbake.pk',
+    'Shop 8, Bakers Market, Karachi', 'NTN-8832214', 'Net 15', 0
+  ).lastInsertRowid;
+  supplierIds.snackhub = insertSupplier.run(
+    'Imran Sheikh', 'SnackHub Distributors', '+92 333 5552211', 'imran@snackhub.pk',
+    'Warehouse 3, Gulberg, Lahore', 'NTN-1195567', 'Due on receipt', 0
+  ).lastInsertRowid;
 
   console.log('Seed complete.');
   console.log('Dev logins:');
