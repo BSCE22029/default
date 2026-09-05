@@ -2,7 +2,7 @@
 
 A real, single-store point-of-sale system: Express backend, PostgreSQL database (via `pg`, deployed on Neon), session-based auth with bcrypt password hashing, and a vanilla-JS frontend. No mock data in the UI — every number the frontend shows comes from a live API call backed by real database rows.
 
-**Live demo:** _link added once deployed_
+**Live demo:** [pos-pro-mu.vercel.app](https://pos-pro-mu.vercel.app) — sign in with any demo account below
 
 ## What's actually implemented
 
