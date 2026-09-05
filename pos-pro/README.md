@@ -1,6 +1,8 @@
 # POS Pro — Retail Point of Sale
 
-A real, single-store point-of-sale system: Express backend, SQLite database (via `better-sqlite3`), session-based auth with bcrypt password hashing, and a vanilla-JS frontend. No mock data in the UI — every number the frontend shows comes from a live API call backed by real database rows.
+A real, single-store point-of-sale system: Express backend, PostgreSQL database (via `pg`, deployed on Neon), session-based auth with bcrypt password hashing, and a vanilla-JS frontend. No mock data in the UI — every number the frontend shows comes from a live API call backed by real database rows.
+
+**Live demo:** _link added once deployed_
 
 ## What's actually implemented
 
@@ -18,13 +20,18 @@ A real, single-store point-of-sale system: Express backend, SQLite database (via
 
 ## What's intentionally out of scope for this build
 
-This is a genuine single-store system, not the full enterprise spec (multi-branch/multi-tenant hierarchy, granular per-permission RBAC beyond 3 roles, cash-drawer reconciliation, stock transfers between branches, PWA offline sync, SMS/email notifications, full automated test suite, managed cloud Postgres deployment). Those are real, multi-week additions — flagging them honestly rather than faking them.
+This is a genuine single-store system, not the full enterprise spec (multi-branch/multi-tenant hierarchy, granular per-permission RBAC beyond 3 roles, cash-drawer reconciliation, stock transfers between branches, PWA offline sync, SMS/email notifications, full automated test suite). Those are real, multi-week additions — flagging them honestly rather than faking them.
 
 ## Running locally
 
 ```bash
 npm install
-npm run seed     # creates db/pos.sqlite3 and seeds demo data + accounts
+```
+
+Create a `.env` (see Environment variables below) pointing at a real Postgres database (a free [Neon](https://neon.tech) instance works fine), then:
+
+```bash
+npm run seed      # creates the schema and seeds demo data + accounts
 npm start         # http://localhost:4100
 ```
 
@@ -39,7 +46,7 @@ npm start         # http://localhost:4100
 ## Tech stack
 
 - **Backend**: Node.js, Express
-- **Database**: SQLite (`better-sqlite3`) — swap for Postgres by replacing `src/db.js` and re-pointing the connection; the SQL is close to standard
+- **Database**: PostgreSQL (`pg`), hosted on [Neon](https://neon.tech), deployed on Vercel
 - **Auth**: `bcryptjs` password hashing, `cookie-session` for sessions
 - **Frontend**: Vanilla JS, no build step, fetches the real API
 
@@ -79,8 +86,9 @@ GET    /api/health
 ## Environment variables
 
 ```
-PORT=4100
+POSTGRES_URL=postgresql://user:password@host/dbname?sslmode=require
 SESSION_SECRET=change-me-in-production
+PORT=4100
 ```
 
-Create a `.env` and load it (or export vars) before running in anything beyond local dev — the code falls back to an insecure dev secret if `SESSION_SECRET` isn't set.
+`DATABASE_URL` is also accepted as an alias for `POSTGRES_URL`. Create a `.env` and load it (or export vars) before running in anything beyond local dev.

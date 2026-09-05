@@ -1,8 +1,8 @@
 const bcrypt = require('bcryptjs');
-const db = require('./db');
+const { pool, insertId, ensureSchema } = require('./db');
 
-function reset() {
-  db.exec(`
+async function reset() {
+  await pool.query(`
     DELETE FROM purchase_returns;
     DELETE FROM purchase_payments;
     DELETE FROM refunds;
@@ -20,30 +20,24 @@ function reset() {
   `);
 }
 
-function seed() {
-  reset();
+async function seed() {
+  await ensureSchema();
+  await reset();
 
-  const insertUser = db.prepare(
-    `INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)`
-  );
   const users = [
     ['Admin User', 'admin@pos.local', 'Admin123!', 'admin'],
     ['Store Manager', 'manager@pos.local', 'Manager123!', 'manager'],
     ['Cashier One', 'cashier@pos.local', 'Cashier123!', 'cashier'],
   ];
   for (const [name, email, pw, role] of users) {
-    insertUser.run(name, email, bcrypt.hashSync(pw, 10), role);
+    await insertId(pool, `INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)`,
+      [name, email, bcrypt.hashSync(pw, 10), role]);
   }
 
-  const insertCat = db.prepare(`INSERT INTO categories (name) VALUES (?)`);
   const cats = ['Drinks', 'Bakery', 'Food', 'Snacks'];
   const catIds = {};
-  for (const c of cats) catIds[c] = insertCat.run(c).lastInsertRowid;
+  for (const c of cats) catIds[c] = await insertId(pool, `INSERT INTO categories (name) VALUES (?)`, [c]);
 
-  const insertProduct = db.prepare(`
-    INSERT INTO products (sku, name, category_id, cost_price, sell_price, tax_rate, stock, min_stock, icon)
-    VALUES (@sku, @name, @category_id, @cost_price, @sell_price, @tax_rate, @stock, @min_stock, @icon)
-  `);
   const products = [
     { sku: 'SKU001', name: 'Espresso', category_id: catIds.Drinks, cost_price: 1.20, sell_price: 3.50, tax_rate: 0.08, stock: 40, min_stock: 10, icon: '☕' },
     { sku: 'SKU002', name: 'Cappuccino', category_id: catIds.Drinks, cost_price: 1.50, sell_price: 4.25, tax_rate: 0.08, stock: 32, min_stock: 10, icon: '☕' },
@@ -60,36 +54,34 @@ function seed() {
     { sku: 'SKU013', name: 'Cookie', category_id: catIds.Snacks, cost_price: 0.50, sell_price: 1.75, tax_rate: 0.08, stock: 30, min_stock: 10, icon: '🍪' },
     { sku: 'SKU014', name: 'Granola Bar', category_id: catIds.Snacks, cost_price: 0.70, sell_price: 2.25, tax_rate: 0.08, stock: 3, min_stock: 10, icon: '🍫' },
   ];
-  for (const p of products) insertProduct.run(p);
+  for (const p of products) {
+    await insertId(pool, `
+      INSERT INTO products (sku, name, category_id, cost_price, sell_price, tax_rate, stock, min_stock, icon)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [p.sku, p.name, p.category_id, p.cost_price, p.sell_price, p.tax_rate, p.stock, p.min_stock, p.icon]);
+  }
 
-  const insertCustomer = db.prepare(`
-    INSERT INTO customers (name, phone, email, customer_type, credit_limit, balance) VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  insertCustomer.run('Walk-in Customer', null, null, 'walk-in', 0, 0);
-  insertCustomer.run('Sarah Khan', '+92 300 1234567', 'sarah@example.com', 'retail', 0, 0);
-  insertCustomer.run('Bilal Traders', '+92 321 9876543', 'bilal@traders.com', 'wholesale', 500, 120.50);
+  await insertId(pool, `INSERT INTO customers (name, phone, email, customer_type, credit_limit, balance) VALUES (?, ?, ?, ?, ?, ?)`,
+    ['Walk-in Customer', null, null, 'walk-in', 0, 0]);
+  await insertId(pool, `INSERT INTO customers (name, phone, email, customer_type, credit_limit, balance) VALUES (?, ?, ?, ?, ?, ?)`,
+    ['Sarah Khan', '+92 300 1234567', 'sarah@example.com', 'retail', 0, 0]);
+  await insertId(pool, `INSERT INTO customers (name, phone, email, customer_type, credit_limit, balance) VALUES (?, ?, ?, ?, ?, ?)`,
+    ['Bilal Traders', '+92 321 9876543', 'bilal@traders.com', 'wholesale', 500, 120.50]);
 
-  const insertSupplier = db.prepare(`
-    INSERT INTO suppliers (name, company, phone, email, address, tax_id, payment_terms, balance)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  const supplierIds = {};
-  supplierIds.roastworks = insertSupplier.run(
-    'Ahsan Malik', 'Roastworks Coffee Co.', '+92 300 5551234', 'orders@roastworks.pk',
-    'Plot 22, Industrial Area, Lahore', 'NTN-4471123', 'Net 30', 0
-  ).lastInsertRowid;
-  supplierIds.freshbake = insertSupplier.run(
-    'Nadia Farooq', 'FreshBake Wholesale', '+92 321 5559876', 'sales@freshbake.pk',
-    'Shop 8, Bakers Market, Karachi', 'NTN-8832214', 'Net 15', 0
-  ).lastInsertRowid;
-  supplierIds.snackhub = insertSupplier.run(
-    'Imran Sheikh', 'SnackHub Distributors', '+92 333 5552211', 'imran@snackhub.pk',
-    'Warehouse 3, Gulberg, Lahore', 'NTN-1195567', 'Due on receipt', 0
-  ).lastInsertRowid;
+  await insertId(pool, `
+    INSERT INTO suppliers (name, company, phone, email, address, tax_id, payment_terms, balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, ['Ahsan Malik', 'Roastworks Coffee Co.', '+92 300 5551234', 'orders@roastworks.pk', 'Plot 22, Industrial Area, Lahore', 'NTN-4471123', 'Net 30', 0]);
+  await insertId(pool, `
+    INSERT INTO suppliers (name, company, phone, email, address, tax_id, payment_terms, balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, ['Nadia Farooq', 'FreshBake Wholesale', '+92 321 5559876', 'sales@freshbake.pk', 'Shop 8, Bakers Market, Karachi', 'NTN-8832214', 'Net 15', 0]);
+  await insertId(pool, `
+    INSERT INTO suppliers (name, company, phone, email, address, tax_id, payment_terms, balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, ['Imran Sheikh', 'SnackHub Distributors', '+92 333 5552211', 'imran@snackhub.pk', 'Warehouse 3, Gulberg, Lahore', 'NTN-1195567', 'Due on receipt', 0]);
 
   console.log('Seed complete.');
   console.log('Dev logins:');
   for (const [name, email, pw, role] of users) console.log(`  ${role.padEnd(8)} ${email}  /  ${pw}`);
+  await pool.end();
 }
 
-seed();
+seed().catch(e => { console.error(e); process.exit(1); });

@@ -512,7 +512,7 @@ async function loadSales() {
   document.getElementById('sales-body').innerHTML = sales.map(s => `
     <tr>
       <td>${s.invoice_no}</td>
-      <td>${new Date(s.created_at + 'Z').toLocaleString()}</td>
+      <td>${new Date(s.created_at).toLocaleString()}</td>
       <td>${s.cashier_name || '—'}</td>
       <td>${s.customer_name || 'Walk-in'}</td>
       <td class="right">$${s.grand_total.toFixed(2)}</td>
@@ -615,7 +615,7 @@ async function openSupplierModal(id) {
     <div class="modal-section">
       <h3>Payment History</h3>
       <table><thead><tr><th>Date</th><th>Method</th><th class="right">Amount</th></tr></thead><tbody>
-        ${s.payments.map(p => `<tr><td>${new Date(p.created_at + 'Z').toLocaleDateString()}</td><td>${p.method}</td><td class="right">$${p.amount.toFixed(2)}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:#475569">No payments yet.</td></tr>'}
+        ${s.payments.map(p => `<tr><td>${new Date(p.created_at).toLocaleDateString()}</td><td>${p.method}</td><td class="right">$${p.amount.toFixed(2)}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:#475569">No payments yet.</td></tr>'}
       </tbody></table>
     </div>
   `);
