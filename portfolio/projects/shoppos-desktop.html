@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ShopPOS — Desktop POS & Inventory System — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.9rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:1.5rem;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.65}
+.container{max-width:1080px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.2rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.cta-row{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem}
+.btn{padding:.7rem 1.3rem;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem}
+.btn:hover{transform:translateY(-1px)}
+.btn.dl{background:linear-gradient(135deg,#16a34a,#22c55e);border-color:transparent;color:#fff;box-shadow:0 4px 20px rgba(34,197,94,.25)}
+.btn.code{background:rgba(255,255,255,.06);border-color:var(--border)}
+.btn.code:hover{border-color:var(--purple2);color:var(--purple2)}
+.note{text-align:center;color:var(--muted);font-size:.72rem;margin:-1.3rem 0 2rem;line-height:1.6}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem;margin-bottom:1.5rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.75rem .5rem;text-align:center}
+.m-val{font-size:1.15rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.2rem;letter-spacing:.02em}
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.shots img{width:100%;border-radius:10px;border:1px solid var(--border);display:block;cursor:zoom-in;transition:border-color .2s}
+.shots img:hover{border-color:var(--purple2)}
+.shots figure{margin:0}
+.shots figcaption{font-size:.68rem;color:var(--muted);text-align:center;margin-top:.4rem}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.feat{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1.1rem}
+.feat h3{font-size:.85rem;margin-bottom:.5rem;color:var(--text)}
+.feat p{font-size:.75rem;color:var(--muted);line-height:1.6}
+.feat .ico{font-size:1.3rem;margin-bottom:.4rem;display:block}
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+th,td{text-align:left;padding:.5rem .7rem;border-bottom:1px solid var(--border)}
+th{color:var(--purple2);font-size:.68rem;text-transform:uppercase;letter-spacing:.03em}
+td{color:#cbd5e1}
+td.ok{color:#4ade80;font-weight:700}
+.stack{display:flex;flex-wrap:wrap;gap:.5rem}
+.tag{background:var(--bg3);color:var(--text);padding:.3rem .7rem;border-radius:99px;font-size:.72rem;font-weight:600;border:1px solid var(--border)}
+.limits{font-size:.78rem;color:var(--muted);line-height:1.8}
+.limits li{margin-bottom:.3rem}
+@media(max-width:700px){.metrics{grid-template-columns:repeat(2,1fr)}.feat-grid{grid-template-columns:1fr}.shots{grid-template-columns:1fr}}
+
+/* lightbox */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:99;padding:2rem;cursor:zoom-out}
+.lightbox.show{display:flex}
+.lightbox img{max-width:100%;max-height:100%;border-radius:8px;border:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Desktop Software · Python · Offline-First</span></div>
+  <h1>ShopPOS</h1>
+  <p class="subtitle">A native Windows desktop point-of-sale system I built end-to-end for a computer/electronics
+    retail shop: POS checkout with barcode + serial-number scanning, purchasing, supplier &amp; customer credit,
+    returns, warranty tracking, a full repair-ticket workflow, cash register reconciliation, 26 reports, role-based
+    permissions, an audit log, and automatic backup/restore — packaged as a single self-contained Windows installer.
+    No internet connection, database server, or runtime install required on the shop PC.</p>
+
+  <div class="cta-row">
+    <a class="btn dl" href="https://github.com/BSCE22029/shoppos/releases/latest" target="_blank">⬇ Download for Windows</a>
+    <a class="btn code" href="https://github.com/BSCE22029/shoppos" target="_blank">&lt;/&gt; View Source on GitHub</a>
+  </div>
+  <p class="note">Windows will show a SmartScreen warning because the installer isn't code-signed — click "More info →
+    Run anyway". First sign-in: <code>admin</code> / <code>admin123</code> (you'll be asked to change it, and offered
+    demo data to explore).</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val">18</div><div class="m-label">Screens</div></div>
+    <div class="metric"><div class="m-val">174</div><div class="m-label">Automated checks</div></div>
+    <div class="metric"><div class="m-val">~9.6k</div><div class="m-label">Lines of code</div></div>
+    <div class="metric"><div class="m-val">0</div><div class="m-label">3rd-party runtime deps</div></div>
+    <div class="metric"><div class="m-val">100k</div><div class="m-label">Sales load-tested</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Screenshots</div>
+    <div class="shots">
+      <figure><img src="../projects-assets/shoppos/dashboard.png" alt="ShopPOS dashboard" onclick="openLightbox(this.src)"><figcaption>Dashboard — sales, profit, low stock &amp; repair alerts</figcaption></figure>
+      <figure><img src="../projects-assets/shoppos/pos.png" alt="ShopPOS POS screen" onclick="openLightbox(this.src)"><figcaption>POS — barcode/serial scan, cart, split payment</figcaption></figure>
+      <figure><img src="../projects-assets/shoppos/products.png" alt="ShopPOS products screen" onclick="openLightbox(this.src)"><figcaption>Products — catalogue with serial-number tracking</figcaption></figure>
+      <figure><img src="../projects-assets/shoppos/repairs.png" alt="ShopPOS repairs screen" onclick="openLightbox(this.src)"><figcaption>Repairs — ticket workflow, parts, technician notes</figcaption></figure>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">What it does</div>
+    <div class="feat-grid">
+      <div class="feat"><span class="ico">🧾</span><h3>POS &amp; Serial Tracking</h3><p>Barcode/serial scan checkout, hold &amp; resume sales, split payments (cash/card/bank/wallet/credit/store credit), and per-unit serial numbers for laptops, GPUs, CPUs and printers — from purchase to sale to warranty.</p></div>
+      <div class="feat"><span class="ico">📦</span><h3>Purchasing &amp; Inventory</h3><p>Purchase orders → partial receiving with serials → weighted-average costing → supplier payables → payment, plus stock adjustments that always leave an audit trail.</p></div>
+      <div class="feat"><span class="ico">🛠️</span><h3>Warranty &amp; Repairs</h3><p>Warranty is created automatically at sale and tracked to expiry. A full repair-ticket workflow covers status, parts consumed (deducted from stock), labor, technician notes, and delivery with payment.</p></div>
+      <div class="feat"><span class="ico">💵</span><h3>Accounting</h3><p>Cash register open/close with expected-vs-actual variance, expense tracking, customer/supplier ledgers, and a real profit &amp; loss report using actual cost of goods sold — not just revenue.</p></div>
+      <div class="feat"><span class="ico">📊</span><h3>26 Reports</h3><p>Sales, inventory, purchasing, financial and repair reports, each exportable to PDF, Excel and CSV — generated with zero third-party libraries.</p></div>
+      <div class="feat"><span class="ico">🔐</span><h3>Roles &amp; Audit</h3><p>8 roles, 30 fine-grained permissions, PBKDF2 password hashing with lockout, session timeout, and an audit log recording every sensitive change with old/new values.</p></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Why it's interesting engineering</div>
+    <p style="font-size:.8rem;color:var(--muted);line-height:1.7;margin-bottom:1rem">
+      Every checkout is one atomic database transaction — sale, line items, payments, stock movement, serial
+      numbers, warranty record, customer/supplier ledger, and cash register entry commit together or none of them
+      do. The whole app (UI included) is built on the Python standard library only: Tkinter for the desktop window,
+      SQLite for storage, and a from-scratch PDF/XLSX writer for report export — no GUI framework, ORM, or reporting
+      library, which kept the packaged installer to ~26&nbsp;MB with nothing to install on the shop PC.
+    </p>
+<pre><span class="comment"># services/sales.py — every checkout is one all-or-nothing transaction</span>
+<span class="kw">def</span> <span class="fn">complete_sale</span>(db, user, cart):
+    <span class="kw">with</span> db.tx():                                  <span class="comment"># commits together or rolls back together</span>
+        lines = _lines_from_cart(db, cart[<span class="str">"items"</span>])
+        totals = _calc(lines, cart[<span class="str">"overall_discount"</span>])
+        <span class="kw">for</span> line <span class="kw">in</span> lines:                             <span class="comment"># stock, serials, warranty, cost — validated together</span>
+            <span class="kw">if</span> line.product.stock &lt; line.qty:
+                <span class="kw">raise</span> POSError(<span class="fn">f</span><span class="str">"Insufficient stock for {line.product.name}."</span>)
+        sale_id = db.insert(<span class="str">"INSERT INTO sales ..."</span>, ...)
+        <span class="kw">for</span> line <span class="kw">in</span> lines:
+            inventory.move(db, line.product_id, <span class="str">"Sale"</span>, -line.qty, ...)
+            <span class="kw">if</span> line.product.serialized:
+                warranty.create_from_sale(db, sale_id, line)
+        cash.post(db, sale_id, totals.paid_in_cash)
+        <span class="kw">return</span> sale_id                              <span class="comment"># any exception above -> nothing was written</span>
+</pre>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Tech stack</div>
+    <div class="stack">
+      <span class="tag">Python 3</span><span class="tag">Tkinter / ttk</span><span class="tag">SQLite</span>
+      <span class="tag">PyInstaller</span><span class="tag">Zero 3rd-party runtime deps</span>
+      <span class="tag">Hand-rolled PDF/XLSX writer</span><span class="tag">Windows Installer (self-contained)</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Test results</div>
+    <table>
+      <thead><tr><th>Suite</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Service-level unit tests</td><td class="ok">80 passing</td></tr>
+        <tr><td>UI workflow test (real Tk window, POS end-to-end)</td><td class="ok">21 checks passing</td></tr>
+        <tr><td>Full UI test — every module driven through real screen code</td><td class="ok">73 checks passing</td></tr>
+        <tr><td>Load test — 10k products / 100k sales / 520k stock transactions</td><td class="ok">POS scan 0.3ms · heaviest report 0.74s</td></tr>
+        <tr><td>Packaged installer — install → run → uninstall lifecycle</td><td class="ok">verified in a sandboxed environment</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Honest limitations</div>
+    <ul class="limits">
+      <li>Single-PC only — SQLite isn't built for several terminals sharing one database over a network.</li>
+      <li>Not yet tested against real barcode-scanner/receipt-printer/cash-drawer hardware in the field.</li>
+      <li>Multi-branch/warehouse support and product variants exist in the schema but have no UI yet.</li>
+      <li>No email invoicing, cloud sync, or auto-update — everything runs and stays local by design.</li>
+    </ul>
+  </div>
+
+  <div class="cta-row" style="margin-top:.5rem">
+    <a class="btn dl" href="https://github.com/BSCE22029/shoppos/releases/latest" target="_blank">⬇ Download for Windows</a>
+    <a class="btn code" href="https://github.com/BSCE22029/shoppos" target="_blank">&lt;/&gt; View Source on GitHub</a>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('show')">
+  <img id="lightbox-img" src="" alt="Screenshot preview">
+</div>
+<script>
+function openLightbox(src){
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('show');
+}
+</script>
+</body>
+</html>

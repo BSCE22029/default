@@ -5,121 +5,216 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Moiz Ahmad — Full-Stack & Embedded Systems Developer</title>
 <meta name="description" content="Full-stack developer & embedded systems engineer. React, Python, C++, Verilog, ML/AI. Available for freelance."/>
+<script>
+/* Set the theme before first paint so there's no flash of the wrong mode. */
+(function () {
+  const saved = localStorage.getItem('theme');
+  const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0a0a12;--bg2:#111128;--bg3:#1a1a35;
-  --purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;
-  --green:#22c55e;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;
-  --card:#13132a;--radius:14px;
+  --bg:#ffffff;--bg2:#f5f5f7;--bg3:#fbfbfd;
+  --accent:#0071e3;--accent-dark:#0058b3;
+  --text:#1d1d1f;--muted:#6e6e73;--border:#d2d2d7;
+  --card:#ffffff;--radius:20px;
+  --nav-bg:rgba(255,255,255,.8);--nav-shadow:0 1px 0 rgba(0,0,0,.08);
+}
+:root[data-theme="dark"]{
+  --bg:#000000;--bg2:#1c1c1e;--bg3:#1c1c1e;
+  --accent:#2997ff;--accent-dark:#0a84ff;
+  --text:#f5f5f7;--muted:#86868b;--border:#424245;
+  --card:#1c1c1e;
+  --nav-bg:rgba(0,0,0,.8);--nav-shadow:0 1px 0 rgba(255,255,255,.1);
 }
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',Arial,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
 
 /* NAV */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,18,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
-.logo{font-size:1.15rem;font-weight:800;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.nav-links{display:flex;gap:2rem;list-style:none}
-.nav-links a{color:var(--muted);text-decoration:none;font-size:.875rem;transition:color .2s}
-.nav-links a:hover{color:var(--text)}
-.nav-cta{background:var(--purple);color:#fff;padding:.5rem 1.3rem;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:700;transition:opacity .2s}
-.nav-cta:hover{opacity:.85}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 2rem;height:48px;display:flex;align-items:center;justify-content:space-between;background:var(--nav-bg);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border)}
+.logo{font-size:.95rem;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.nav-links{display:flex;gap:2.2rem;list-style:none;align-items:center}
+.nav-links a{color:var(--text);text-decoration:none;font-size:.8rem;font-weight:400;transition:color .2s;opacity:.8}
+.nav-links a:hover{opacity:1}
+.nav-cta{background:var(--accent);color:#fff;padding:.4rem 1.1rem;border-radius:980px;text-decoration:none;font-size:.78rem;font-weight:500;transition:background .2s}
+.nav-cta:hover{background:var(--accent-dark)}
+.theme-toggle{background:var(--bg2);border:1px solid var(--border);color:var(--text);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;cursor:pointer;transition:border-color .2s}
+.theme-toggle:hover{border-color:var(--accent)}
 
 /* HERO */
-.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:6rem 2rem 4rem;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,58,237,.2),transparent)}
-.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;padding:.4rem 1rem;border-radius:99px;font-size:.78rem;font-weight:700;margin-bottom:1.8rem;letter-spacing:.02em}
-.hero-badge::before{content:'●';font-size:.45rem;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
-h1{font-size:clamp(2.4rem,6vw,4.5rem);font-weight:800;line-height:1.1;margin-bottom:1.2rem}
-h1 .grad{background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero-sub{font-size:1.1rem;color:var(--muted);max-width:600px;margin:0 auto 2.5rem;line-height:1.75}
-.hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
-.btn-primary{background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;padding:.85rem 2rem;border-radius:10px;text-decoration:none;font-weight:700;transition:transform .2s,box-shadow .2s}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,58,237,.4)}
-.btn-sec{background:transparent;color:var(--text);padding:.85rem 2rem;border-radius:10px;text-decoration:none;font-weight:600;border:1px solid var(--border);transition:border-color .2s}
-.btn-sec:hover{border-color:var(--purple)}
-.hero-stats{display:flex;gap:3rem;justify-content:center;margin-top:4.5rem;flex-wrap:wrap;padding-top:3rem;border-top:1px solid var(--border)}
-.stat-num{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.stat-label{font-size:.78rem;color:var(--muted);margin-top:.25rem;font-weight:600}
-.tech-pills{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem}
-.pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--muted);padding:.3rem .85rem;border-radius:99px;font-size:.75rem;font-weight:600}
+.hero{min-height:92vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:7rem 2rem 4rem;position:relative;overflow:hidden}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:.35rem 1rem;border-radius:980px;font-size:.78rem;font-weight:500;margin-bottom:2rem;letter-spacing:0}
+.hero-badge::before{content:'●';font-size:.5rem;color:#06c270;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+h1{font-size:clamp(2.6rem,6.5vw,5.2rem);font-weight:600;line-height:1.07;letter-spacing:-.02em;margin-bottom:1.3rem;color:var(--text)}
+h1 .grad{color:var(--accent)}
+.hero-sub{font-size:1.3rem;font-weight:400;color:var(--muted);max-width:620px;margin:0 auto 2.5rem;line-height:1.5;letter-spacing:.001em}
+.hero-btns{display:flex;gap:1.4rem;justify-content:center;flex-wrap:wrap;align-items:center}
+.btn-primary{background:var(--accent);color:#fff;padding:.75rem 1.7rem;border-radius:980px;text-decoration:none;font-weight:500;font-size:.95rem;transition:background .2s}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-sec{background:transparent;color:var(--accent);padding:.75rem .3rem;border-radius:0;text-decoration:none;font-weight:400;font-size:.95rem;border:none;transition:opacity .2s}
+.btn-sec::after{content:' ›';font-weight:400}
+.btn-sec:hover{opacity:.7}
+.hero-stats{display:flex;gap:3.5rem;justify-content:center;margin-top:5rem;flex-wrap:wrap;padding-top:3rem;border-top:1px solid var(--border)}
+.stat-num{font-size:2.4rem;font-weight:600;color:var(--text);letter-spacing:-.02em}
+.stat-label{font-size:.82rem;color:var(--muted);margin-top:.3rem;font-weight:400}
+.tech-pills{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.2rem}
+.pill{background:var(--bg2);border:1px solid var(--border);color:var(--muted);padding:.3rem .9rem;border-radius:980px;font-size:.78rem;font-weight:400}
 
 /* SECTION */
-section{padding:6rem 2rem}
+section{padding:7rem 2rem}
 .container{max-width:1120px;margin:0 auto}
-.section-tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--purple2);margin-bottom:.8rem}
-.section-title{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;margin-bottom:1rem}
-.section-sub{color:var(--muted);font-size:.95rem;max-width:560px;line-height:1.75;margin-bottom:3rem}
+.section-tag{font-size:.78rem;font-weight:600;text-transform:none;letter-spacing:0;color:var(--accent);margin-bottom:.8rem}
+.section-title{font-size:clamp(2rem,4vw,3rem);font-weight:600;letter-spacing:-.02em;margin-bottom:1.1rem;color:var(--text)}
+.section-sub{color:var(--muted);font-size:1.1rem;font-weight:400;max-width:600px;line-height:1.55;margin-bottom:3.5rem}
 
 /* SKILLS */
 #skills{background:var(--bg2)}
-.skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.85rem}
-.skill-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.1rem .9rem;text-align:center;transition:border-color .2s,transform .2s;cursor:default}
-.skill-card:hover{border-color:var(--purple);transform:translateY(-3px)}
-.skill-icon{font-size:1.7rem;margin-bottom:.5rem}
-.skill-name{font-size:.8rem;font-weight:700;color:var(--text)}
-.skill-level{font-size:.65rem;color:var(--purple2);margin-top:.2rem;font-weight:600}
+.skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.9rem}
+.skill-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem .9rem;text-align:center;transition:transform .25s cubic-bezier(.2,.8,.3,1),box-shadow .25s;cursor:default}
+.skill-card:hover{box-shadow:0 12px 30px rgba(0,0,0,.08);transform:translateY(-3px)}
+.skill-icon{font-size:1.7rem;margin-bottom:.55rem}
+.skill-name{font-size:.82rem;font-weight:500;color:var(--text)}
+.skill-level{font-size:.68rem;color:var(--muted);margin-top:.2rem;font-weight:400}
 
 /* PROJECTS */
-.proj-tabs{display:flex;gap:.75rem;margin-bottom:2.5rem;flex-wrap:wrap}
-.proj-tab{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:.5rem 1.2rem;border-radius:99px;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s}
-.proj-tab.active{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
-.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:1.4rem}
-.project-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s,transform .2s;display:flex;flex-direction:column}
-.project-card:hover{border-color:var(--purple);transform:translateY(-4px)}
+.proj-tabs{display:flex;gap:.6rem;margin-bottom:2.8rem;flex-wrap:wrap}
+.proj-tab{background:var(--bg2);border:1px solid var(--border);color:var(--muted);padding:.5rem 1.2rem;border-radius:980px;font-size:.82rem;font-weight:500;cursor:pointer;transition:all .2s}
+.proj-tab.active{background:var(--text);border-color:var(--text);color:#fff}
+.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:1.5rem}
+.project-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:box-shadow .25s,transform .25s;display:flex;flex-direction:column}
+.project-card:hover{box-shadow:0 20px 50px rgba(0,0,0,.1)}
 .project-thumb{height:160px;display:flex;align-items:center;justify-content:center;font-size:3.5rem;position:relative}
-.project-badge{position:absolute;top:.75rem;right:.75rem;font-size:.65rem;font-weight:700;padding:.2rem .55rem;border-radius:99px;letter-spacing:.03em}
-.badge-live{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
-.badge-github{background:rgba(255,255,255,.08);color:#94a3b8;border:1px solid rgba(255,255,255,.12)}
-.project-body{padding:1.4rem;flex:1;display:flex;flex-direction:column}
-.project-tags{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem}
-.tag{background:rgba(124,58,237,.12);color:var(--purple2);padding:.18rem .55rem;border-radius:99px;font-size:.67rem;font-weight:700}
-.tag-blue{background:rgba(59,130,246,.12);color:#60a5fa}
-.tag-green{background:rgba(34,197,94,.1);color:#4ade80}
-.tag-orange{background:rgba(249,115,22,.1);color:#fb923c}
-.project-title{font-size:1rem;font-weight:700;margin-bottom:.45rem}
-.project-desc{color:var(--muted);font-size:.84rem;line-height:1.65;flex:1;margin-bottom:1.1rem}
+.project-badge{position:absolute;top:.75rem;right:.75rem;font-size:.65rem;font-weight:600;padding:.2rem .55rem;border-radius:980px;letter-spacing:.02em}
+.badge-live{background:rgba(255,255,255,.92);color:#06915a;border:1px solid rgba(6,145,90,.25)}
+.badge-github{background:rgba(0,0,0,.35);color:#fff;border:1px solid rgba(255,255,255,.2)}
+.project-body{padding:1.5rem;flex:1;display:flex;flex-direction:column}
+.project-tags{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem}
+.tag{background:var(--bg2);color:var(--text);padding:.18rem .6rem;border-radius:980px;font-size:.67rem;font-weight:500}
+.tag-blue{background:rgba(0,113,227,.1);color:var(--accent)}
+.tag-green{background:rgba(6,145,90,.1);color:#06915a}
+.tag-orange{background:rgba(201,90,0,.1);color:#c95a00}
+.project-title{font-size:1.05rem;font-weight:600;letter-spacing:-.01em;margin-bottom:.5rem;color:var(--text)}
+.project-desc{color:var(--muted);font-size:.87rem;line-height:1.55;flex:1;margin-bottom:1.2rem}
 .project-links{display:flex;gap:.6rem}
-.project-link{flex:1;text-align:center;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:700;text-decoration:none;transition:opacity .2s}
-.project-link:hover{opacity:.8}
-.link-demo{background:var(--purple);color:#fff}
-.link-code{background:rgba(255,255,255,.07);color:var(--muted);border:1px solid var(--border)}
+.project-link{flex:1;text-align:center;padding:.55rem;border-radius:980px;font-size:.8rem;font-weight:500;text-decoration:none;transition:opacity .2s,background .2s}
+.link-demo{background:var(--accent);color:#fff}
+.link-demo:hover{background:var(--accent-dark)}
+.link-code{background:var(--bg2);color:var(--text);border:1px solid var(--border)}
+.link-code:hover{background:var(--border)}
 
 /* SERVICES */
-#services{background:var(--bg2)}
-.services-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1.3rem}
-.service-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.8rem 1.4rem;transition:border-color .2s}
-.service-card:hover{border-color:var(--purple)}
-.service-icon{width:46px;height:46px;border-radius:12px;background:rgba(124,58,237,.15);display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:1.1rem}
-.service-title{font-size:.95rem;font-weight:700;margin-bottom:.5rem}
-.service-desc{color:var(--muted);font-size:.83rem;line-height:1.65}
-.service-price{margin-top:.9rem;font-size:.82rem;font-weight:700;color:var(--purple2)}
+#services{background:var(--bg)}
+.services-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1.4rem}
+.service-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.9rem 1.5rem;transition:box-shadow .25s}
+.service-card:hover{box-shadow:0 16px 40px rgba(0,0,0,.08)}
+.service-icon{width:48px;height:48px;border-radius:14px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:1.2rem}
+.service-title{font-size:1rem;font-weight:600;letter-spacing:-.01em;margin-bottom:.55rem;color:var(--text)}
+.service-desc{color:var(--muted);font-size:.86rem;line-height:1.55}
+.service-price{margin-top:1rem;font-size:.84rem;font-weight:600;color:var(--accent)}
 
 /* CONTACT */
+#contact{background:var(--bg2)}
 .contact-wrap{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start}
-.contact-info h3{font-size:1.5rem;font-weight:700;margin-bottom:.8rem}
-.contact-info p{color:var(--muted);line-height:1.75;margin-bottom:1.8rem;font-size:.95rem}
+.contact-info h3{font-size:1.6rem;font-weight:600;letter-spacing:-.01em;margin-bottom:.9rem;color:var(--text)}
+.contact-info p{color:var(--muted);line-height:1.6;margin-bottom:1.9rem;font-size:1rem}
 .contact-links{display:flex;flex-direction:column;gap:.65rem}
-.contact-link{display:flex;align-items:center;gap:.75rem;color:var(--text);text-decoration:none;font-size:.875rem;padding:.7rem .9rem;background:var(--card);border:1px solid var(--border);border-radius:10px;transition:border-color .2s}
-.contact-link:hover{border-color:var(--purple)}
-.contact-link-icon{width:34px;height:34px;border-radius:8px;background:rgba(124,58,237,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.contact-form{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem}
-.form-group{margin-bottom:1.1rem}
-.form-group label{display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em}
-.form-group input,.form-group textarea,.form-group select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.7rem .9rem;color:var(--text);font-size:.875rem;font-family:inherit;transition:border-color .2s;outline:none}
-.form-group input:focus,.form-group textarea:focus{border-color:var(--purple)}
+.contact-link{display:flex;align-items:center;gap:.75rem;color:var(--text);text-decoration:none;font-size:.875rem;padding:.75rem .95rem;background:var(--card);border:1px solid var(--border);border-radius:14px;transition:box-shadow .2s}
+.contact-link:hover{box-shadow:0 8px 24px rgba(0,0,0,.07)}
+.contact-link-icon{width:36px;height:36px;border-radius:10px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.contact-form{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:2.2rem}
+.form-group{margin-bottom:1.2rem}
+.form-group label{display:block;font-size:.75rem;font-weight:500;color:var(--muted);margin-bottom:.45rem;text-transform:none;letter-spacing:0}
+.form-group input,.form-group textarea,.form-group select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.75rem .95rem;color:var(--text);font-size:.9rem;font-family:inherit;transition:border-color .2s,box-shadow .2s;outline:none}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(0,113,227,.12)}
 .form-group textarea{resize:vertical;min-height:110px}
-.btn-submit{width:100%;background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;padding:.85rem;border-radius:10px;font-size:.925rem;font-weight:700;cursor:pointer;transition:opacity .2s}
-.btn-submit:hover{opacity:.85}
+.btn-submit{width:100%;background:var(--accent);color:#fff;border:none;padding:.85rem;border-radius:980px;font-size:.95rem;font-weight:500;cursor:pointer;transition:background .2s}
+.btn-submit:hover{background:var(--accent-dark)}
 
-footer{background:var(--bg2);border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--muted);font-size:.85rem}
-footer a{color:var(--purple2);text-decoration:none}
+footer{background:var(--bg);border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--muted);font-size:.8rem}
+footer a{color:var(--text);text-decoration:none}
+footer a:hover{color:var(--accent)}
 
 @media(max-width:768px){.nav-links{display:none}.contact-wrap{grid-template-columns:1fr}.hero-stats{gap:1.5rem}}
 </style>
+
+<style>
+/* ===== APPLE-STYLE 3D & MOTION ===== */
+/* Full-page particle network + floating orbs restored (recolored for the
+   white background), while keeping Apple's typography/color/card language
+   everywhere else. Only visible where a section has no opaque background
+   (the hero) — solid sections still sit above it, same as the original. */
+
+/* Three.js canvas — fixed behind the whole page */
+#canvas3d {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  z-index: 0; pointer-events: none; display: block;
+}
+nav { z-index: 100; }
+.hero, section, footer { position: relative; z-index: 1; }
+.hero { overflow: hidden; }
+
+/* ── Floating color orbs, softened for a white canvas ── */
+.orb {
+  position: fixed; border-radius: 50%;
+  filter: blur(120px); pointer-events: none; z-index: 0;
+  animation: orbFloat 28s ease-in-out infinite;
+}
+.orb-1 { width: 750px; height: 750px; background: rgba(0,113,227,.10); top: -250px; right: -200px; }
+.orb-2 { width: 650px; height: 650px; background: rgba(124,58,237,.08); bottom: -200px; left: -200px; animation-delay: -9s; }
+.orb-3 { width: 500px; height: 500px; background: rgba(0,113,227,.07); top: 45vh; left: calc(50% - 250px); animation-delay: -18s; }
+@keyframes orbFloat {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33%      { transform: translate(45px,-45px) scale(1.07); }
+  66%      { transform: translate(-28px,28px) scale(.94); }
+}
+
+/* ── 3D Card Tilt — subtle, product-photo-style, not neon ── */
+.project-card {
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: box-shadow .25s !important;
+}
+.project-card:hover {
+  box-shadow: 0 20px 50px rgba(0,0,0,.1) !important;
+  transform: none !important;
+}
+.skill-card, .service-card { transform-style: preserve-3d; will-change: transform; }
+
+/* ── Scroll Reveal ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ── Nav scroll shadow ── */
+nav.scrolled { box-shadow: var(--nav-shadow); }
+
+/* ── Smooth image/thumb parallax wrapper ── */
+.project-thumb { transform: translateZ(20px); }
+
+/* ── Respect reduced-motion preference: stop ambient animation loops ── */
+@media (prefers-reduced-motion: reduce) {
+  .hero-badge, .orb { animation: none !important; }
+  .reveal { transition-duration: .01ms !important; }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
+
+<!-- 3D canvas — behind all content -->
+<canvas id="canvas3d"></canvas>
+
+<!-- Floating color blobs -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
 
 <nav>
   <div class="logo">Moiz Ahmad</div>
@@ -127,9 +222,13 @@ footer a{color:var(--purple2);text-decoration:none}
     <li><a href="#skills">Skills</a></li>
     <li><a href="#projects">Projects</a></li>
     <li><a href="#services">Services</a></li>
+    <li><a href="products.html" style="color:var(--accent);font-weight:500">Products</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
-  <a href="#contact" class="nav-cta">Hire Me</a>
+  <div style="display:flex;align-items:center;gap:.9rem">
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙</button>
+    <a href="products.html" class="nav-cta">Products & Hire</a>
+  </div>
 </nav>
 
 <!-- HERO -->
@@ -194,6 +293,7 @@ footer a{color:var(--purple2);text-decoration:none}
       <button class="proj-tab" onclick="filterProj('tools',this)">Live Tools</button>
       <button class="proj-tab" onclick="filterProj('embedded',this)">Embedded & Hardware</button>
       <button class="proj-tab" onclick="filterProj('ai',this)">AI & ML</button>
+      <button class="proj-tab" onclick="filterProj('data',this)">Data Engineering</button>
     </div>
 
     <div class="projects-grid" id="proj-grid">
@@ -208,6 +308,19 @@ footer a{color:var(--purple2);text-decoration:none}
           <div class="project-links">
             <a href="https://leadflow-crm-vert.vercel.app" target="_blank" class="project-link link-demo">Live Demo</a>
             <a href="https://github.com/BSCE22029/default" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="web">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0c1a2e,#1e3a5f)">🧾<span class="project-badge badge-live">DOWNLOAD</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag">Python</span><span class="tag">Tkinter</span><span class="tag">SQLite</span><span class="tag blue">Windows Desktop</span></div>
+          <div class="project-title">ShopPOS — Desktop POS &amp; Inventory System</div>
+          <div class="project-desc">Offline Windows desktop POS for a retail shop: serial-numbered inventory, purchasing, warranty, repair tickets, cash register reconciliation, and 26 reports — 18 screens, 174 automated checks, ships as a self-contained installer.</div>
+          <div class="project-links">
+            <a href="projects/shoppos-desktop.html" target="_blank" class="project-link link-demo">View Project</a>
+            <a href="https://github.com/BSCE22029/shoppos" target="_blank" class="project-link link-code">GitHub</a>
           </div>
         </div>
       </div>
@@ -247,6 +360,84 @@ footer a{color:var(--purple2);text-decoration:none}
           <div class="project-links">
             <a href="https://github.com/BSCE22029/calculator" target="_blank" class="project-link link-demo">View on GitHub</a>
             <a href="https://github.com/BSCE22029/calculator" target="_blank" class="project-link link-code">Source</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="web">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1628,#1e3a5f)">🔌<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag">Node.js</span><span class="tag">Express</span><span class="tag-blue tag">REST API</span><span class="tag">JWT</span></div>
+          <div class="project-title">REST API Explorer</div>
+          <div class="project-desc">Interactive full CRUD REST API demo — users, posts, JWT authentication. Try every endpoint live: GET, POST, PUT, DELETE with real request/response.</div>
+          <div class="project-links">
+            <a href="projects/rest-api-explorer.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="web">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a1400,#4a3b00)">🪣<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-blue tag">Redis</span><span class="tag">Lua</span><span class="tag-green tag">Distributed Systems</span><span class="tag">Token Bucket</span></div>
+          <div class="project-title">Distributed Rate Limiter</div>
+          <div class="project-desc">Token-bucket rate limiter shared across multiple API nodes via an atomic Redis Lua script — admits or rejects requests correctly even when they land on different nodes behind a load balancer. Fire bursts or sustained load and watch admission control happen live.</div>
+          <div class="project-links">
+            <a href="projects/rate-limiter.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="web">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1a14,#0d3b2a)">📦<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-orange tag">Kafka-style</span><span class="tag">Event-Driven</span><span class="tag-blue tag">Retry / DLQ</span></div>
+          <div class="project-title">Real-Time Event-Driven Order Pipeline</div>
+          <div class="project-desc">Production-style order flow — validate, reserve inventory, charge payment, ship, notify — decoupled through a message queue. Each stage retries transient failures with backoff and routes permanent failures to a dead-letter queue instead of stalling the pipeline.</div>
+          <div class="project-links">
+            <a href="projects/order-pipeline.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="web">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1a10,#0d3b1e)">📈<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-green tag">FinTech</span><span class="tag-blue tag">Matching Engine</span><span class="tag">Double-Entry Ledger</span><span class="tag-orange tag">Risk Engine</span></div>
+          <div class="project-title">Trading Exchange Simulator</div>
+          <div class="project-desc">A real price-time-priority limit order book — partial fills, market-order sweeps — settling every trade through a genuine double-entry ledger (debits always equal credits) gated by a pre-trade risk engine checking buying power, position limits, and large/rapid-fire orders. The same core algorithm behind real exchanges.</div>
+          <div class="project-links">
+            <a href="projects/trading-exchange.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="web">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1428,#1e1b4b)">🐳<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-blue tag">Kubernetes-style</span><span class="tag">Bin-Packing</span><span class="tag-green tag">Self-Healing</span><span class="tag-orange tag">Autoscaling</span></div>
+          <div class="project-title">Container Orchestrator Simulator</div>
+          <div class="project-desc">A real best-fit bin-packing scheduler placing pods onto worker nodes by actual CPU/memory fit — kill a node and watch pods genuinely get rescheduled, or push cluster load past 75% CPU and watch a real horizontal autoscaler add nodes. Backed by a live health-check loop that detects and self-heals failures.</div>
+          <div class="project-links">
+            <a href="projects/container-orchestrator.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="web">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a0a1a,#3b0d3b)">📝<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-blue tag">CRDT</span><span class="tag">Distributed Systems</span><span class="tag-green tag">Real-Time Sync</span></div>
+          <div class="project-title">Real-Time Collaborative Editor</div>
+          <div class="project-desc">A genuine RGA (Replicated Growable Array) CRDT — the same class of algorithm behind Google Docs-style multiplayer editing. Simulate 3 clients editing concurrently, trigger a network partition, then reconnect and watch every replica provably converge to the identical text via a live hash check.</div>
+          <div class="project-links">
+            <a href="projects/collab-editor.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
           </div>
         </div>
       </div>
@@ -317,7 +508,33 @@ footer a{color:var(--purple2);text-decoration:none}
         </div>
       </div>
 
+      <div class="project-card" data-cat="tools">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a1042,#2d1b6e)">📊<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag">JavaScript</span><span class="tag">Algorithms</span><span class="tag-blue tag">DSA</span></div>
+          <div class="project-title">Sorting Algorithm Visualizer</div>
+          <div class="project-desc">Watch Bubble, Insertion, Merge, and Quick Sort execute in real time. Animated bars, comparison/swap counters, adjustable speed, and full Python/C++ implementations.</div>
+          <div class="project-links">
+            <a href="projects/sorting-visualizer.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
       <!-- EMBEDDED / HARDWARE -->
+      <div class="project-card" data-cat="embedded">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a0a2e,#3b0a5e)">🧩<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-orange tag">Verilog</span><span class="tag-blue tag">RV32I</span><span class="tag">Pipelining</span><span class="tag">Hazard Detection</span></div>
+          <div class="project-title">5-Stage Pipelined RISC-V CPU</div>
+          <div class="project-desc">A real RV32I core in synthesizable Verilog (IF→ID→EX→MEM→WB) with a hazard detection unit, a data-forwarding unit, and branch flushing. Instruction encodings cross-verified against an independent Python ISA simulator; the live visualizer runs the exact same cycle-accurate logic as the RTL.</div>
+          <div class="project-links">
+            <a href="projects/riscv-pipeline.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
       <div class="project-card" data-cat="embedded">
         <div class="project-thumb" style="background:linear-gradient(135deg,#1a0520,#2d0a5e)">🔢<span class="project-badge badge-live">LIVE</span></div>
         <div class="project-body">
@@ -358,17 +575,31 @@ footer a{color:var(--purple2);text-decoration:none}
       </div>
 
       <div class="project-card" data-cat="embedded">
-        <div class="project-thumb" style="background:linear-gradient(135deg,#1a0a00,#451a03)">⚡<span class="project-badge badge-github">GitHub</span></div>
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0d1a2e,#1a3a5c)">📡<span class="project-badge badge-live">LIVE</span></div>
         <div class="project-body">
-          <div class="project-tags"><span class="tag-orange tag">Verilog</span><span class="tag">HDL</span><span class="tag">RISC-V</span></div>
-          <div class="project-title">RISC-V Pipelined Processor</div>
-          <div class="project-desc">5-stage pipelined RISC-V microprocessor implemented in Verilog HDL. Includes hazard detection, forwarding units, and branch prediction.</div>
+          <div class="project-tags"><span class="tag-orange tag">Verilog</span><span class="tag">HDL</span><span class="tag">UART</span><span class="tag">Serial</span></div>
+          <div class="project-title">UART Transceiver</div>
+          <div class="project-desc">Interactive UART serial protocol simulator. Type any text and watch each character serialized into start bit, 8 data bits, parity, and stop bit — with live waveform and receiver log.</div>
           <div class="project-links">
-            <a href="https://github.com/BSCE22029/RISC-V-Microprocessor-pipelined" target="_blank" class="project-link link-demo">View on GitHub</a>
-            <a href="https://github.com/BSCE22029/RISC-V-Microprocessor-pipelined" target="_blank" class="project-link link-code">Source</a>
+            <a href="projects/uart-simulator.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
           </div>
         </div>
       </div>
+
+      <div class="project-card" data-cat="embedded">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a0a28,#3b1a6e)">⚙️<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-orange tag">Verilog</span><span class="tag">Arduino</span><span class="tag">PWM</span><span class="tag">Motor Control</span></div>
+          <div class="project-title">PWM Motor Controller</div>
+          <div class="project-desc">Pulse Width Modulation demo with adjustable duty cycle and frequency. Real-time waveform visualization, simulated motor RPM, LED brightness control, and Verilog implementation.</div>
+          <div class="project-links">
+            <a href="projects/pwm-controller.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
 
       <div class="project-card" data-cat="embedded">
         <div class="project-thumb" style="background:linear-gradient(135deg,#001a1a,#0a3a3a)">📡<span class="project-badge badge-github">GitHub</span></div>
@@ -437,6 +668,123 @@ footer a{color:var(--purple2);text-decoration:none}
 
       <!-- AI / ML -->
       <div class="project-card" data-cat="ai">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a0a2e,#3b0a5e)">🤖<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-green tag">LangGraph</span><span class="tag-blue tag">Multi-Agent</span><span class="tag">Tool Calling</span><span class="tag">Critic Loop</span></div>
+          <div class="project-title">AI Agent Orchestration Visualizer</div>
+          <div class="project-desc">Interactive simulation of a planner → tool-executor → critic agent graph handling real tasks. Watch tool calls, retries, and state transitions animate live on a canvas-rendered agent graph, backed by a LangGraph-style Python state machine.</div>
+          <div class="project-links">
+            <a href="projects/agent-orchestrator.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="ai">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a0520,#4a0a3d)">⚖️<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-orange tag">Multi-Agent</span><span class="tag-blue tag">Consensus</span><span class="tag">Canvas Viz</span></div>
+          <div class="project-title">Multi-Agent Debate &amp; Consensus Simulator</div>
+          <div class="project-desc">Three AI personas — Optimist, Skeptic, Moderator — argue real startup/engineering decisions over multiple rounds with a live typing-reveal, a pulsing agent graph, and a synthesized recommendation that genuinely weighs both sides.</div>
+          <div class="project-links">
+            <a href="projects/agent-debate.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="ai">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1a1a,#0d3b3b)">🛠️<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-green tag">Self-Correcting</span><span class="tag-blue tag">Sandboxed Exec</span><span class="tag">Retry Loop</span></div>
+          <div class="project-title">Self-Correcting Code Agent</div>
+          <div class="project-desc">An agent that writes code, actually runs it in a sandboxed executor against real test cases, and retries with a genuine fix when it fails — pass/fail comes from real execution, not a scripted outcome.</div>
+          <div class="project-links">
+            <a href="projects/code-agent.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="ai">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1a2e,#0a3b5e)">📷<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-blue tag">TensorFlow.js</span><span class="tag-green tag">Computer Vision</span><span class="tag">Real-Time</span></div>
+          <div class="project-title">Real-Time Object Detection</div>
+          <div class="project-desc">Live webcam or uploaded-image object detection running entirely in the browser via TensorFlow.js's COCO-SSD model — real bounding boxes, confidence scores, and inference-time metrics, no server involved.</div>
+          <div class="project-links">
+            <a href="projects/object-detector.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="ai">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a1400,#3b2e00)">🔤<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-orange tag">Tesseract.js</span><span class="tag-green tag">Computer Vision</span><span class="tag">OCR</span></div>
+          <div class="project-title">OCR Text Extractor</div>
+          <div class="project-desc">Upload any image — a receipt, sign, or document — and extract real text client-side via Tesseract.js, with a live pipeline progress bar, confidence score, and word count.</div>
+          <div class="project-links">
+            <a href="projects/ocr-extractor.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="ai">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1a2e,#0d3b30)">🤜<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-blue tag">TinyML</span><span class="tag-orange tag">Arduino</span><span class="tag">TFLite</span><span class="tag">INT8</span></div>
+          <div class="project-title">TinyML Gesture Classifier</div>
+          <div class="project-desc">Neural network trained in TensorFlow, quantized to INT8, and deployed on Arduino Nano 33 BLE Sense. Classifies 6 hand gestures from IMU data in 3.2ms — no cloud, fully on-device.</div>
+          <div class="project-links">
+            <a href="projects/gesture-classifier.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="ai">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a0a2e,#2d0a5e)">⚡<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-orange tag">Verilog</span><span class="tag-blue tag">FPGA</span><span class="tag">Systolic Array</span><span class="tag">INT8</span></div>
+          <div class="project-title">FPGA Neural Network Accelerator</div>
+          <div class="project-desc">4×4 systolic array of Processing Elements (MAC units) in Verilog HDL. Runs matrix multiply for NN inference at 12.8 GOPS on Xilinx Artix-7 — hardware AI acceleration from scratch.</div>
+          <div class="project-links">
+            <a href="projects/nn-accelerator.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="ai">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a0a00,#3d1200)">🔬<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-blue tag">Edge AI</span><span class="tag-orange tag">ESP32</span><span class="tag">Autoencoder</span><span class="tag">IoT</span></div>
+          <div class="project-title">Edge Anomaly Detector</div>
+          <div class="project-desc">Autoencoder neural network on ESP32 detects industrial machine faults (bearing failure, imbalance, misalignment) from vibration sensor data in real time — 98.2% detection rate at 12ms latency.</div>
+          <div class="project-links">
+            <a href="projects/anomaly-detector.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="ai">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1428,#0a2a1a)">🎙️<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-blue tag">Edge AI</span><span class="tag-orange tag">STM32</span><span class="tag">MFCC</span><span class="tag">DS-CNN</span></div>
+          <div class="project-title">Keyword Spotter — Wake Word</div>
+          <div class="project-desc">MFCC feature extraction + depthwise separable CNN on STM32F4. Detects "Hey Moiz" wake word from a microphone stream in 8ms — same architecture used in Alexa and Google Assistant.</div>
+          <div class="project-links">
+            <a href="projects/keyword-spotter.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="ai">
         <div class="project-thumb" style="background:linear-gradient(135deg,#0d0d2b,#1e1b4b)">🧠<span class="project-badge badge-github">GitHub</span></div>
         <div class="project-body">
           <div class="project-tags"><span class="tag">Python</span><span class="tag">Jupyter</span><span class="tag-blue tag">Deep Learning</span></div>
@@ -471,6 +819,45 @@ footer a{color:var(--purple2);text-decoration:none}
           <div class="project-links">
             <a href="https://github.com/BSCE22029/PyRealm-The-Ultimate-Python-RPG" target="_blank" class="project-link link-demo">View on GitHub</a>
             <a href="https://github.com/BSCE22029/PyRealm-The-Ultimate-Python-RPG" target="_blank" class="project-link link-code">Source</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="data">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1a14,#0d3b2a)">🧹<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-green tag">ETL</span><span class="tag">Data Quality</span><span class="tag-blue tag">Validation</span></div>
+          <div class="project-title">CSV ETL Pipeline & Data Cleaner</div>
+          <div class="project-desc">A real extract-transform-load pipeline: parse raw CSV, validate every field against real rules, dedupe on a normalized row hash, standardize types/casing/dates, and load a clean, downloadable dataset. Paste your own messy CSV — every stat is computed live, nothing is canned.</div>
+          <div class="project-links">
+            <a href="projects/etl-pipeline.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="data">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#0a1428,#1e1b4b)">🗄️<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-blue tag">SQL Engine</span><span class="tag">Query Parser</span><span class="tag-orange tag">Aggregation</span></div>
+          <div class="project-title">In-Browser SQL Query Engine</div>
+          <div class="project-desc">A real SQL interpreter written from scratch in JavaScript — a genuine tokenizer and executor for SELECT / WHERE / GROUP BY / ORDER BY / LIMIT, running against a 40-row embedded orders dataset. Type any query; it's actually parsed and executed, not matched against canned answers.</div>
+          <div class="project-links">
+            <a href="projects/sql-query-engine.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-card" data-cat="data">
+        <div class="project-thumb" style="background:linear-gradient(135deg,#1a0a1a,#3b0d3b)">📊<span class="project-badge badge-live">LIVE</span></div>
+        <div class="project-body">
+          <div class="project-tags"><span class="tag-orange tag">Log Parsing</span><span class="tag">Real-Time Aggregation</span><span class="tag-green tag">Observability</span></div>
+          <div class="project-title">Log Analytics Pipeline</div>
+          <div class="project-desc">A real regex-based parser for Nginx/Apache combined access logs, aggregating genuine metrics — status code distribution, requests per minute, top paths, error rate, average latency — from whatever log lines you paste in. Change the input and every chart recomputes.</div>
+          <div class="project-links">
+            <a href="projects/log-analytics.html" target="_blank" class="project-link link-demo">Live Demo</a>
+            <a href="https://github.com/BSCE22029" target="_blank" class="project-link link-code">GitHub</a>
           </div>
         </div>
       </div>
@@ -554,13 +941,254 @@ footer a{color:var(--purple2);text-decoration:none}
 </footer>
 
 <script>
+/* ============================================================
+   THREE.JS — Particle network + floating geometry, restored,
+   recolored (soft blue/violet at low opacity) to sit correctly
+   behind the new white/light background instead of the old
+   dark one.
+   ============================================================ */
+(function () {
+  if (typeof THREE === 'undefined') return;
+
+  const isMobile      = window.innerWidth < 700;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const canvas   = document.getElementById('canvas3d');
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1 : 1.5));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 400);
+  camera.position.set(0, 0, 55);
+
+  /* — Particle cloud (Fibonacci sphere) — fewer points on mobile for perf */
+  const N = isMobile ? 120 : 300;
+  const posArr = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const phi   = Math.acos(1 - 2 * (i + .5) / N);
+    const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+    const r     = 28 + Math.random() * 18;
+    posArr[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    posArr[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    posArr[i*3+2] = r * Math.cos(phi);
+  }
+
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(posArr.slice(), 3));
+  const pMat  = new THREE.PointsMaterial({ color: 0x0071e3, size: 0.28, transparent: true, opacity: .35, sizeAttenuation: true });
+  const cloud = new THREE.Points(pGeo, pMat);
+
+  /* — Connecting edges (pre-computed once) — skipped on mobile for perf/clarity — */
+  const netGroup = new THREE.Group();
+  netGroup.add(cloud);
+  if (!isMobile) {
+    const edgeVerts = [];
+    const DIST_SQ   = 19 * 19;
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        const dx = posArr[i*3]   - posArr[j*3];
+        const dy = posArr[i*3+1] - posArr[j*3+1];
+        const dz = posArr[i*3+2] - posArr[j*3+2];
+        if (dx*dx + dy*dy + dz*dz < DIST_SQ) {
+          edgeVerts.push(posArr[i*3], posArr[i*3+1], posArr[i*3+2],
+                         posArr[j*3], posArr[j*3+1], posArr[j*3+2]);
+        }
+      }
+    }
+    const eGeo  = new THREE.BufferGeometry();
+    eGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgeVerts, 3));
+    const eMat  = new THREE.LineBasicMaterial({ color: 0x7c3aed, transparent: true, opacity: .08 });
+    netGroup.add(new THREE.LineSegments(eGeo, eMat));
+  }
+  scene.add(netGroup);
+
+  /* — Central icosahedron wireframe — */
+  const icoGeo = new THREE.IcosahedronGeometry(11, 1);
+  const icoMat = new THREE.MeshBasicMaterial({ color: 0x6d28d9, wireframe: true, transparent: true, opacity: .1 });
+  const ico    = new THREE.Mesh(icoGeo, icoMat);
+  scene.add(ico);
+
+  /* — Orbiting torus ring — */
+  const ringGeo = new THREE.TorusGeometry(24, 0.28, 8, 100);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x0071e3, transparent: true, opacity: .12 });
+  const ring    = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI / 3.5;
+  scene.add(ring);
+
+  /* — Second outer ring — */
+  const ring2Geo = new THREE.TorusGeometry(34, 0.15, 6, 120);
+  const ring2Mat = new THREE.MeshBasicMaterial({ color: 0x7c3aed, transparent: true, opacity: .08 });
+  const ring2    = new THREE.Mesh(ring2Geo, ring2Mat);
+  ring2.rotation.x = -Math.PI / 4;
+  ring2.rotation.z = Math.PI / 5;
+  scene.add(ring2);
+
+  /* — Mouse parallax — */
+  let mx = 0, my = 0, smx = 0, smy = 0;
+  window.addEventListener('mousemove', e => {
+    mx = (e.clientX / window.innerWidth  - .5) * 2;
+    my = (e.clientY / window.innerHeight - .5) * 2;
+  });
+
+  /* — Animate — auto-rotation is skipped under prefers-reduced-motion; */
+  /* mouse parallax still responds since it's user-driven, not ambient motion. */
+  const clock = new THREE.Clock();
+  const spin = reducedMotion ? 0 : 1;
+  (function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime() * spin;
+
+    smx += (mx - smx) * .035;
+    smy += (my - smy) * .035;
+
+    netGroup.rotation.y = t * .038 + smx * .22;
+    netGroup.rotation.x = t * .014 - smy * .12;
+
+    ico.rotation.x = t * .18;
+    ico.rotation.y = t * .28;
+
+    ring.rotation.z  = t * .06;
+    ring.rotation.y  = t * .04;
+    ring2.rotation.z = -t * .035;
+    ring2.rotation.x = -Math.PI / 4 + t * .025;
+
+    camera.position.x += (smx * 9  - camera.position.x) * .025;
+    camera.position.y += (-smy * 6 - camera.position.y) * .025;
+    camera.lookAt(scene.position);
+
+    renderer.render(scene, camera);
+  })();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+
+/* ============================================================
+   3D CARD TILT — subtle, Apple-style restraint (not neon glow)
+   ============================================================ */
+function initTilt() {
+  document.querySelectorAll('.project-card, .skill-card, .service-card').forEach(card => {
+    const isProject = card.classList.contains('project-card');
+    const maxDeg    = isProject ? 5 : 3.5;
+
+    card.addEventListener('mouseenter', () => {
+      card.style.transition = 'box-shadow .2s, transform .1s ease';
+    });
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left)  / r.width  - .5;
+      const y = (e.clientY - r.top)   / r.height - .5;
+      card.style.transform = `perspective(900px) rotateY(${x * maxDeg * 2}deg) rotateX(${-y * maxDeg * 2}deg) translateZ(4px)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transition = 'box-shadow .2s, transform .5s cubic-bezier(.16,1,.3,1)';
+      card.style.transform  = 'perspective(900px) rotateY(0deg) rotateX(0deg) translateZ(0)';
+    });
+  });
+}
+initTilt();
+
+/* ============================================================
+   SCROLL REVEAL
+   ============================================================ */
+(function () {
+  const items = [
+    ...document.querySelectorAll('.project-card'),
+    ...document.querySelectorAll('.skill-card'),
+    ...document.querySelectorAll('.service-card'),
+    ...document.querySelectorAll('.contact-link'),
+    ...document.querySelectorAll('.section-title'),
+    ...document.querySelectorAll('.section-sub'),
+    ...document.querySelectorAll('.section-tag'),
+    ...document.querySelectorAll('.hero-stats .stat'),
+  ];
+
+  items.forEach(el => el.classList.add('reveal'));
+
+  const obs = new IntersectionObserver((entries) => {
+    let delay = 0;
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      setTimeout(() => entry.target.classList.add('visible'), delay);
+      delay += 60;
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: .08 });
+
+  items.forEach(el => obs.observe(el));
+})();
+
+/* ============================================================
+   STATS COUNTER
+   ============================================================ */
+(function () {
+  const nums = document.querySelectorAll('.stat-num');
+  const obs  = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el  = entry.target;
+      const raw = el.textContent.trim();
+      const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+      const sfx = raw.replace(/[0-9.]/g, '');
+      if (isNaN(num)) return;
+      let cur = 0;
+      const step = num / 45;
+      const id = setInterval(() => {
+        cur += step;
+        if (cur >= num) { el.textContent = raw; clearInterval(id); return; }
+        el.textContent = (Number.isInteger(num) ? Math.floor(cur) : cur.toFixed(1)) + sfx;
+      }, 28);
+      obs.unobserve(el);
+    });
+  }, { threshold: .5 });
+  nums.forEach(el => obs.observe(el));
+})();
+
+/* ============================================================
+   NAV SCROLL EFFECT
+   ============================================================ */
+window.addEventListener('scroll', () => {
+  document.querySelector('nav').classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
+
+/* ============================================================
+   DARK MODE TOGGLE
+   ============================================================ */
+function syncThemeIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+}
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  syncThemeIcon();
+}
+syncThemeIcon();
+// Follow system changes only if the user hasn't manually chosen a theme.
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+  if (localStorage.getItem('theme')) return;
+  document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+  syncThemeIcon();
+});
+
+/* ============================================================
+   ORIGINAL FILTER — extended to re-init tilt after filter
+   ============================================================ */
 function filterProj(cat, btn){
   document.querySelectorAll('.proj-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   document.querySelectorAll('.project-card').forEach(c=>{
     const show = cat==='all' || c.dataset.cat===cat;
     c.style.display = show ? 'flex' : 'none';
+    if (show) { c.classList.remove('reveal'); c.classList.add('visible'); }
   });
+  setTimeout(initTilt, 50);
 }
 function sendMsg(e){
   e.preventDefault();
