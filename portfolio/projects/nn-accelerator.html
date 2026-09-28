@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FPGA Neural Network Accelerator — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+
+/* Systolic array */
+.systolic-wrap{overflow-x:auto}
+#systolicCanvas{display:block;border-radius:10px;background:#020208}
+
+/* Pipeline stages */
+.pipeline{display:flex;gap:2px;margin-bottom:.8rem}
+.pipe-stage{flex:1;height:32px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;transition:all .3s}
+.ps-idle{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.ps-active{background:rgba(124,58,237,.2);color:var(--purple2);border:1px solid rgba(124,58,237,.4);box-shadow:0 0 8px rgba(124,58,237,.2)}
+.ps-done{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+
+/* metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+/* log */
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:110px;overflow-y:auto;font-family:monospace;font-size:.7rem;line-height:1.8;color:#64748b}
+.log-purple{color:#a855f7}.log-blue{color:#60a5fa}.log-green{color:#4ade80}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Verilog HDL · FPGA · Systolic Array · Hardware AI</span></div>
+  <h1>FPGA Neural Network Accelerator</h1>
+  <p class="subtitle">A systolic array matrix multiplier for neural network inference — implemented in Verilog, synthesized on Xilinx Artix-7</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val">4×4</div><div class="m-label">PE Array</div></div>
+    <div class="metric"><div class="m-val">50MHz</div><div class="m-label">Clock</div></div>
+    <div class="metric"><div class="m-val">12.8</div><div class="m-label">GOPS</div></div>
+    <div class="metric"><div class="m-val">INT8</div><div class="m-label">Precision</div></div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="card">
+    <div class="card-h">Inference Pipeline</div>
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage ps-idle">LOAD WEIGHTS</div>
+      <div class="pipe-stage ps-idle">LOAD INPUT</div>
+      <div class="pipe-stage ps-idle">MAC ARRAY</div>
+      <div class="pipe-stage ps-idle">ACCUMULATE</div>
+      <div class="pipe-stage ps-idle">ACTIVATION</div>
+      <div class="pipe-stage ps-idle">OUTPUT</div>
+    </div>
+    <div style="display:flex;gap:.7rem;align-items:center">
+      <button class="btn go" onclick="runPipeline()">▶ Run Inference</button>
+      <button class="btn" onclick="resetPipeline()">Reset</button>
+      <span id="pipeStatus" style="font-size:.72rem;color:var(--muted)">Ready</span>
+    </div>
+  </div>
+
+  <!-- SYSTOLIC ARRAY VIZ -->
+  <div class="card">
+    <div class="card-h">4×4 Systolic Array — MAC Operations</div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:.8rem">Each Processing Element (PE) computes multiply-accumulate. Data flows left→right, weights flow top→bottom.</p>
+    <div class="systolic-wrap">
+      <canvas id="systolicCanvas" width="560" height="320"></canvas>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">Hardware Execution Log</div>
+    <div class="log" id="hwLog">
+      <div><span class="log-blue">[boot]</span> FPGA NN Accelerator — Artix-7 XC7A35T</div>
+      <div><span class="log-blue">[boot]</span> Systolic array 4×4 initialized</div>
+      <div><span class="log-blue">[boot]</span> Weight BRAM loaded: 2048 INT8 values</div>
+      <div><span style="color:#374151">[idle]</span> Waiting for inference trigger...</div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Verilog Implementation</div>
+<pre><span class="comment">// Processing Element — core of systolic array</span>
+<span class="comment">// Muhammad Moiz Ahmad — FPGA Neural Network Accelerator</span>
+
+<span class="kw">module</span> <span class="type">pe</span> #(<span class="kw">parameter</span> DATA_W = <span class="num">8</span>, ACC_W = <span class="num">32</span>)(
+    <span class="kw">input</span>                clk, rst, valid_in,
+    <span class="kw">input</span>  [DATA_W-1:0]  data_in,    <span class="comment">// activation (flows right)</span>
+    <span class="kw">input</span>  [DATA_W-1:0]  weight_in,  <span class="comment">// weight (flows down)</span>
+    <span class="kw">output reg</span> [DATA_W-1:0]  data_out, weight_out,
+    <span class="kw">output reg</span> [ACC_W-1:0]   acc_out,
+    <span class="kw">output reg</span>               valid_out
+);
+<span class="kw">reg</span> [ACC_W-1:0] acc;
+<span class="kw">always</span> @(<span class="kw">posedge</span> clk) <span class="kw">begin</span>
+    <span class="kw">if</span> (rst) acc &lt;= <span class="num">0</span>;
+    <span class="kw">else if</span> (valid_in)
+        acc &lt;= acc + $<span class="fn">signed</span>(data_in) * $<span class="fn">signed</span>(weight_in);
+    data_out   &lt;= data_in;
+    weight_out &lt;= weight_in;
+    valid_out  &lt;= valid_in;
+    acc_out    &lt;= acc;
+<span class="kw">end</span>
+<span class="kw">endmodule</span>
+
+<span class="comment">// ReLU Activation Unit</span>
+<span class="kw">module</span> <span class="type">relu_unit</span> #(<span class="kw">parameter</span> W = <span class="num">32</span>)(
+    <span class="kw">input</span>  [W-1:0] acc_in,
+    <span class="kw">output</span> [W-1:0] relu_out
+);
+<span class="kw">assign</span> relu_out = acc_in[W-<span class="num">1</span>] ? <span class="num">0</span> : acc_in;  <span class="comment">// zero if negative</span>
+<span class="kw">endmodule</span></pre>
+  </div>
+</div>
+
+<script>
+// ─── PIPELINE ───
+let pipeRunning = false;
+const stages = ['LOAD WEIGHTS','LOAD INPUT','MAC ARRAY','ACCUMULATE','ACTIVATION','OUTPUT'];
+const stageTimes = [600, 400, 1200, 500, 300, 400];
+const logMsgs = [
+  ['<span class="log-purple">[DMA]</span> Loading weight BRAM — 512 INT8 params', '<span class="log-purple">[DMA]</span> Weight transfer: 512 bytes → on-chip SRAM'],
+  ['<span class="log-blue">[BUF]</span> Input buffer: 16 neurons loaded', '<span class="log-blue">[BUF]</span> Input quantized: float32 → INT8'],
+  ['<span class="log-purple">[MAC]</span> Systolic array triggered', '<span class="log-purple">[MAC]</span> 16 PEs executing multiply-accumulate', '<span class="log-purple">[MAC]</span> Clock cycles: 64 / 64'],
+  ['<span class="log-blue">[ACC]</span> Bias addition complete', '<span class="log-blue">[ACC]</span> INT32 accumulator → INT8 clamp'],
+  ['<span class="log-green">[ACT]</span> ReLU applied — 16 outputs', '<span class="log-green">[ACT]</span> Negative values zeroed'],
+  ['<span class="log-green">[OUT]</span> Output written to BRAM', '<span class="log-green">[OUT]</span> Inference complete — 3.1µs / layer'],
+];
+
+function resetPipeline() {
+  if (pipeRunning) return;
+  document.querySelectorAll('.pipe-stage').forEach((s,i) => {
+    s.className = 'pipe-stage ps-idle';
+    s.textContent = stages[i];
+  });
+  document.getElementById('pipeStatus').textContent = 'Ready';
+}
+
+function runPipeline() {
+  if (pipeRunning) return;
+  pipeRunning = true;
+  resetPipeline();
+  const stageEls = document.querySelectorAll('.pipe-stage');
+  const log = document.getElementById('hwLog');
+  let totalTime = 0;
+
+  stages.forEach((_, i) => {
+    const startDelay = totalTime;
+    const endDelay = totalTime + stageTimes[i];
+    totalTime = endDelay + 100;
+
+    setTimeout(() => {
+      stageEls[i].className = 'pipe-stage ps-active';
+      document.getElementById('pipeStatus').textContent = `Running: ${stages[i]}...`;
+      logMsgs[i].forEach((m, j) => {
+        setTimeout(() => {
+          log.insertAdjacentHTML('beforeend', `<div>${m}</div>`);
+          log.scrollTop = log.scrollHeight;
+        }, j * 120);
+      });
+    }, startDelay);
+
+    setTimeout(() => {
+      stageEls[i].className = 'pipe-stage ps-done';
+    }, endDelay);
+  });
+
+  setTimeout(() => {
+    document.getElementById('pipeStatus').textContent = '✓ Inference done — 3.1µs';
+    pipeRunning = false;
+    animateSystolic();
+  }, totalTime - 100);
+}
+
+// ─── SYSTOLIC ARRAY VIZ ───
+const canvas = document.getElementById('systolicCanvas');
+const ctx = canvas.getContext('2d');
+const N = 4;
+const CW = Math.min(560, window.innerWidth - 80);
+canvas.width = CW;
+
+function drawSystolic(activations) {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#020208'; ctx.fillRect(0,0,W,H);
+
+  const cellSize = Math.min(80, (W - 120) / N);
+  const startX = (W - N * cellSize - (N-1)*12) / 2;
+  const startY = 50;
+
+  // Labels
+  ctx.fillStyle = 'rgba(148,163,184,.5)'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+  for (let j = 0; j < N; j++) {
+    ctx.fillText(`W[${j}]`, startX + j*(cellSize+12) + cellSize/2, 22);
+  }
+  ctx.textAlign = 'right';
+  for (let i = 0; i < N; i++) {
+    ctx.fillText(`X[${i}]`, startX - 8, startY + i*(cellSize+12) + cellSize/2 + 4);
+  }
+
+  // PEs
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const x = startX + j*(cellSize+12);
+      const y = startY + i*(cellSize+12);
+      const act = activations ? activations[i*N+j] : 0;
+      const intensity = act;
+
+      // Shadow glow
+      if (intensity > 0.1) {
+        ctx.shadowColor = `rgba(168,85,247,${intensity*.6})`;
+        ctx.shadowBlur = intensity * 20;
+      }
+
+      // Cell background
+      ctx.fillStyle = `rgba(${Math.round(124+intensity*80)},${Math.round(58+intensity*60)},${Math.round(237)},${.08+intensity*.25})`;
+      ctx.strokeStyle = `rgba(168,85,247,${.2+intensity*.6})`;
+      ctx.lineWidth = 1+intensity;
+      ctx.beginPath();
+      ctx.roundRect(x, y, cellSize, cellSize, 8);
+      ctx.fill(); ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // PE label
+      ctx.fillStyle = `rgba(168,85,247,${.5+intensity*.5})`;
+      ctx.font = `bold ${10+intensity*2}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`PE[${i},${j}]`, x+cellSize/2, y+cellSize/2-6);
+
+      // MAC value
+      if (act > 0) {
+        const macVal = Math.round(act * 127 * (i+1) * (j+1)) % 256;
+        ctx.fillStyle = `rgba(196,132,252,${.7+intensity*.3})`;
+        ctx.font = '9px monospace';
+        ctx.fillText(`acc=${macVal}`, x+cellSize/2, y+cellSize/2+10);
+      }
+
+      // Flow arrows
+      if (j < N-1 && intensity > 0.2) {
+        ctx.strokeStyle = `rgba(96,165,250,${intensity*.5})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x+cellSize+2, y+cellSize/2);
+        ctx.lineTo(x+cellSize+10, y+cellSize/2);
+        ctx.stroke();
+      }
+      if (i < N-1 && intensity > 0.2) {
+        ctx.strokeStyle = `rgba(168,85,247,${intensity*.4})`;
+        ctx.beginPath();
+        ctx.moveTo(x+cellSize/2, y+cellSize+2);
+        ctx.lineTo(x+cellSize/2, y+cellSize+10);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+let sysAnimId = null;
+function animateSystolic() {
+  if (sysAnimId) cancelAnimationFrame(sysAnimId);
+  let t = 0;
+  const activations = new Array(N*N).fill(0);
+
+  function step() {
+    t += 0.04;
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        const wave = Math.sin(t - (i+j)*0.6);
+        activations[i*N+j] = Math.max(0, wave) * (.5 + Math.sin(t*.3 + i*.5 + j*.7)*.4);
+      }
+    }
+    drawSystolic(activations);
+    sysAnimId = requestAnimationFrame(step);
+  }
+  step();
+}
+
+drawSystolic(null);
+animateSystolic();
+</script>
+</body>
+</html>

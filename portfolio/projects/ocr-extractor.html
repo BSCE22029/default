@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OCR Text Extractor — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+/* dropzone */
+.dropzone{border:2px dashed var(--border);border-radius:12px;padding:1.8rem 1rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3)}
+.dropzone:hover,.dropzone.drag{border-color:var(--purple2);background:rgba(124,58,237,.08)}
+.dropzone-title{font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:.3rem}
+.dropzone-sub{font-size:.72rem;color:var(--muted)}
+.preset-chip{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.3rem .8rem;border-radius:99px;font-size:.72rem;cursor:pointer;transition:all .2s;display:inline-block}
+.preset-chip:hover{border-color:var(--purple2);color:var(--purple2)}
+.presets-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem}
+
+.preview-row{display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap;align-items:flex-start}
+.preview-img-wrap{flex:0 0 auto}
+#previewImg{max-width:220px;max-height:220px;border-radius:8px;border:1px solid var(--border);display:none;background:#020208}
+.progress-wrap{flex:1;min-width:200px}
+.progress-label{font-size:.7rem;color:var(--muted);margin-bottom:.3rem;font-family:monospace}
+.progress-bar{height:10px;border-radius:5px;background:#0d0d1a;overflow:hidden;border:1px solid var(--border)}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--purple),var(--blue));transition:width .2s}
+
+.output-box{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.9rem 1rem;min-height:140px;max-height:320px;overflow-y:auto;font-family:monospace;font-size:.78rem;line-height:1.6;color:#e2e8f0;white-space:pre-wrap;word-break:break-word}
+.output-box.empty{color:#475569;font-style:italic}
+
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:200px;overflow-y:auto;font-family:monospace;font-size:.72rem;line-height:1.85;color:#64748b}
+.log-purple{color:#a855f7}.log-blue{color:#60a5fa}.log-green{color:#4ade80}.log-orange{color:#fb923c}.log-red{color:#f87171}.log-white{color:#e2e8f0;font-weight:700}
+
+.error-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);color:#fca5a5;border-radius:8px;padding:.7rem 1rem;font-size:.78rem;margin-top:.8rem;display:none}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Computer Vision · OCR · Tesseract.js</span></div>
+  <h1>OCR Text Extractor</h1>
+  <p class="subtitle">A real, client-side optical character recognition demo — upload a photo of a receipt, sign, or document (or pick a sample) and Tesseract.js's WASM OCR engine reads the text directly in your browser, no server round-trip involved.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mConfidence">—</div><div class="m-label">Confidence</div></div>
+    <div class="metric"><div class="m-val" id="mWords">—</div><div class="m-label">Words Found</div></div>
+    <div class="metric"><div class="m-val" id="mTime">—</div><div class="m-label">Processing Time</div></div>
+    <div class="metric"><div class="m-val" id="mStage">Idle</div><div class="m-label">Pipeline Stage</div></div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="card">
+    <div class="card-h">Input Image</div>
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-title">Drop an image here or click to upload</div>
+      <div class="dropzone-sub">PNG / JPG · a screenshot, receipt, sign, or document with visible text</div>
+      <input type="file" id="fileInput" accept="image/*" style="display:none"/>
+    </div>
+    <div class="presets-row">
+      <span class="preset-chip" onclick="loadSample(0)">Sample: street sign</span>
+      <span class="preset-chip" onclick="loadSample(1)">Sample: printed document</span>
+      <button class="btn go" id="runBtn" onclick="runOcr()" disabled style="margin-left:auto">▶ Run OCR</button>
+      <button class="btn" onclick="resetAll()">Reset</button>
+    </div>
+    <div class="preview-row">
+      <div class="preview-img-wrap"><img id="previewImg"/></div>
+      <div class="progress-wrap">
+        <div class="progress-label" id="progressLabel">No image loaded yet</div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+    </div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="card">
+    <div class="card-h">Extracted Text</div>
+    <div class="output-box empty" id="outputBox">Run OCR on an image to see extracted text here...</div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">Tesseract Pipeline Log</div>
+    <div class="log" id="ocrLog">
+      <div><span class="log-blue">[system]</span> Tesseract.js worker not yet initialized</div>
+      <div style="color:#374151">[idle] Waiting for an image...</div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Core OCR Call (JavaScript / Tesseract.js)</div>
+<pre><span class="comment">// ocr.js — Muhammad Moiz Ahmad</span>
+<span class="comment">// Runs entirely client-side: Tesseract.js compiles the Tesseract OCR</span>
+<span class="comment">// engine to WebAssembly and ships the "eng" traineddata over CDN.</span>
+
+<span class="kw">async function</span> <span class="fn">extractText</span>(imageSourceOrFile) {
+  <span class="kw">const</span> startedAt = <span class="type">Date</span>.now();
+
+  <span class="kw">const</span> { data } = <span class="kw">await</span> <span class="type">Tesseract</span>.<span class="fn">recognize</span>(
+    imageSourceOrFile,
+    <span class="str">'eng'</span>,
+    {
+      <span class="fn">logger</span>: (m) => {
+        <span class="comment">// m looks like: { status: 'recognizing text', progress: 0.42 }</span>
+        updateProgressBar(m.status, m.progress);
+        appendLogLine(<span class="str">`[${m.status}] ${Math.round((m.progress||0)*100)}%`</span>);
+      },
+    }
+  );
+
+  <span class="kw">const</span> elapsedMs = <span class="type">Date</span>.now() - startedAt;
+  <span class="kw">return</span> {
+    text: data.text,
+    confidence: data.confidence,          <span class="comment">// 0-100, from Tesseract</span>
+    wordCount: data.text.trim().<span class="fn">split</span>(<span class="str">/\s+/</span>).<span class="fn">filter</span>(<span class="type">Boolean</span>).length,
+    elapsedMs,
+  };
+}</pre>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+// ─── STATE ───
+let currentImageSrc = null;   // data URL or remote URL fed to Tesseract
+let running = false;
+
+const SAMPLES = [
+  // Small, text-heavy, reliably-hosted Wikimedia Commons images.
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Stop_sign_in_Vals-les-Bains.jpg/320px-Stop_sign_in_Vals-les-Bains.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Cursive_Writing_on_Ruled_Paper.jpg/320px-Cursive_Writing_on_Ruled_Paper.jpg'
+];
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const previewImg = document.getElementById('previewImg');
+const runBtn = document.getElementById('runBtn');
+const errorBox = document.getElementById('errorBox');
+const outputBox = document.getElementById('outputBox');
+
+// ─── LOGGING ───
+function log(html) {
+  const el = document.getElementById('ocrLog');
+  el.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
+  el.scrollTop = el.scrollHeight;
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.style.display = 'block';
+  log(`<span class="log-red">[error]</span> ${escapeHtml(msg)}`);
+}
+function clearError() {
+  errorBox.style.display = 'none';
+  errorBox.textContent = '';
+}
+
+// ─── IMAGE LOADING ───
+function setPreview(src) {
+  currentImageSrc = src;
+  previewImg.src = src;
+  previewImg.style.display = 'inline-block';
+  runBtn.disabled = false;
+  document.getElementById('progressLabel').textContent = 'Image ready — click "Run OCR"';
+  document.getElementById('progressFill').style.width = '0%';
+  clearError();
+}
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  const file = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) {
+    showError('That file does not look like an image. Please upload a PNG or JPG.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    setPreview(e.target.result);
+    log(`<span class="log-blue">[input]</span> Loaded local file "${escapeHtml(file.name)}" (${(file.size/1024).toFixed(1)} KB)`);
+  };
+  reader.onerror = () => showError('Could not read that file from disk.');
+  reader.readAsDataURL(file);
+}
+
+function loadSample(idx) {
+  clearError();
+  const url = SAMPLES[idx];
+  log(`<span class="log-blue">[input]</span> Loading sample image from Wikimedia Commons...`);
+  // Verify the remote image actually loads before wiring it up — if the CDN
+  // is unreachable we show a message instead of silently breaking the demo.
+  const testImg = new Image();
+  testImg.crossOrigin = 'anonymous';
+  testImg.onload = () => {
+    setPreview(url);
+    log(`<span class="log-green">[input]</span> Sample image loaded successfully`);
+  };
+  testImg.onerror = () => {
+    showError('Could not load the sample image (network issue or the host is unreachable). Please try the other sample or upload your own image instead.');
+  };
+  testImg.src = url;
+}
+
+// ─── PROGRESS / STATUS MAPPING ───
+function updateProgress(status, progress) {
+  const pct = Math.round((progress || 0) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${status || 'working'}... ${pct}%`;
+  document.getElementById('mStage').textContent = shortStage(status);
+}
+function shortStage(status) {
+  if (!status) return 'Idle';
+  if (status.includes('loading language')) return 'Loading Lang';
+  if (status.includes('initializing')) return 'Init';
+  if (status.includes('loading tesseract')) return 'Loading Core';
+  if (status.includes('recognizing')) return 'Recognizing';
+  if (status.includes('done')) return 'Done';
+  return status;
+}
+
+// ─── RESET ───
+function resetAll() {
+  if (running) return;
+  currentImageSrc = null;
+  previewImg.style.display = 'none';
+  previewImg.src = '';
+  runBtn.disabled = true;
+  fileInput.value = '';
+  clearError();
+  document.getElementById('progressLabel').textContent = 'No image loaded yet';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('mConfidence').textContent = '—';
+  document.getElementById('mWords').textContent = '—';
+  document.getElementById('mTime').textContent = '—';
+  document.getElementById('mStage').textContent = 'Idle';
+  outputBox.textContent = 'Run OCR on an image to see extracted text here...';
+  outputBox.classList.add('empty');
+  document.getElementById('ocrLog').innerHTML = `
+    <div><span class="log-blue">[system]</span> Tesseract.js worker not yet initialized</div>
+    <div style="color:#374151">[idle] Waiting for an image...</div>`;
+}
+
+// ─── RUN OCR (real Tesseract.js call) ───
+async function runOcr() {
+  if (running || !currentImageSrc) return;
+  if (typeof Tesseract === 'undefined') {
+    showError('Tesseract.js failed to load from the CDN — check your internet connection and reload the page.');
+    return;
+  }
+  running = true;
+  runBtn.disabled = true;
+  clearError();
+  outputBox.classList.remove('empty');
+  outputBox.textContent = '';
+  document.getElementById('mConfidence').textContent = '—';
+  document.getElementById('mWords').textContent = '—';
+  document.getElementById('mTime').textContent = '—';
+  log(`<span class="log-white">[run]</span> Starting Tesseract.recognize(image, "eng", { logger })`);
+
+  const startedAt = Date.now();
+  let lastLoggedStatus = null;
+
+  try {
+    const { data } = await Tesseract.recognize(
+      currentImageSrc,
+      'eng',
+      {
+        logger: (m) => {
+          updateProgress(m.status, m.progress);
+          // avoid spamming the log with every incremental progress tick —
+          // log once per status change, plus every 25% within a status.
+          const bucket = Math.floor((m.progress || 0) * 4);
+          const key = m.status + ':' + bucket;
+          if (key !== lastLoggedStatus) {
+            lastLoggedStatus = key;
+            const pct = Math.round((m.progress || 0) * 100);
+            const color = m.status && m.status.includes('recognizing') ? 'log-purple' : 'log-blue';
+            log(`<span class="${color}">[${escapeHtml(m.status || 'working')}]</span> ${pct}%`);
+          }
+        },
+      }
+    );
+
+    const elapsedMs = Date.now() - startedAt;
+    const text = data.text || '';
+    const wordCount = text.trim().length ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+
+    outputBox.textContent = text.trim().length ? text : '(no text detected in this image)';
+    if (!text.trim().length) outputBox.classList.add('empty');
+
+    document.getElementById('mConfidence').textContent = (typeof data.confidence === 'number' ? data.confidence.toFixed(1) : '—') + '%';
+    document.getElementById('mWords').textContent = wordCount;
+    document.getElementById('mTime').textContent = elapsedMs + 'ms';
+    document.getElementById('mStage').textContent = 'Done';
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('progressLabel').textContent = `Done in ${elapsedMs}ms`;
+
+    log(`<span class="log-green">[done]</span> Extracted ${wordCount} words · confidence ${(data.confidence||0).toFixed(1)}% · ${elapsedMs}ms`);
+  } catch (err) {
+    console.error(err);
+    showError('OCR failed: ' + (err && err.message ? err.message : 'unknown error (possibly a network issue loading Tesseract\'s language data, or an unreadable image).'));
+    document.getElementById('mStage').textContent = 'Error';
+    document.getElementById('progressLabel').textContent = 'Failed — see message above';
+  } finally {
+    running = false;
+    runBtn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

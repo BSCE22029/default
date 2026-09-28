@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Event-Driven Order Pipeline — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn.danger{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);color:#f87171}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.task-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.task-presets{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem}
+.preset-chip{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.3rem .8rem;border-radius:99px;font-size:.72rem;cursor:pointer;transition:all .2s}
+.preset-chip:hover{border-color:var(--purple2);color:var(--purple2)}
+.preset-chip.fail{border-color:rgba(239,68,68,.35)}
+.preset-chip.fail:hover{border-color:#f87171;color:#f87171}
+
+.pipeline{display:flex;gap:2px;margin-bottom:.8rem;flex-wrap:wrap}
+.pipe-stage{flex:1;min-width:90px;height:38px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;transition:all .3s;text-align:center;padding:0 .3rem}
+.ps-idle{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.ps-active{background:rgba(124,58,237,.2);color:var(--purple2);border:1px solid rgba(124,58,237,.4);box-shadow:0 0 8px rgba(124,58,237,.2)}
+.ps-done{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+.ps-failed{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.35)}
+.ps-retry{background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.35)}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+.graph-wrap{overflow-x:auto}
+#graphCanvas{display:block;border-radius:10px;background:#020208}
+
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:230px;overflow-y:auto;font-family:monospace;font-size:.72rem;line-height:1.85;color:#64748b}
+.log-purple{color:#a855f7}.log-blue{color:#60a5fa}.log-green{color:#4ade80}.log-orange{color:#fb923c}.log-red{color:#f87171}.log-white{color:#e2e8f0;font-weight:700}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,1fr)}.pipe-stage{min-width:70px;font-size:.55rem}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Event-Driven Architecture · Message Queue · Retry & DLQ</span></div>
+  <h1>Real-Time Event-Driven Order Pipeline</h1>
+  <p class="subtitle">A production-style e-commerce order flow — validate → reserve inventory → charge payment → ship → notify — decoupled through a message queue. Each stage is an independent consumer with its own retry policy and a dead-letter queue for anything that fails permanently.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mProcessed">0</div><div class="m-label">Orders Processed</div></div>
+    <div class="metric"><div class="m-val" id="mRetries">0</div><div class="m-label">Retries</div></div>
+    <div class="metric"><div class="m-val" id="mDLQ">0</div><div class="m-label">Sent to DLQ</div></div>
+    <div class="metric"><div class="m-val" id="mLatency">—</div><div class="m-label">End-to-End Latency</div></div>
+  </div>
+
+  <!-- ORDER INPUT -->
+  <div class="card">
+    <div class="card-h">Order</div>
+    <div class="task-presets">
+      <span class="preset-chip" onclick="runOrder('happy')">✅ Normal order — everything succeeds</span>
+      <span class="preset-chip fail" onclick="runOrder('outofstock')">📦 Out-of-stock item (retries, then recovers)</span>
+      <span class="preset-chip fail" onclick="runOrder('paymentfail')">💳 Payment declined (retries, then fails to DLQ)</span>
+    </div>
+    <div class="task-row">
+      <button class="btn" onclick="resetAll()">Reset</button>
+      <span id="pipeStatus" style="font-size:.72rem;color:var(--muted)">Ready — pick an order scenario above</span>
+    </div>
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage ps-idle">VALIDATE</div>
+      <div class="pipe-stage ps-idle">INVENTORY</div>
+      <div class="pipe-stage ps-idle">PAYMENT</div>
+      <div class="pipe-stage ps-idle">SHIPPING</div>
+      <div class="pipe-stage ps-idle">NOTIFY</div>
+    </div>
+  </div>
+
+  <!-- GRAPH -->
+  <div class="card">
+    <div class="card-h">Topology — Producer → Queue → Consumers → DLQ</div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:.8rem">Each consumer pulls from its own topic/partition. A failed message is retried with backoff up to a limit, then routed to the dead-letter queue instead of blocking the pipeline — so one bad order never stalls the rest of the stream.</p>
+    <div class="graph-wrap">
+      <canvas id="graphCanvas" width="560" height="320"></canvas>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">Event Stream</div>
+    <div class="log" id="orderLog">
+      <div><span class="log-blue">[system]</span> Order pipeline online — 5 consumers attached, DLQ enabled</div>
+      <div><span class="log-blue">[system]</span> Topics: orders.created, orders.validated, orders.reserved, orders.charged, orders.shipped</div>
+      <div style="color:#374151">[idle] Waiting for an order...</div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Consumer with Retry + Dead-Letter Queue (Python / Kafka-style)</div>
+<pre><span class="comment"># order_pipeline.py — Muhammad Moiz Ahmad</span>
+<span class="comment"># Each stage consumes its own topic and republishes to the next,</span>
+<span class="comment"># so stages scale and fail independently.</span>
+
+MAX_RETRIES = <span class="num">3</span>
+
+<span class="kw">def</span> <span class="fn">process_with_retry</span>(consumer, handler, next_topic, dlq_topic):
+    <span class="kw">for</span> msg <span class="kw">in</span> consumer:
+        attempt = msg.headers.get(<span class="str">"retry_count"</span>, <span class="num">0</span>)
+        <span class="kw">try</span>:
+            result = handler(msg.value)
+            producer.send(next_topic, value=result)
+            consumer.commit(msg)
+        <span class="kw">except</span> TransientError <span class="kw">as</span> e:
+            <span class="kw">if</span> attempt >= MAX_RETRIES:
+                producer.send(dlq_topic, value=msg.value,
+                               headers={<span class="str">"error"</span>: <span class="kw">str</span>(e), <span class="str">"stage"</span>: handler.__name__})
+                consumer.commit(msg)
+            <span class="kw">else</span>:
+                backoff = (<span class="num">2</span> ** attempt) * <span class="num">0.5</span>
+                producer.send(consumer.topic, value=msg.value,
+                               headers={<span class="str">"retry_count"</span>: attempt + <span class="num">1</span>},
+                               delay=backoff)
+                consumer.commit(msg)
+
+<span class="kw">def</span> <span class="fn">reserve_inventory</span>(order):
+    <span class="kw">if</span> <span class="kw">not</span> inventory.reserve(order[<span class="str">"sku"</span>], order[<span class="str">"qty"</span>]):
+        <span class="kw">raise</span> TransientError(<span class="str">"insufficient_stock"</span>)
+    <span class="kw">return</span> {**order, <span class="str">"reserved"</span>: <span class="kw">True</span>}
+
+<span class="kw">def</span> <span class="fn">charge_payment</span>(order):
+    charge = payments.charge(order[<span class="str">"payment_token"</span>], order[<span class="str">"total"</span>])
+    <span class="kw">if</span> <span class="kw">not</span> charge.success:
+        <span class="kw">raise</span> TransientError(<span class="str">"card_declined"</span>)
+    <span class="kw">return</span> {**order, <span class="str">"charge_id"</span>: charge.id}</pre>
+  </div>
+</div>
+
+<script>
+const stages = ['VALIDATE','INVENTORY','PAYMENT','SHIPPING','NOTIFY'];
+let processed = 0, retryCount = 0, dlqCount = 0;
+let running = false;
+
+function scenario(kind) {
+  if (kind === 'outofstock') {
+    return { label: 'Order #8841 — 2× Wireless Mouse', failStage: 1, recoverAfter: 2, fatal: false };
+  }
+  if (kind === 'paymentfail') {
+    return { label: 'Order #8842 — 1× Mechanical Keyboard', failStage: 2, recoverAfter: 3, fatal: true };
+  }
+  return { label: 'Order #8840 — 1× USB-C Hub, 1× Webcam', failStage: -1, recoverAfter: 0, fatal: false };
+}
+
+function log(html) {
+  const el = document.getElementById('orderLog');
+  el.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
+  el.scrollTop = el.scrollHeight;
+}
+
+function resetAll() {
+  if (running) return;
+  document.querySelectorAll('.pipe-stage').forEach((s,i) => { s.className = 'pipe-stage ps-idle'; s.textContent = stages[i]; });
+  document.getElementById('pipeStatus').textContent = 'Ready — pick an order scenario above';
+  document.getElementById('mLatency').textContent = '—';
+  document.getElementById('orderLog').innerHTML = `
+    <div><span class="log-blue">[system]</span> Order pipeline online — 5 consumers attached, DLQ enabled</div>
+    <div><span class="log-blue">[system]</span> Topics: orders.created, orders.validated, orders.reserved, orders.charged, orders.shipped</div>
+    <div style="color:#374151">[idle] Waiting for an order...</div>`;
+  drawGraph();
+}
+
+function runOrder(kind) {
+  if (running) return;
+  running = true;
+  const sc = scenario(kind);
+  resetAll();
+  const stageEls = document.querySelectorAll('.pipe-stage');
+  const startTime = Date.now();
+  log(`<span class="log-white">[Producer]</span> orders.created ← "<span class="log-orange">${sc.label}</span>"`);
+
+  let t = 0;
+  function runStage(i, attempt) {
+    stageEls[i].className = 'pipe-stage ps-active';
+    document.getElementById('pipeStatus').textContent = `Running: ${stages[i]}${attempt>0 ? ' (retry '+attempt+')' : ''}...`;
+    pulseGraphNode(i, 'active');
+
+    const willFail = i === sc.failStage && attempt < sc.recoverAfter;
+    const isFatal = willFail && sc.fatal && attempt === sc.recoverAfter - 1;
+
+    setTimeout(() => {
+      if (willFail) {
+        if (isFatal) {
+          stageEls[i].className = 'pipe-stage ps-failed';
+          dlqCount++;
+          document.getElementById('mDLQ').textContent = dlqCount;
+          log(`<span class="log-red">[${stages[i]}]</span> attempt ${attempt+1} failed permanently → routed to <span class="log-red">orders.dlq</span>`);
+          pulseGraphNode(i, 'dlq');
+          document.getElementById('pipeStatus').textContent = `✗ Order sent to dead-letter queue after ${stages[i]} failure`;
+          running = false;
+          return;
+        }
+        stageEls[i].className = 'pipe-stage ps-retry';
+        retryCount++;
+        document.getElementById('mRetries').textContent = retryCount;
+        const backoff = (Math.pow(2, attempt) * 0.5).toFixed(1);
+        log(`<span class="log-orange">[${stages[i]}]</span> attempt ${attempt+1} failed (transient) → retrying in ${backoff}s...`);
+        setTimeout(() => runStage(i, attempt + 1), 500);
+        return;
+      }
+      stageEls[i].className = 'pipe-stage ps-done';
+      log(`<span class="log-green">[${stages[i]}]</span> ✓ succeeded → published to next topic`);
+      if (i < stages.length - 1) {
+        runStage(i + 1, 0);
+      } else {
+        processed++;
+        document.getElementById('mProcessed').textContent = processed;
+        const elapsed = ((Date.now() - startTime)/1000).toFixed(1);
+        document.getElementById('mLatency').textContent = elapsed + 's';
+        document.getElementById('pipeStatus').textContent = '✓ Order fully processed — customer notified';
+        log(`<span class="log-white">[Notify]</span> Email + SMS sent — order journey complete`);
+        running = false;
+      }
+    }, 700);
+  }
+  runStage(0, 0);
+}
+
+// ─── GRAPH VIZ ───
+const canvas = document.getElementById('graphCanvas');
+const ctx = canvas.getContext('2d');
+const CW = Math.min(560, window.innerWidth - 80);
+canvas.width = CW;
+const gNodes = [
+  { name: 'Producer', x: 0.5, y: 0.08, color: '148,163,184' },
+  { name: 'Validate', x: 0.12, y: 0.38, color: '96,165,250' },
+  { name: 'Inventory', x: 0.35, y: 0.38, color: '168,85,247' },
+  { name: 'Payment', x: 0.58, y: 0.38, color: '74,222,128' },
+  { name: 'Shipping', x: 0.81, y: 0.38, color: '251,146,60' },
+  { name: 'Notify', x: 0.5, y: 0.68, color: '226,232,240' },
+  { name: 'Dead\nLetter Q', x: 0.85, y: 0.9, color: '248,113,113' },
+];
+const gEdges = [[0,1],[1,2],[2,3],[3,4],[1,5],[2,5],[3,5],[4,5]];
+let pulseState = new Array(gNodes.length).fill(0);
+let dlqPulse = 0;
+const stageToNode = [1,2,3,4,5];
+
+function nodePos(n) { return { x: n.x * canvas.width, y: n.y * canvas.height }; }
+
+function drawGraph() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#020208'; ctx.fillRect(0,0,W,H);
+
+  gEdges.forEach(([a,b]) => {
+    const pa = nodePos(gNodes[a]), pb = nodePos(gNodes[b]);
+    ctx.strokeStyle = 'rgba(148,163,184,.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+  });
+
+  if (dlqPulse > 0) {
+    const pa = nodePos(gNodes[4]), pb = nodePos(gNodes[6]);
+    ctx.strokeStyle = `rgba(248,113,113,${dlqPulse/10})`;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(248,113,113,.7)'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    ctx.shadowBlur = 0;
+    dlqPulse--;
+  }
+
+  gNodes.forEach((n, i) => {
+    const p = nodePos(n);
+    const pulse = pulseState[i];
+    const r = i === 6 ? 26 + pulse*8 : 30 + pulse*8;
+    if (pulse > .1) { ctx.shadowColor = `rgba(${n.color},${pulse*.7})`; ctx.shadowBlur = pulse*22; }
+    ctx.fillStyle = `rgba(${n.color},${.1 + pulse*.25})`;
+    ctx.strokeStyle = `rgba(${n.color},${.5 + pulse*.5})`;
+    ctx.lineWidth = 1.5 + pulse;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = `rgba(${n.color},${.75 + pulse*.25})`;
+    ctx.font = `bold ${9 + pulse}px monospace`;
+    ctx.textAlign = 'center';
+    n.name.split('\n').forEach((line, li) => {
+      ctx.fillText(line, p.x, p.y + 3 + li*10 - (n.name.includes('\n') ? 5 : 0));
+    });
+  });
+}
+
+function pulseGraphNode(stageIdx, kind) {
+  const nodeIdx = stageToNode[stageIdx];
+  if (kind === 'dlq') { dlqPulse = 10; }
+  let t = 0;
+  const anim = setInterval(() => {
+    t += 1;
+    pulseState[nodeIdx] = Math.max(0, 1 - t/16);
+    if (nodeIdx === 0) {} // producer stays calm
+    drawGraph();
+    if (t > 20) clearInterval(anim);
+  }, 30);
+}
+
+drawGraph();
+</script>
+</body>
+</html>

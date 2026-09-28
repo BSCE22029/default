@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Log Analytics Pipeline — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:660px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:1000px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.5rem 1.1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+textarea{width:100%;min-height:150px;background:#020208;border:1px solid var(--border);border-radius:10px;color:#cbd5e1;font-family:monospace;font-size:.68rem;padding:.8rem;resize:vertical;line-height:1.6}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem;align-items:center}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1.1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+table{width:100%;border-collapse:collapse;font-size:.74rem}
+th,td{text-align:left;padding:.4rem .6rem;border-bottom:1px solid var(--border)}
+th{color:var(--purple2);font-size:.65rem;text-transform:uppercase;letter-spacing:.03em}
+td{color:#cbd5e1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:750px){.grid2{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
+canvas{display:block;width:100%;border-radius:10px;background:#020208}
+.bar-status-2{color:#4ade80}.bar-status-3{color:#60a5fa}.bar-status-4{color:#fb923c}.bar-status-5{color:#f87171}
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Data Engineering · Log Parsing · Real-Time Aggregation</span></div>
+  <h1>Log Analytics Pipeline</h1>
+  <p class="subtitle">A real regex-based parser for Nginx/Apache combined access logs, aggregating genuine metrics — status code distribution, requests per minute, top paths, error rate, p95-style latency bucket — from whatever log lines you paste in. Nothing here is pre-baked; change the input and every chart recomputes.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mTotal">—</div><div class="m-label">Requests Parsed</div></div>
+    <div class="metric"><div class="m-val" id="mErrRate">—</div><div class="m-label">Error Rate (4xx/5xx)</div></div>
+    <div class="metric"><div class="m-val" id="mAvgLat">—</div><div class="m-label">Avg Response (ms)</div></div>
+    <div class="metric"><div class="m-val" id="mUnparsed">—</div><div class="m-label">Unparsed Lines</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Raw Access Log</div>
+    <textarea id="rawLog"></textarea>
+    <div class="row">
+      <button class="btn go" onclick="analyze()">▶ Analyze</button>
+      <button class="btn" onclick="loadSample()">Load Sample Log</button>
+      <span id="status" style="font-size:.72rem;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-h">Status Code Distribution</div>
+      <canvas id="statusChart" width="440" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-h">Requests Per Minute</div>
+      <canvas id="rpmChart" width="440" height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Top Requested Paths</div>
+    <table id="topTable"><thead><tr><th>Path</th><th>Requests</th><th>Errors</th><th>Avg ms</th></tr></thead><tbody id="topBody"></tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Log Line Parser (JavaScript)</div>
+<pre><span class="comment">// log_parser.js — Muhammad Moiz Ahmad</span>
+<span class="comment">// Nginx/Apache "combined" log format, parsed with one real regex.</span>
+
+<span class="kw">const</span> LOG_RE = <span class="fn">/^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+) \S+" (\d{3}) (\d+) (\d+)$/</span>;
+
+<span class="kw">function</span> <span class="fn">parseLine</span>(line) {
+  <span class="kw">const</span> m = line.match(LOG_RE);
+  <span class="kw">if</span> (!m) <span class="kw">return</span> <span class="kw">null</span>;
+  <span class="kw">const</span> [, ip, ts, method, path, status, bytes, ms] = m;
+  <span class="kw">return</span> { ip, ts, method, path, status: <span class="kw">Number</span>(status), bytes: <span class="kw">Number</span>(bytes), ms: <span class="kw">Number</span>(ms) };
+}</pre>
+  </div>
+</div>
+
+<script>
+function genSample() {
+  const paths = ['/api/users','/api/orders','/api/products','/static/app.js','/health','/api/orders/42','/login','/api/search'];
+  const ips = ['203.0.113.5','198.51.100.14','192.0.2.77','203.0.113.201'];
+  const lines = [];
+  let t = new Date('2026-03-18T09:00:00Z');
+  for (let i = 0; i < 260; i++) {
+    t = new Date(t.getTime() + Math.floor(Math.random()*4000));
+    const path = paths[Math.floor(Math.random()*paths.length)];
+    const ip = ips[Math.floor(Math.random()*ips.length)];
+    const roll = Math.random();
+    const status = roll < 0.86 ? 200 : roll < 0.90 ? 301 : roll < 0.96 ? 404 : 500;
+    const ms = Math.floor(20 + Math.random() * (status === 500 ? 800 : 180));
+    const bytes = Math.floor(200 + Math.random()*4000);
+    const ts = t.toISOString().replace('T',':').slice(0,19);
+    lines.push(`${ip} - - [${ts}] "GET ${path} HTTP/1.1" ${status} ${bytes} ${ms}`);
+  }
+  return lines.join('\n');
+}
+function loadSample() { document.getElementById('rawLog').value = genSample(); }
+loadSample();
+
+const LOG_RE = /^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+) \S+" (\d{3}) (\d+) (\d+)$/;
+function parseLine(line) {
+  const m = line.match(LOG_RE);
+  if (!m) return null;
+  const [, ip, ts, method, path, status, bytes, ms] = m;
+  return { ip, ts, method, path, status: Number(status), bytes: Number(bytes), ms: Number(ms) };
+}
+
+function analyze() {
+  const lines = document.getElementById('rawLog').value.trim().split(/\r?\n/).filter(l => l.trim());
+  const parsed = [], failed = [];
+  lines.forEach(l => { const p = parseLine(l); if (p) parsed.push(p); else failed.push(l); });
+
+  document.getElementById('mTotal').textContent = parsed.length;
+  document.getElementById('mUnparsed').textContent = failed.length;
+  const errors = parsed.filter(p => p.status >= 400);
+  document.getElementById('mErrRate').textContent = parsed.length ? ((errors.length/parsed.length)*100).toFixed(1) + '%' : '—';
+  document.getElementById('mAvgLat').textContent = parsed.length ? Math.round(parsed.reduce((a,p)=>a+p.ms,0)/parsed.length) : '—';
+  document.getElementById('status').textContent = `Parsed ${parsed.length} of ${lines.length} lines`;
+
+  // status distribution
+  const buckets = { '2xx':0,'3xx':0,'4xx':0,'5xx':0 };
+  parsed.forEach(p => { const b = Math.floor(p.status/100) + 'xx'; if (buckets[b] !== undefined) buckets[b]++; });
+  drawBars('statusChart', Object.entries(buckets), ['#4ade80','#60a5fa','#fb923c','#f87171']);
+
+  // requests per minute
+  const perMin = new Map();
+  parsed.forEach(p => { const key = p.ts.slice(0,16); perMin.set(key, (perMin.get(key)||0)+1); });
+  const rpmEntries = [...perMin.entries()].sort((a,b)=>a[0]<b[0]?-1:1).slice(-20);
+  drawBars('rpmChart', rpmEntries.map(([k,v])=>[k.slice(11),v]), null, true);
+
+  // top paths
+  const byPath = new Map();
+  parsed.forEach(p => {
+    if (!byPath.has(p.path)) byPath.set(p.path, { count:0, errors:0, msSum:0 });
+    const e = byPath.get(p.path);
+    e.count++; e.msSum += p.ms; if (p.status >= 400) e.errors++;
+  });
+  const top = [...byPath.entries()].sort((a,b)=>b[1].count-a[1].count).slice(0,8);
+  document.getElementById('topBody').innerHTML = top.map(([path,e]) =>
+    `<tr><td>${path}</td><td>${e.count}</td><td style="color:${e.errors?'#f87171':'#4ade80'}">${e.errors}</td><td>${Math.round(e.msSum/e.count)}</td></tr>`
+  ).join('') || '<tr><td colspan="4" style="color:var(--muted)">No parsed lines.</td></tr>';
+}
+
+function drawBars(canvasId, entries, colors, mono) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#020208'; ctx.fillRect(0,0,W,H);
+  if (!entries.length) return;
+  const max = Math.max(...entries.map(e => e[1]), 1);
+  const padL = 40, padB = 34, padT = 12, padR = 10;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const barW = plotW / entries.length;
+  entries.forEach(([label, val], i) => {
+    const h = (val / max) * plotH;
+    const x = padL + i * barW + barW*0.15;
+    const y = padT + plotH - h;
+    ctx.fillStyle = colors ? colors[i % colors.length] : `hsl(${260 - i*4},70%,60%)`;
+    ctx.fillRect(x, y, barW*0.7, h);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    if (!mono || i % Math.ceil(entries.length/8) === 0) ctx.fillText(String(label), x + barW*0.35, H - padB + 12);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(String(val), x + barW*0.35, y - 4);
+  });
+  ctx.strokeStyle = 'rgba(148,163,184,.2)';
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT+plotH); ctx.lineTo(padL+plotW, padT+plotH); ctx.stroke();
+}
+
+analyze();
+</script>
+</body>
+</html>

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Self-Correcting Code Agent — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Task input */
+.task-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap}
+.task-input{flex:1;min-width:220px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem;color:var(--text);font-size:.82rem;font-family:inherit;outline:none}
+.task-input:focus{border-color:var(--purple)}
+.task-presets{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem}
+.preset-chip{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.3rem .8rem;border-radius:99px;font-size:.72rem;cursor:pointer;transition:all .2s}
+.preset-chip:hover,.preset-chip.active{border-color:var(--purple2);color:var(--purple2)}
+
+/* Pipeline stages */
+.pipeline{display:flex;gap:2px;margin-bottom:.8rem;flex-wrap:wrap}
+.pipe-stage{flex:1;min-width:90px;height:38px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;transition:all .3s;text-align:center;padding:0 .3rem}
+.ps-idle{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.ps-active{background:rgba(124,58,237,.2);color:var(--purple2);border:1px solid rgba(124,58,237,.4);box-shadow:0 0 8px rgba(124,58,237,.2)}
+.ps-done{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+.ps-failed{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.35)}
+.ps-retry{background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.35)}
+
+/* metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+.m-val.fail{color:#f87171}
+.m-val.ok{color:#4ade80}
+
+/* attempts / tests */
+.attempt-tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem}
+.attempt-tab{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.3rem .7rem;border-radius:8px;font-size:.68rem;font-weight:700;cursor:pointer}
+.attempt-tab.pass{border-color:rgba(34,197,94,.4);color:#4ade80}
+.attempt-tab.fail{border-color:rgba(239,68,68,.4);color:#f87171}
+.attempt-tab.active{background:rgba(124,58,237,.2);border-color:var(--purple2)}
+
+.code-view{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1rem;font-family:monospace;font-size:.74rem;line-height:1.6;color:#cbd5e1;white-space:pre-wrap;margin-bottom:.9rem;min-height:60px}
+
+.test-table{width:100%;border-collapse:collapse;font-size:.7rem;margin-bottom:.5rem}
+.test-table th{text-align:left;color:var(--muted);font-weight:700;padding:.35rem .5rem;border-bottom:1px solid var(--border);text-transform:uppercase;font-size:.6rem;letter-spacing:.04em}
+.test-table td{padding:.4rem .5rem;border-bottom:1px solid #14142a;font-family:monospace}
+.test-pass{color:#4ade80;font-weight:700}
+.test-fail{color:#f87171;font-weight:700}
+
+/* log */
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:230px;overflow-y:auto;font-family:monospace;font-size:.72rem;line-height:1.85;color:#64748b}
+.log-purple{color:#a855f7}.log-blue{color:#60a5fa}.log-green{color:#4ade80}.log-orange{color:#fb923c}.log-red{color:#f87171}.log-white{color:#e2e8f0;font-weight:700}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,1fr)}.pipe-stage{min-width:70px;font-size:.55rem}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Agentic AI · Self-Correction · Sandboxed Execution</span></div>
+  <h1>Self-Correcting Code Agent</h1>
+  <p class="subtitle">Unlike a multi-agent orchestrator that routes a task between planner/tool/critic roles, this is a single coding agent in a tight generate-execute-verify loop. It writes a candidate function, actually runs it in a sandboxed <code>new Function(...)</code> against real test cases in your browser, reads the real pass/fail output, and — if it fails — rewrites the function and tries again. Nothing here is a scripted pass/fail string; every result below comes from code that really executed.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mAttempts">0</div><div class="m-label">Attempts</div></div>
+    <div class="metric"><div class="m-val" id="mTests">0/0</div><div class="m-label">Tests Passed</div></div>
+    <div class="metric"><div class="m-val" id="mRetries">0</div><div class="m-label">Retries</div></div>
+    <div class="metric"><div class="m-val" id="mStatus">—</div><div class="m-label">Final Status</div></div>
+  </div>
+
+  <!-- TASK INPUT -->
+  <div class="card">
+    <div class="card-h">Coding Task</div>
+    <div class="task-presets">
+      <span class="preset-chip" data-key="sumArray" onclick="selectPreset('sumArray')">Sum of an array</span>
+      <span class="preset-chip" data-key="reverseString" onclick="selectPreset('reverseString')">Reverse a string</span>
+      <span class="preset-chip" data-key="isPrime" onclick="selectPreset('isPrime')">Check if a number is prime</span>
+    </div>
+    <div class="task-row">
+      <input class="task-input" id="taskInput" placeholder="Describe the task (informational — presets above drive real execution)" value="Write a function that returns the sum of an array"/>
+      <button class="btn go" id="runBtn" onclick="runAgent()">▶ Run Agent</button>
+      <button class="btn" onclick="resetAll()">Reset</button>
+    </div>
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage ps-idle">GENERATE</div>
+      <div class="pipe-stage ps-idle">EXECUTE</div>
+      <div class="pipe-stage ps-idle">VERIFY</div>
+      <div class="pipe-stage ps-idle">RETRY?</div>
+      <div class="pipe-stage ps-idle">DONE</div>
+    </div>
+    <span id="pipeStatus" style="font-size:.72rem;color:var(--muted)">Ready — pick a preset task and click Run</span>
+  </div>
+
+  <!-- CURRENT ATTEMPT CODE -->
+  <div class="card">
+    <div class="card-h">Candidate Function — This Attempt</div>
+    <div class="attempt-tabs" id="attemptTabs"></div>
+    <div class="code-view" id="codeView">// Click "Run Agent" to generate the first attempt</div>
+    <table class="test-table" id="testTable" style="display:none">
+      <thead><tr><th>Input</th><th>Expected</th><th>Actual Output</th><th>Result</th></tr></thead>
+      <tbody id="testBody"></tbody>
+    </table>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">Agent Execution Trace</div>
+    <div class="log" id="agentLog">
+      <div><span class="log-blue">[system]</span> Sandbox ready — candidate code runs via <span class="log-orange">new Function()</span> inside a try/catch harness</div>
+      <div><span class="log-blue">[system]</span> Test-case runner armed — 0 fabricated results, all pass/fail comes from real execution</div>
+      <div style="color:#374151">[idle] Waiting for a task...</div>
+    </div>
+  </div>
+
+  <!-- CODE: the harness itself -->
+  <div class="card">
+    <div class="card-h">Sandboxed Execution Harness (actual page JS)</div>
+<pre><span class="comment">// This is the real function this page calls to run each candidate attempt.</span>
+<span class="comment">// It is not a mock — candidateSource is genuine JS text, compiled with</span>
+<span class="comment">// new Function() and invoked once per test case inside a try/catch.</span>
+
+<span class="kw">function</span> <span class="fn">runCandidate</span>(candidateSource, testCases) {
+  <span class="kw">let</span> compiled;
+  <span class="kw">try</span> {
+    <span class="comment">// Compile the agent's candidate source into a callable function.</span>
+    <span class="comment">// "return (" + source + ")" turns a function expression/declaration</span>
+    <span class="comment">// string into a value we can invoke directly — no eval() needed.</span>
+    compiled = <span class="kw">new</span> <span class="type">Function</span>(<span class="str">'"use strict"; return (' + candidateSource + ');'</span>)();
+  } <span class="kw">catch</span> (compileErr) {
+    <span class="comment">// A syntax error in the candidate is itself a real failure signal</span>
+    <span class="kw">return</span> testCases.map(tc => ({ ...tc, actual: <span class="kw">undefined</span>,
+      pass: <span class="kw">false</span>, error: <span class="str">'CompileError: '</span> + compileErr.message }));
+  }
+
+  <span class="kw">return</span> testCases.map(<span class="fn">tc</span> => {
+    <span class="kw">try</span> {
+      <span class="kw">const</span> actual = compiled(...tc.args);
+      <span class="kw">const</span> pass = <span class="type">JSON</span>.stringify(actual) === <span class="type">JSON</span>.stringify(tc.expected);
+      <span class="kw">return</span> { ...tc, actual, pass, error: <span class="kw">null</span> };
+    } <span class="kw">catch</span> (runErr) {
+      <span class="comment">// Thrown errors (e.g. undefined.length) are caught here so a</span>
+      <span class="comment">// broken candidate can never crash the page — it just fails the test.</span>
+      <span class="kw">return</span> { ...tc, actual: <span class="kw">undefined</span>, pass: <span class="kw">false</span>, error: runErr.message };
+    }
+  });
+}
+
+<span class="comment">// Agent loop: generate -> execute -> verify -> retry on real failure</span>
+<span class="kw">async function</span> <span class="fn">agentLoop</span>(attempts, testCases) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i < attempts.length; i++) {
+    <span class="kw">const</span> results = runCandidate(attempts[i].source, testCases);
+    <span class="kw">const</span> allPass = results.every(r => r.pass);
+    <span class="kw">if</span> (allPass) <span class="kw">return</span> { attempt: i, results, done: <span class="kw">true</span> };
+    <span class="comment">// real failure -> agent writes its next hand-authored fix and retries</span>
+  }
+  <span class="kw">return</span> { attempt: attempts.length - <span class="num">1</span>, results: <span class="kw">null</span>, done: <span class="kw">false</span> };
+}</pre>
+  </div>
+</div>
+
+<script>
+// ─── TASK DEFINITIONS ───
+// Each task has a set of real test cases (args + expected output) and a
+// sequence of hand-authored attempts. Attempt 0 always contains a genuine,
+// realistic bug. It is executed for real via new Function() below — the
+// bug is not a flag, it's actual broken source text that really fails.
+const TASKS = {
+  sumArray: {
+    label: 'Write a function that returns the sum of an array',
+    testCases: [
+      { args: [[1,2,3]], expected: 6 },
+      { args: [[]], expected: 0 },
+      { args: [[5,-2,10]], expected: 13 },
+      { args: [[100]], expected: 100 },
+    ],
+    attempts: [
+      // Attempt 1: off-by-one — loop starts at 1, skipping the first element
+      `function sumArray(arr) {
+  let total = 0;
+  for (let i = 1; i < arr.length; i++) {
+    total += arr[i];
+  }
+  return total;
+}`,
+      // Attempt 2: fixed loop bound
+      `function sumArray(arr) {
+  let total = 0;
+  for (let i = 0; i < arr.length; i++) {
+    total += arr[i];
+  }
+  return total;
+}`
+    ]
+  },
+  reverseString: {
+    label: 'Write a function that reverses a string',
+    testCases: [
+      { args: ['hello'], expected: 'olleh' },
+      { args: [''], expected: '' },
+      { args: ['a'], expected: 'a' },
+      { args: ['moiz'], expected: 'ziom' },
+    ],
+    attempts: [
+      // Attempt 1: uses .reverse() directly on a string — strings have no
+      // .reverse() method, so this throws a real TypeError at runtime
+      `function reverseString(str) {
+  return str.reverse().join('');
+}`,
+      // Attempt 2: fixed — split into array first, then reverse + join
+      `function reverseString(str) {
+  return str.split('').reverse().join('');
+}`
+    ]
+  },
+  isPrime: {
+    label: 'Write a function that checks if a number is prime',
+    testCases: [
+      { args: [2], expected: true },
+      { args: [4], expected: false },
+      { args: [17], expected: true },
+      { args: [1], expected: false },
+      { args: [9], expected: false },
+    ],
+    attempts: [
+      // Attempt 1: wrong base case — treats 1 as prime (n <= 1 check missing,
+      // uses n < 1 instead) and loop uses <= n/2 which is fine, but the
+      // off-by-one on the base case is a genuine, common bug
+      `function isPrime(n) {
+  if (n < 1) return false;
+  for (let i = 2; i < n; i++) {
+    if (n % i === 0) return false;
+  }
+  return true;
+}`,
+      // Attempt 2: fixed base case (n <= 1 is not prime)
+      `function isPrime(n) {
+  if (n <= 1) return false;
+  for (let i = 2; i < n; i++) {
+    if (n % i === 0) return false;
+  }
+  return true;
+}`
+    ]
+  }
+};
+
+let currentKey = 'sumArray';
+let running = false;
+let attemptResults = []; // [{source, results, allPass}]
+
+function selectPreset(key) {
+  if (running) return;
+  currentKey = key;
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.toggle('active', c.dataset.key === key));
+  document.getElementById('taskInput').value = TASKS[key].label;
+  resetAll();
+}
+selectPreset('sumArray');
+
+// ─── REAL SANDBOXED EXECUTION (genuinely runs the candidate code) ───
+function runCandidate(candidateSource, testCases) {
+  let compiled;
+  try {
+    compiled = new Function('"use strict"; return (' + candidateSource + ');')();
+  } catch (compileErr) {
+    return testCases.map(tc => ({ ...tc, actual: undefined, pass: false, error: 'CompileError: ' + compileErr.message }));
+  }
+  return testCases.map(tc => {
+    try {
+      const actual = compiled(...tc.args);
+      const pass = JSON.stringify(actual) === JSON.stringify(tc.expected);
+      return { ...tc, actual, pass, error: null };
+    } catch (runErr) {
+      return { ...tc, actual: undefined, pass: false, error: runErr.message };
+    }
+  });
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtVal(v){
+  if (v === undefined) return 'undefined';
+  try { return JSON.stringify(v); } catch(e){ return String(v); }
+}
+
+function resetAll() {
+  if (running) return;
+  const stages = ['GENERATE','EXECUTE','VERIFY','RETRY?','DONE'];
+  document.querySelectorAll('.pipe-stage').forEach((s,i) => { s.className = 'pipe-stage ps-idle'; s.textContent = stages[i]; });
+  document.getElementById('pipeStatus').textContent = 'Ready — pick a preset task and click Run';
+  document.getElementById('mAttempts').textContent = '0';
+  document.getElementById('mTests').textContent = '0/0';
+  document.getElementById('mTests').className = 'm-val';
+  document.getElementById('mRetries').textContent = '0';
+  document.getElementById('mStatus').textContent = '—';
+  document.getElementById('mStatus').className = 'm-val';
+  document.getElementById('codeView').textContent = '// Click "Run Agent" to generate the first attempt';
+  document.getElementById('attemptTabs').innerHTML = '';
+  document.getElementById('testTable').style.display = 'none';
+  document.getElementById('testBody').innerHTML = '';
+  attemptResults = [];
+  document.getElementById('agentLog').innerHTML = `
+    <div><span class="log-blue">[system]</span> Sandbox ready — candidate code runs via <span class="log-orange">new Function()</span> inside a try/catch harness</div>
+    <div><span class="log-blue">[system]</span> Test-case runner armed — 0 fabricated results, all pass/fail comes from real execution</div>
+    <div style="color:#374151">[idle] Waiting for a task...</div>`;
+}
+
+function renderAttemptTabs() {
+  const wrap = document.getElementById('attemptTabs');
+  wrap.innerHTML = attemptResults.map((a, i) => {
+    const cls = a.allPass ? 'pass' : 'fail';
+    return `<span class="attempt-tab ${cls}${i === attemptResults.length-1 ? ' active' : ''}" onclick="showAttempt(${i})">Attempt ${i+1} — ${a.allPass ? 'PASS' : 'FAIL'}</span>`;
+  }).join('');
+}
+
+function showAttempt(i) {
+  const a = attemptResults[i];
+  if (!a) return;
+  document.querySelectorAll('.attempt-tab').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  document.getElementById('codeView').textContent = a.source;
+  renderTestTable(a.results);
+}
+
+function renderTestTable(results) {
+  const table = document.getElementById('testTable');
+  const body = document.getElementById('testBody');
+  table.style.display = '';
+  body.innerHTML = results.map(r => {
+    const inputStr = escapeHtml(r.args.map(fmtVal).join(', '));
+    const expStr = escapeHtml(fmtVal(r.expected));
+    const actStr = r.error ? escapeHtml(r.error) : escapeHtml(fmtVal(r.actual));
+    return `<tr>
+      <td>${inputStr}</td>
+      <td>${expStr}</td>
+      <td>${actStr}</td>
+      <td class="${r.pass ? 'test-pass' : 'test-fail'}">${r.pass ? '✓ PASS' : '✗ FAIL'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
+
+async function runAgent() {
+  if (running) return;
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  resetAll();
+
+  const task = TASKS[currentKey];
+  const stageEls = document.querySelectorAll('.pipe-stage');
+  const log = document.getElementById('agentLog');
+  const statusEl = document.getElementById('pipeStatus');
+
+  function logLine(html) {
+    log.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
+    log.scrollTop = log.scrollHeight;
+  }
+  function setStage(idx, cls) {
+    stageEls[idx].className = 'pipe-stage ' + cls;
+  }
+  function resetStages() {
+    ['GENERATE','EXECUTE','VERIFY','RETRY?','DONE'].forEach((_,i) => setStage(i, 'ps-idle'));
+  }
+
+  logLine(`<span class="log-white">[Agent]</span> Task: "<span class="log-orange">${escapeHtml(task.label)}</span>"`);
+  await sleep(200);
+
+  let retries = 0;
+  let finalPass = false;
+  let lastResults = null;
+
+  for (let i = 0; i < task.attempts.length; i++) {
+    resetStages();
+    const source = task.attempts[i];
+
+    // GENERATE
+    setStage(0, 'ps-active');
+    statusEl.textContent = `Attempt ${i+1}: generating candidate function...`;
+    logLine(`<span class="log-purple">[Generate]</span> Writing candidate function (attempt ${i+1})...`);
+    await sleep(500);
+    setStage(0, 'ps-done');
+
+    // EXECUTE (real)
+    setStage(1, 'ps-active');
+    statusEl.textContent = `Attempt ${i+1}: executing in sandbox...`;
+    logLine(`<span class="log-blue">[Execute]</span> Compiling with new Function() and running ${task.testCases.length} real test cases...`);
+    await sleep(500);
+
+    const results = runCandidate(source, task.testCases);
+    lastResults = results;
+    const allPass = results.every(r => r.pass);
+    const passCount = results.filter(r => r.pass).length;
+
+    results.forEach(r => {
+      if (r.error) {
+        logLine(`<span class="log-red">[Execute]</span> ${escapeHtml(source.match(/function\s+(\w+)/)?.[1] || 'fn')}(${escapeHtml(r.args.map(fmtVal).join(', '))}) → threw: ${escapeHtml(r.error)}`);
+      } else {
+        logLine(`<span class="log-blue">[Execute]</span> ${escapeHtml(source.match(/function\s+(\w+)/)?.[1] || 'fn')}(${escapeHtml(r.args.map(fmtVal).join(', '))}) → ${escapeHtml(fmtVal(r.actual))}`);
+      }
+    });
+    setStage(1, 'ps-done');
+
+    attemptResults.push({ source, results, allPass });
+    renderAttemptTabs();
+    showAttempt(attemptResults.length - 1);
+    document.getElementById('mAttempts').textContent = attemptResults.length;
+    document.getElementById('mTests').textContent = `${passCount}/${results.length}`;
+    document.getElementById('mTests').className = 'm-val ' + (allPass ? 'ok' : 'fail');
+
+    await sleep(300);
+
+    // VERIFY
+    setStage(2, 'ps-active');
+    statusEl.textContent = `Attempt ${i+1}: verifying results...`;
+    logLine(`<span class="log-orange">[Verify]</span> ${passCount}/${results.length} test cases passed`);
+    await sleep(450);
+
+    if (allPass) {
+      setStage(2, 'ps-done');
+      setStage(3, 'ps-done');
+      stageEls[3].textContent = 'NO RETRY';
+      setStage(4, 'ps-active');
+      await sleep(350);
+      setStage(4, 'ps-done');
+      logLine(`<span class="log-green">[Done]</span> All tests passed on attempt ${i+1} — task complete`);
+      finalPass = true;
+      break;
+    } else {
+      setStage(2, 'ps-failed');
+      if (i < task.attempts.length - 1) {
+        setStage(3, 'ps-retry');
+        stageEls[3].textContent = 'RETRYING';
+        retries++;
+        document.getElementById('mRetries').textContent = retries;
+        logLine(`<span class="log-red">[Verify]</span> Attempt ${i+1} failed — looping back to GENERATE with failure context`);
+        await sleep(500);
+      } else {
+        setStage(3, 'ps-failed');
+        stageEls[3].textContent = 'NO MORE TRIES';
+        setStage(4, 'ps-failed');
+        stageEls[4].textContent = 'GAVE UP';
+        logLine(`<span class="log-red">[Done]</span> Exhausted all hand-authored attempts — task failed`);
+      }
+    }
+  }
+
+  document.getElementById('mStatus').textContent = finalPass ? 'SOLVED' : 'FAILED';
+  document.getElementById('mStatus').className = 'm-val ' + (finalPass ? 'ok' : 'fail');
+  statusEl.textContent = finalPass ? '✓ Agent self-corrected and solved the task' : '✗ Agent could not solve the task in the available attempts';
+  running = false;
+  document.getElementById('runBtn').disabled = false;
+}
+</script>
+</body>
+</html>

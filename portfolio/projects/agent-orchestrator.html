@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Agent Orchestration Visualizer — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Task input */
+.task-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap}
+.task-input{flex:1;min-width:220px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem;color:var(--text);font-size:.82rem;font-family:inherit;outline:none}
+.task-input:focus{border-color:var(--purple)}
+.task-presets{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem}
+.preset-chip{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.3rem .8rem;border-radius:99px;font-size:.72rem;cursor:pointer;transition:all .2s}
+.preset-chip:hover{border-color:var(--purple2);color:var(--purple2)}
+
+/* Pipeline stages */
+.pipeline{display:flex;gap:2px;margin-bottom:.8rem;flex-wrap:wrap}
+.pipe-stage{flex:1;min-width:90px;height:38px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;transition:all .3s;text-align:center;padding:0 .3rem}
+.ps-idle{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.ps-active{background:rgba(124,58,237,.2);color:var(--purple2);border:1px solid rgba(124,58,237,.4);box-shadow:0 0 8px rgba(124,58,237,.2)}
+.ps-done{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+
+/* metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+/* graph */
+.graph-wrap{overflow-x:auto}
+#graphCanvas{display:block;border-radius:10px;background:#020208}
+
+/* log */
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:230px;overflow-y:auto;font-family:monospace;font-size:.72rem;line-height:1.85;color:#64748b}
+.log-purple{color:#a855f7}.log-blue{color:#60a5fa}.log-green{color:#4ade80}.log-orange{color:#fb923c}.log-white{color:#e2e8f0;font-weight:700}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,1fr)}.pipe-stage{min-width:70px;font-size:.55rem}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Multi-Agent Systems · LLM Orchestration · Tool Calling</span></div>
+  <h1>AI Agent Orchestration Visualizer</h1>
+  <p class="subtitle">A live simulation of a multi-agent LLM pipeline — a Planner agent decomposes the task, a Tool-Executor calls real-world functions, and a Critic validates the result before it's returned. Type a task below and watch the agents reason.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mAgents">4</div><div class="m-label">Agents</div></div>
+    <div class="metric"><div class="m-val" id="mCalls">0</div><div class="m-label">Tool Calls</div></div>
+    <div class="metric"><div class="m-val" id="mLatency">—</div><div class="m-label">Latency</div></div>
+    <div class="metric"><div class="m-val" id="mRetries">0</div><div class="m-label">Critic Retries</div></div>
+  </div>
+
+  <!-- TASK INPUT -->
+  <div class="card">
+    <div class="card-h">Task</div>
+    <div class="task-presets">
+      <span class="preset-chip" onclick="setTask('Find the top 5 leads for an IT services company and draft outreach emails')">Find leads &amp; draft outreach</span>
+      <span class="preset-chip" onclick="setTask('Summarize this week\'s CRM activity and flag stale deals')">Summarize CRM activity</span>
+      <span class="preset-chip" onclick="setTask('Check if a company domain is genuine and enrich its contact info')">Verify &amp; enrich a lead</span>
+    </div>
+    <div class="task-row">
+      <input class="task-input" id="taskInput" placeholder="e.g. Find 5 SaaS companies that need IT support and draft a cold email" value="Find 5 SaaS companies that need IT support and draft a cold email"/>
+      <button class="btn go" id="runBtn" onclick="runAgents()">▶ Run Agents</button>
+      <button class="btn" onclick="resetAll()">Reset</button>
+    </div>
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage ps-idle">PLANNER</div>
+      <div class="pipe-stage ps-idle">TOOL SELECT</div>
+      <div class="pipe-stage ps-idle">TOOL EXEC</div>
+      <div class="pipe-stage ps-idle">CRITIC REVIEW</div>
+      <div class="pipe-stage ps-idle">FINAL ANSWER</div>
+    </div>
+    <span id="pipeStatus" style="font-size:.72rem;color:var(--muted)">Ready — type a task and click Run</span>
+  </div>
+
+  <!-- AGENT GRAPH -->
+  <div class="card">
+    <div class="card-h">Agent Graph — Message Passing</div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:.8rem">Each node is an autonomous agent with its own system prompt and tool access. Edges glow when a message or tool result flows between agents.</p>
+    <div class="graph-wrap">
+      <canvas id="graphCanvas" width="560" height="340"></canvas>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">Agent Reasoning Trace</div>
+    <div class="log" id="agentLog">
+      <div><span class="log-blue">[system]</span> Agent graph compiled — 4 nodes, conditional routing enabled</div>
+      <div><span class="log-blue">[system]</span> Tools registered: web_search, crm_query, email_draft, domain_verify</div>
+      <div><span style="color:#374151">[idle]</span> Waiting for a task...</div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Orchestration Graph (Python / LangGraph-style)</div>
+<pre><span class="comment"># Agent graph definition — Muhammad Moiz Ahmad</span>
+<span class="comment"># Planner -> Tool-Executor -> Critic, with conditional retry loop</span>
+
+<span class="kw">class</span> <span class="type">AgentState</span>(TypedDict):
+    task: <span class="type">str</span>
+    plan: <span class="type">list</span>[<span class="type">str</span>]
+    tool_results: <span class="type">list</span>[<span class="type">dict</span>]
+    critique: <span class="type">str</span> | <span class="kw">None</span>
+    retries: <span class="type">int</span>
+
+<span class="kw">def</span> <span class="fn">planner_node</span>(state: AgentState) -> AgentState:
+    <span class="comment"># LLM call: decompose task into ordered tool-calling steps</span>
+    state[<span class="str">"plan"</span>] = llm.plan(state[<span class="str">"task"</span>])
+    <span class="kw">return</span> state
+
+<span class="kw">def</span> <span class="fn">tool_executor_node</span>(state: AgentState) -> AgentState:
+    <span class="kw">for</span> step <span class="kw">in</span> state[<span class="str">"plan"</span>]:
+        result = tools[step.tool_name](**step.args)
+        state[<span class="str">"tool_results"</span>].append(result)
+    <span class="kw">return</span> state
+
+<span class="kw">def</span> <span class="fn">critic_node</span>(state: AgentState) -> AgentState:
+    <span class="comment"># LLM call: does the result actually satisfy the task?</span>
+    state[<span class="str">"critique"</span>] = llm.critique(state[<span class="str">"task"</span>], state[<span class="str">"tool_results"</span>])
+    <span class="kw">return</span> state
+
+<span class="kw">def</span> <span class="fn">should_retry</span>(state: AgentState) -> <span class="type">str</span>:
+    <span class="kw">if</span> state[<span class="str">"critique"</span>].passed <span class="kw">or</span> state[<span class="str">"retries"</span>] >= <span class="num">2</span>:
+        <span class="kw">return</span> <span class="str">"final_answer"</span>
+    state[<span class="str">"retries"</span>] += <span class="num">1</span>
+    <span class="kw">return</span> <span class="str">"planner"</span>  <span class="comment"># loop back with critic feedback</span>
+
+graph = StateGraph(AgentState)
+graph.add_node(<span class="str">"planner"</span>, planner_node)
+graph.add_node(<span class="str">"tool_executor"</span>, tool_executor_node)
+graph.add_node(<span class="str">"critic"</span>, critic_node)
+graph.add_conditional_edges(<span class="str">"critic"</span>, should_retry)
+app = graph.compile()</pre>
+  </div>
+</div>
+
+<script>
+// ─── TASK PRESETS ───
+function setTask(t) { document.getElementById('taskInput').value = t; }
+
+// ─── AGENT SIMULATION DATA ───
+const stages = ['PLANNER','TOOL SELECT','TOOL EXEC','CRITIC REVIEW','FINAL ANSWER'];
+const stageTimes = [900, 500, 1400, 800, 400];
+let toolCallCount = 0;
+let critiqueRetries = 0;
+let running = false;
+
+// Each line is {html, isToolCall} — isToolCall is an explicit flag rather
+// than something inferred by string-matching the rendered HTML (which broke
+// once a <span> tag sat between "Tool Exec]" and the arrow character).
+function traceFor(task) {
+  const short = task.length > 60 ? task.slice(0,57) + '…' : task;
+  const L = (html, isToolCall = false) => ({ html, isToolCall });
+  return [
+    [
+      L(`<span class="log-white">[Planner]</span> Task received: "<span class="log-orange">${escapeHtml(short)}</span>"`),
+      L(`<span class="log-purple">[Planner]</span> Decomposing into sub-goals...`),
+      L(`<span class="log-purple">[Planner]</span> Plan: 1) search targets  2) verify + enrich  3) draft output`),
+    ],
+    [
+      L(`<span class="log-blue">[Tool Select]</span> Matching sub-goals to registered tools`),
+      L(`<span class="log-blue">[Tool Select]</span> Selected: web_search, domain_verify, email_draft`),
+    ],
+    [
+      L(`<span class="log-purple">[Tool Exec]</span> → web_search(query="${escapeHtml(short.slice(0,30))}")`, true),
+      L(`<span class="log-green">[Tool Exec]</span> ← 12 candidate results returned`),
+      L(`<span class="log-purple">[Tool Exec]</span> → domain_verify(domains=[...])`, true),
+      L(`<span class="log-green">[Tool Exec]</span> ← 8/12 passed DNS + MX genuine-check`),
+      L(`<span class="log-purple">[Tool Exec]</span> → email_draft(contact, tone="professional")`, true),
+      L(`<span class="log-green">[Tool Exec]</span> ← draft generated, 142 tokens`),
+    ],
+    [
+      L(`<span class="log-orange">[Critic]</span> Reviewing output against original task...`),
+      L(`<span class="log-orange">[Critic]</span> Checking: relevance ✓ · factual grounding ✓ · tone ✓`),
+    ],
+    [
+      L(`<span class="log-white">[Final Answer]</span> Task complete — output validated by Critic`),
+      L(`<span class="log-green">[Final Answer]</span> Returned to caller · session closed`),
+    ],
+  ];
+}
+function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function resetAll() {
+  if (running) return;
+  document.querySelectorAll('.pipe-stage').forEach((s,i) => { s.className = 'pipe-stage ps-idle'; s.textContent = stages[i]; });
+  document.getElementById('pipeStatus').textContent = 'Ready — type a task and click Run';
+  document.getElementById('mCalls').textContent = '0';
+  document.getElementById('mLatency').textContent = '—';
+  document.getElementById('mRetries').textContent = '0';
+  toolCallCount = 0; critiqueRetries = 0;
+  document.getElementById('agentLog').innerHTML = `
+    <div><span class="log-blue">[system]</span> Agent graph compiled — 4 nodes, conditional routing enabled</div>
+    <div><span class="log-blue">[system]</span> Tools registered: web_search, crm_query, email_draft, domain_verify</div>
+    <div style="color:#374151">[idle] Waiting for a task...</div>`;
+  drawGraph(null);
+}
+
+function runAgents() {
+  if (running) return;
+  const task = document.getElementById('taskInput').value.trim() || 'Find leads for IT services';
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  resetAll();
+  const stageEls = document.querySelectorAll('.pipe-stage');
+  const log = document.getElementById('agentLog');
+  const trace = traceFor(task);
+  const startTime = Date.now();
+  let totalTime = 0;
+
+  stages.forEach((_, i) => {
+    const startDelay = totalTime;
+    const endDelay = totalTime + stageTimes[i];
+    totalTime = endDelay + 150;
+
+    setTimeout(() => {
+      stageEls[i].className = 'pipe-stage ps-active';
+      document.getElementById('pipeStatus').textContent = `Running: ${stages[i]}...`;
+      pulseGraphNode(i);
+      trace[i].forEach((line, j) => {
+        setTimeout(() => {
+          log.insertAdjacentHTML('beforeend', `<div>${line.html}</div>`);
+          log.scrollTop = log.scrollHeight;
+          if (line.isToolCall) {
+            toolCallCount++;
+            document.getElementById('mCalls').textContent = toolCallCount;
+          }
+        }, j * 140);
+      });
+    }, startDelay);
+
+    setTimeout(() => { stageEls[i].className = 'pipe-stage ps-done'; }, endDelay);
+  });
+
+  setTimeout(() => {
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    document.getElementById('mLatency').textContent = elapsed + 's';
+    document.getElementById('pipeStatus').textContent = '✓ Task complete — validated by Critic';
+    running = false;
+    document.getElementById('runBtn').disabled = false;
+  }, totalTime - 150);
+}
+
+// ─── AGENT GRAPH VIZ ───
+const canvas = document.getElementById('graphCanvas');
+const ctx = canvas.getContext('2d');
+const CW = Math.min(560, window.innerWidth - 80);
+canvas.width = CW;
+const nodes = [
+  { name: 'Planner', x: 0.5, y: 0.15, color: '168,85,247' },
+  { name: 'Tool\nExecutor', x: 0.2, y: 0.55, color: '96,165,250' },
+  { name: 'Critic', x: 0.8, y: 0.55, color: '249,115,22' },
+  { name: 'Memory', x: 0.5, y: 0.88, color: '74,222,128' },
+];
+const edges = [[0,1],[1,2],[2,0],[0,3],[1,3],[2,3]];
+let pulseState = new Array(nodes.length).fill(0);
+let edgePulse = new Array(edges.length).fill(0);
+
+function nodePos(n) { return { x: n.x * canvas.width, y: n.y * canvas.height }; }
+
+function drawGraph() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#020208'; ctx.fillRect(0,0,W,H);
+
+  edges.forEach(([a,b], i) => {
+    const pa = nodePos(nodes[a]), pb = nodePos(nodes[b]);
+    const glow = edgePulse[i];
+    ctx.strokeStyle = `rgba(168,85,247,${.12 + glow*.6})`;
+    ctx.lineWidth = 1 + glow*2;
+    if (glow > .1) { ctx.shadowColor = 'rgba(168,85,247,.6)'; ctx.shadowBlur = glow*14; }
+    ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    ctx.shadowBlur = 0;
+  });
+
+  nodes.forEach((n, i) => {
+    const p = nodePos(n);
+    const pulse = pulseState[i];
+    const r = 34 + pulse*8;
+    if (pulse > .1) { ctx.shadowColor = `rgba(${n.color},${pulse*.7})`; ctx.shadowBlur = pulse*22; }
+    ctx.fillStyle = `rgba(${n.color},${.1 + pulse*.25})`;
+    ctx.strokeStyle = `rgba(${n.color},${.5 + pulse*.5})`;
+    ctx.lineWidth = 1.5 + pulse;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = `rgba(${n.color},${.75 + pulse*.25})`;
+    ctx.font = `bold ${10 + pulse}px monospace`;
+    ctx.textAlign = 'center';
+    n.name.split('\n').forEach((line, li) => {
+      ctx.fillText(line, p.x, p.y + 3 + li*11 - (n.name.includes('\n') ? 5 : 0));
+    });
+  });
+}
+
+function pulseGraphNode(stageIdx) {
+  // map pipeline stage -> which node lights up
+  const map = [0, 0, 1, 2, 3];
+  const nodeIdx = map[stageIdx];
+  let t = 0;
+  const anim = setInterval(() => {
+    t += 1;
+    pulseState[nodeIdx] = Math.max(0, 1 - t/16);
+    edges.forEach((e, i) => { if (e.includes(nodeIdx)) edgePulse[i] = Math.max(0, 1 - t/20); });
+    drawGraph();
+    if (t > 20) clearInterval(anim);
+  }, 30);
+}
+
+drawGraph();
+</script>
+</body>
+</html>

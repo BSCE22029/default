@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CSV ETL Pipeline & Data Cleaner — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:1000px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.5rem 1.1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn.dl{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.4);color:#4ade80}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+textarea{width:100%;min-height:150px;background:#020208;border:1px solid var(--border);border-radius:10px;color:#cbd5e1;font-family:monospace;font-size:.75rem;padding:.8rem;resize:vertical;line-height:1.6}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem;align-items:center}
+
+.pipeline{display:flex;gap:2px;margin-bottom:.8rem;flex-wrap:wrap}
+.pipe-stage{flex:1;min-width:100px;height:38px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;transition:all .3s;text-align:center;padding:0 .3rem}
+.ps-idle{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.ps-active{background:rgba(124,58,237,.2);color:var(--purple2);border:1px solid rgba(124,58,237,.4);box-shadow:0 0 8px rgba(124,58,237,.2)}
+.ps-done{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+table{width:100%;border-collapse:collapse;font-size:.72rem}
+th,td{text-align:left;padding:.4rem .6rem;border-bottom:1px solid var(--border);white-space:nowrap}
+th{color:var(--purple2);font-size:.65rem;text-transform:uppercase;letter-spacing:.03em}
+td{color:#cbd5e1}
+.tbl-wrap{overflow-x:auto;max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+.err-row{color:#f87171}
+.tag-err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#f87171;padding:.1rem .5rem;border-radius:99px;font-size:.65rem}
+.tag-ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;padding:.1rem .5rem;border-radius:99px;font-size:.65rem}
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,1fr)}.pipe-stage{min-width:76px;font-size:.55rem}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Data Engineering · ETL · Data Quality</span></div>
+  <h1>CSV ETL Pipeline & Data Cleaner</h1>
+  <p class="subtitle">A real extract-transform-load pipeline running entirely in the browser: parse raw CSV → validate every field against real rules → dedupe on a normalized row hash → standardize types, casing, and dates → load into a clean, downloadable dataset. Every number below is computed from the rows you give it — paste your own messy CSV and it processes that instead.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mIn">—</div><div class="m-label">Rows In</div></div>
+    <div class="metric"><div class="m-val" id="mOut">—</div><div class="m-label">Rows Out</div></div>
+    <div class="metric"><div class="m-val" id="mDupes">—</div><div class="m-label">Duplicates Removed</div></div>
+    <div class="metric"><div class="m-val" id="mErrors">—</div><div class="m-label">Validation Errors</div></div>
+    <div class="metric"><div class="m-val" id="mTime">—</div><div class="m-label">Pipeline Time</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Raw Input (CSV)</div>
+    <textarea id="rawInput"></textarea>
+    <div class="row">
+      <button class="btn go" onclick="runPipeline()">▶ Run Pipeline</button>
+      <button class="btn" onclick="loadSample()">Load Sample (Messy Data)</button>
+      <button class="btn dl" id="dlBtn" onclick="downloadClean()" disabled>⬇ Download Clean CSV</button>
+      <span id="pipeStatus" style="font-size:.72rem;color:var(--muted)">Paste CSV or load the sample, then run.</span>
+    </div>
+    <div class="pipeline" id="pipeline" style="margin-top:1rem">
+      <div class="pipe-stage ps-idle">PARSE</div>
+      <div class="pipe-stage ps-idle">VALIDATE</div>
+      <div class="pipe-stage ps-idle">DEDUPE</div>
+      <div class="pipe-stage ps-idle">NORMALIZE</div>
+      <div class="pipe-stage ps-idle">LOAD</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Validation Errors</div>
+    <div class="tbl-wrap"><table id="errTable"><thead><tr><th>Row</th><th>Field</th><th>Issue</th><th>Value</th></tr></thead><tbody id="errBody"><tr><td colspan="4" style="color:var(--muted)">Run the pipeline to see results.</td></tr></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Cleaned Output (first 25 rows)</div>
+    <div class="tbl-wrap"><table id="outTable"><thead id="outHead"></thead><tbody id="outBody"><tr><td style="color:var(--muted)">Run the pipeline to see results.</td></tr></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Transform & Validation Rules (JavaScript)</div>
+<pre><span class="comment">// etl.js — Muhammad Moiz Ahmad</span>
+<span class="comment">// Real rules applied to every row — no mock output.</span>
+
+<span class="kw">const</span> RULES = {
+  email: v =&gt; <span class="fn">/^[^\s@]+@[^\s@]+\.[^\s@]+$/</span>.test(v),
+  qty:   v =&gt; <span class="kw">Number</span>.isFinite(<span class="kw">Number</span>(v)) &amp;&amp; <span class="kw">Number</span>(v) &gt;= <span class="num">0</span>,
+  date:  v =&gt; !<span class="kw">isNaN</span>(<span class="kw">Date</span>.parse(v)),
+};
+
+<span class="kw">function</span> <span class="fn">rowHash</span>(row) {
+  <span class="comment">// Normalize before hashing so "  Ali@X.com " and "ali@x.com" collide</span>
+  <span class="kw">return</span> <span class="kw">Object</span>.values(row)
+    .map(v =&gt; <span class="kw">String</span>(v).trim().toLowerCase())
+    .join(<span class="str">'|'</span>);
+}
+
+<span class="kw">function</span> <span class="fn">normalizeDate</span>(v) {
+  <span class="comment">// Rearrange components directly — going through Date/toISOString()</span>
+  <span class="comment">// shifts the calendar day whenever the local timezone is behind UTC.</span>
+  <span class="kw">const</span> mdy = v.match(<span class="fn">/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/</span>);
+  <span class="kw">if</span> (mdy) {
+    <span class="kw">const</span> [, m, d, y] = mdy;
+    <span class="kw">return</span> `${y}-${m.padStart(<span class="num">2</span>,<span class="str">'0'</span>)}-${d.padStart(<span class="num">2</span>,<span class="str">'0'</span>)}`;
+  }
+  <span class="kw">return</span> v; <span class="comment">// already ISO, or left as-is for the validator to flag</span>
+}</pre>
+  </div>
+</div>
+
+<script>
+const SAMPLE = `name,email,qty,signup_date
+ Ali Khan , ali.khan@example.com ,5,03/14/2026
+Sara Ahmed,SARA.AHMED@EXAMPLE.COM,12,2026-03-15
+Ali Khan,ali.khan@example.com,5,03/14/2026
+Bilal Hussain,not-an-email,3,03/16/2026
+Nadia Farooq,nadia@example.com,-2,03/17/2026
+Imran Sheikh,imran@example.com,,03/18/2026
+Sara Ahmed,sara.ahmed@example.com,12,2026-03-15
+Zainab Malik,zainab@example.com,7,not-a-date
+Hassan Raza,hassan@example.com,9,03/20/2026`;
+
+function loadSample() { document.getElementById('rawInput').value = SAMPLE; }
+loadSample();
+
+// Rearranges date components directly instead of going through Date/toISOString,
+// which shifts the calendar day when the local timezone is behind UTC.
+function normalizeDate(v) {
+  const iso = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return v;
+  const mdy = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdy) { const [, m, d, y] = mdy; return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+  const d = new Date(v);
+  return isNaN(d) ? v : d.toISOString().slice(0,10);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length);
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows = lines.slice(1).map(line => {
+    const cells = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (cells[i] ?? '').trim());
+    return obj;
+  });
+  return { headers, rows };
+}
+
+async function setStage(i, cls) {
+  document.querySelectorAll('.pipe-stage')[i].className = 'pipe-stage ' + cls;
+  await new Promise(r => setTimeout(r, 180));
+}
+
+async function runPipeline() {
+  const t0 = performance.now();
+  document.querySelectorAll('.pipe-stage').forEach(s => s.className = 'pipe-stage ps-idle');
+  document.getElementById('pipeStatus').textContent = 'Running...';
+  document.getElementById('dlBtn').disabled = true;
+
+  // PARSE
+  await setStage(0, 'ps-active');
+  const raw = document.getElementById('rawInput').value;
+  const { headers, rows } = parseCSV(raw);
+  await setStage(0, 'ps-done');
+
+  // VALIDATE
+  await setStage(1, 'ps-active');
+  const RULES = {
+    email: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+    qty:   v => v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0,
+    signup_date: v => !isNaN(Date.parse(v)),
+  };
+  const errors = [];
+  rows.forEach((row, i) => {
+    Object.keys(RULES).forEach(field => {
+      if (headers.includes(field) && !RULES[field](row[field])) {
+        errors.push({ row: i + 2, field, issue: field === 'email' ? 'invalid email format' : field === 'qty' ? 'missing or negative quantity' : 'unparseable date', value: row[field] || '(empty)' });
+      }
+    });
+  });
+  await setStage(1, 'ps-done');
+
+  // DEDUPE
+  await setStage(2, 'ps-active');
+  const seen = new Set();
+  let dupeCount = 0;
+  const deduped = rows.filter(row => {
+    const key = Object.values(row).map(v => String(v).trim().toLowerCase()).join('|');
+    if (seen.has(key)) { dupeCount++; return false; }
+    seen.add(key);
+    return true;
+  });
+  await setStage(2, 'ps-done');
+
+  // NORMALIZE
+  await setStage(3, 'ps-active');
+  const normalized = deduped.map(row => {
+    const out = {};
+    headers.forEach(h => {
+      let v = row[h];
+      if (h === 'email') v = v.trim().toLowerCase();
+      else if (h === 'signup_date') v = normalizeDate(v);
+      else v = typeof v === 'string' ? v.trim() : v;
+      out[h] = v;
+    });
+    return out;
+  });
+  await setStage(3, 'ps-done');
+
+  // LOAD
+  await setStage(4, 'ps-active');
+  window.__cleanRows = normalized;
+  window.__headers = headers;
+  renderOutput(headers, normalized);
+  renderErrors(errors);
+  await setStage(4, 'ps-done');
+
+  const elapsed = (performance.now() - t0).toFixed(0);
+  document.getElementById('mIn').textContent = rows.length;
+  document.getElementById('mOut').textContent = normalized.length;
+  document.getElementById('mDupes').textContent = dupeCount;
+  document.getElementById('mErrors').textContent = errors.length;
+  document.getElementById('mTime').textContent = elapsed + 'ms';
+  document.getElementById('pipeStatus').textContent = `✓ Done — ${normalized.length} clean rows loaded`;
+  document.getElementById('dlBtn').disabled = false;
+}
+
+function renderErrors(errors) {
+  const body = document.getElementById('errBody');
+  if (!errors.length) { body.innerHTML = '<tr><td colspan="4"><span class="tag-ok">No validation errors</span></td></tr>'; return; }
+  body.innerHTML = errors.map(e => `<tr class="err-row"><td>${e.row}</td><td>${e.field}</td><td>${e.issue}</td><td>${e.value}</td></tr>`).join('');
+}
+
+function renderOutput(headers, rows) {
+  document.getElementById('outHead').innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+  document.getElementById('outBody').innerHTML = rows.slice(0, 25).map(r =>
+    '<tr>' + headers.map(h => `<td>${r[h]}</td>`).join('') + '</tr>'
+  ).join('') || '<tr><td style="color:var(--muted)">No rows survived cleaning.</td></tr>';
+}
+
+function downloadClean() {
+  const headers = window.__headers, rows = window.__cleanRows;
+  if (!rows) return;
+  const csv = [headers.join(','), ...rows.map(r => headers.map(h => r[h]).join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cleaned.csv';
+  a.click();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>5-Stage Pipelined RISC-V CPU — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:720px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:1040px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.5rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.preset-chip{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.35rem .85rem;border-radius:99px;font-size:.75rem;cursor:pointer;transition:all .2s}
+.preset-chip:hover{border-color:var(--purple2);color:var(--purple2)}
+.preset-chip.active{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.6rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.56rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem;letter-spacing:.03em}
+
+/* Reservation table (pipeline diagram) */
+.pt-wrap{overflow-x:auto}
+table.pt{border-collapse:collapse;font-size:.7rem;white-space:nowrap}
+table.pt th, table.pt td{border:1px solid var(--border);padding:.3rem .5rem;text-align:center;min-width:34px}
+table.pt th{color:var(--muted);font-weight:700;background:var(--bg3);position:sticky;top:0}
+table.pt td.instr-col{text-align:left;font-family:monospace;color:var(--text);font-weight:700;min-width:150px;background:var(--bg3);position:sticky;left:0}
+.stg{border-radius:5px;padding:.15rem .3rem;font-weight:800;font-size:.62rem;display:inline-block;min-width:26px}
+.stg-IF{background:rgba(59,130,246,.25);color:#93c5fd}
+.stg-ID{background:rgba(168,85,247,.25);color:#d8b4fe}
+.stg-EX{background:rgba(249,115,22,.25);color:#fdba74}
+.stg-MEM{background:rgba(34,197,94,.25);color:#86efac}
+.stg-WB{background:rgba(34,197,94,.45);color:#dcfce7}
+.stg-stall{background:rgba(239,68,68,.2);color:#fca5a5;border:1px dashed rgba(239,68,68,.5)}
+.cur-col{background:rgba(124,58,237,.08)}
+
+.regfile{display:grid;grid-template-columns:repeat(8,1fr);gap:.4rem;font-family:monospace;font-size:.68rem}
+.reg-cell{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.35rem;text-align:center}
+.reg-cell.changed{border-color:var(--purple2);box-shadow:0 0 6px rgba(168,85,247,.3)}
+.reg-name{color:var(--muted)}
+.reg-val{color:var(--text);font-weight:700}
+
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:210px;overflow-y:auto;font-family:monospace;font-size:.72rem;line-height:1.85;color:#64748b}
+.log-stall{color:#f87171}.log-forward{color:#4ade80}.log-flush{color:#fb923c}.log-info{color:#60a5fa}.log-white{color:#e2e8f0;font-weight:700}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.71rem;overflow-x:auto;line-height:1.6;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:750px){.metrics{grid-template-columns:repeat(3,1fr)}.regfile{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Computer Architecture · Verilog RTL · RV32I</span></div>
+  <h1>5-Stage Pipelined RISC-V CPU</h1>
+  <p class="subtitle">A real RV32I core in synthesizable Verilog — IF → ID → EX → MEM → WB — with a hazard detection unit and a forwarding unit resolving data hazards, and branch flushing for control hazards. The visualizer below runs the exact same cycle-by-cycle logic as the RTL (register file, forwarding, stalling, squashing), instruction-encoding-verified against an independent Python ISA simulator.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mCycle">0</div><div class="m-label">Cycle</div></div>
+    <div class="metric"><div class="m-val" id="mRetired">0</div><div class="m-label">Retired</div></div>
+    <div class="metric"><div class="m-val" id="mStalls">0</div><div class="m-label">Stalls</div></div>
+    <div class="metric"><div class="m-val" id="mForwards">0</div><div class="m-label">Forwards</div></div>
+    <div class="metric"><div class="m-val" id="mFlushes">0</div><div class="m-label">Flushes</div></div>
+    <div class="metric"><div class="m-val" id="mIpc">—</div><div class="m-label">IPC</div></div>
+  </div>
+
+  <!-- PROGRAM SELECT -->
+  <div class="card">
+    <div class="card-h">Test Program</div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+      <span class="preset-chip active" data-prog="A" onclick="selectProgram('A',this)">Forwarding (no stall)</span>
+      <span class="preset-chip" data-prog="B" onclick="selectProgram('B',this)">Load-Use Hazard (stall)</span>
+      <span class="preset-chip" data-prog="C" onclick="selectProgram('C',this)">Branch (flush)</span>
+      <span class="preset-chip" data-prog="D" onclick="selectProgram('D',this)">Ideal (no hazards)</span>
+    </div>
+    <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+      <button class="btn go" onclick="stepCycle()">▶ Step Cycle</button>
+      <button class="btn go" onclick="runAll()">⏩ Run to Completion</button>
+      <button class="btn" onclick="resetSim()">Reset</button>
+      <span id="statusMsg" style="font-size:.72rem;color:var(--muted)">Ready — step through or run the full pipeline</span>
+    </div>
+  </div>
+
+  <!-- SOURCE FILES -->
+  <div class="card">
+    <div class="card-h">Real Source Files</div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.8rem">This isn't just a decorative code block — these are the actual RTL and testbench files the visualizer above is faithfully modeled on, including the hex-encoded test programs and a README with the golden-model verification table.</p>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <a class="btn" href="riscv-pipeline-rtl/riscv_pipeline.v" target="_blank">📄 riscv_pipeline.v</a>
+      <a class="btn" href="riscv-pipeline-rtl/tb_riscv_pipeline.v" target="_blank">📄 tb_riscv_pipeline.v</a>
+      <a class="btn" href="riscv-pipeline-rtl/README.md" target="_blank">📄 README.md</a>
+    </div>
+  </div>
+
+  <!-- PIPELINE DIAGRAM -->
+  <div class="card">
+    <div class="card-h">Pipeline Reservation Diagram</div>
+    <p style="font-size:.74rem;color:var(--muted);margin-bottom:.8rem">Each row is one instruction; each column is one clock cycle. A dashed red cell means the instruction is stalled waiting in that stage (bubble ahead of it).</p>
+    <div class="pt-wrap"><table class="pt" id="pipeTable"></table></div>
+  </div>
+
+  <!-- REGISTER FILE + LOG -->
+  <div class="card">
+    <div class="card-h">Register File (x0–x15)</div>
+    <div class="regfile" id="regFile"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Pipeline Event Log</div>
+    <div class="log" id="pipeLog"></div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Hazard Detection + Forwarding Unit (Verilog)</div>
+<pre><span class="comment">// hazard_unit — stalls on a load-use hazard (real RTL, riscv_pipeline.v)</span>
+<span class="kw">module</span> <span class="type">hazard_unit</span> (
+    <span class="kw">input</span>        idex_mem_read,
+    <span class="kw">input</span> [<span class="num">4</span>:<span class="num">0</span>]  idex_rd,
+    <span class="kw">input</span> [<span class="num">4</span>:<span class="num">0</span>]  ifid_rs1, ifid_rs2,
+    <span class="kw">output</span>       stall
+);
+    <span class="kw">assign</span> stall = idex_mem_read &amp;&amp;
+                   ((idex_rd == ifid_rs1) || (idex_rd == ifid_rs2)) &amp;&amp;
+                   (idex_rd != <span class="num">5</span>'d<span class="num">0</span>);
+<span class="kw">endmodule</span>
+
+<span class="comment">// forward_unit — EX/MEM has priority over MEM/WB (more recent value)</span>
+<span class="kw">module</span> <span class="type">forward_unit</span> (
+    <span class="kw">input</span> [<span class="num">4</span>:<span class="num">0</span>] idex_rs1, idex_rs2,
+    <span class="kw">input</span> [<span class="num">4</span>:<span class="num">0</span>] exmem_rd, memwb_rd,
+    <span class="kw">input</span>       exmem_reg_write, memwb_reg_write,
+    <span class="kw">output reg</span> [<span class="num">1</span>:<span class="num">0</span>] forward_a, forward_b
+);
+    <span class="kw">always</span> @(*) <span class="kw">begin</span>
+        forward_a = <span class="num">2</span>'d<span class="num">0</span>;
+        <span class="kw">if</span> (exmem_reg_write &amp;&amp; exmem_rd != <span class="num">5</span>'d<span class="num">0</span> &amp;&amp; exmem_rd == idex_rs1)
+            forward_a = <span class="num">2</span>'d<span class="num">1</span>;      <span class="comment">// forward from EX/MEM</span>
+        <span class="kw">else if</span> (memwb_reg_write &amp;&amp; memwb_rd != <span class="num">5</span>'d<span class="num">0</span> &amp;&amp; memwb_rd == idex_rs1)
+            forward_a = <span class="num">2</span>'d<span class="num">2</span>;      <span class="comment">// forward from MEM/WB</span>
+        <span class="comment">// forward_b follows the same priority for rs2 (omitted here for brevity)</span>
+    <span class="kw">end</span>
+<span class="kw">endmodule</span></pre>
+  </div>
+</div>
+
+<script>
+// ─── Program definitions (identical semantics to the .hex files run by the real testbench) ───
+const PROGRAMS = {
+  A: { name: 'Forwarding', instrs: [
+    { asm: 'addi x1, x0, 5',  op: 'ADDI', rd: 1, rs1: 0, rs2: 0, imm: 5 },
+    { asm: 'addi x2, x0, 10', op: 'ADDI', rd: 2, rs1: 0, rs2: 0, imm: 10 },
+    { asm: 'add  x3, x1, x2', op: 'ADD',  rd: 3, rs1: 1, rs2: 2, imm: 0 },
+    { asm: 'sub  x4, x3, x1', op: 'SUB',  rd: 4, rs1: 3, rs2: 1, imm: 0 },
+  ]},
+  B: { name: 'Load-Use Hazard', instrs: [
+    { asm: 'addi x1, x0, 20', op: 'ADDI', rd: 1, rs1: 0, rs2: 0, imm: 20 },
+    { asm: 'sw   x1, 0(x0)',  op: 'SW',   rd: 0, rs1: 0, rs2: 1, imm: 0, isStore: true },
+    { asm: 'lw   x2, 0(x0)',  op: 'LW',   rd: 2, rs1: 0, rs2: 0, imm: 0, isLoad: true },
+    { asm: 'add  x3, x2, x2', op: 'ADD',  rd: 3, rs1: 2, rs2: 2, imm: 0 },
+  ]},
+  C: { name: 'Branch', instrs: [
+    { asm: 'addi x1, x0, 1',  op: 'ADDI', rd: 1, rs1: 0, rs2: 0, imm: 1 },
+    { asm: 'addi x2, x0, 1',  op: 'ADDI', rd: 2, rs1: 0, rs2: 0, imm: 1 },
+    { asm: 'beq  x1, x2, L',  op: 'BEQ',  rd: 0, rs1: 1, rs2: 2, imm: 0, isBranch: true, target: 4 },
+    { asm: 'addi x3, x0, 99', op: 'ADDI', rd: 3, rs1: 0, rs2: 0, imm: 99 },
+    { asm: 'addi x4, x0, 42', op: 'ADDI', rd: 4, rs1: 0, rs2: 0, imm: 42 },
+  ]},
+  D: { name: 'Ideal', instrs: [
+    { asm: 'addi x1, x0, 1', op: 'ADDI', rd: 1, rs1: 0, rs2: 0, imm: 1 },
+    { asm: 'addi x2, x0, 2', op: 'ADDI', rd: 2, rs1: 0, rs2: 0, imm: 2 },
+    { asm: 'addi x3, x0, 3', op: 'ADDI', rd: 3, rs1: 0, rs2: 0, imm: 3 },
+    { asm: 'addi x4, x0, 4', op: 'ADDI', rd: 4, rs1: 0, rs2: 0, imm: 4 },
+    { asm: 'addi x5, x0, 5', op: 'ADDI', rd: 5, rs1: 0, rs2: 0, imm: 5 },
+  ]},
+};
+
+function alu(op, a, b) {
+  switch (op) {
+    case 'ADD': case 'ADDI': case 'LW': case 'SW': return (a + b) | 0;
+    case 'SUB': case 'BEQ': return (a - b) | 0;
+    default: return 0;
+  }
+}
+function bubble() { return { rd: 0, regWrite: false, memRead: false, memWrite: false, memToReg: false, asm: '(bubble)', idx: -1 }; }
+
+// ─── Simulator state ───
+let curProg = 'A';
+let instrs, pcIdx, ifid, idex, exmem, memwb, regs, mem;
+let cycle, stalls, forwards, flushes, table, events, running, finished;
+
+function resetSim() {
+  instrs = PROGRAMS[curProg].instrs;
+  pcIdx = 0;
+  ifid = { valid: false, idx: -1 };
+  idex = bubble();
+  exmem = { rd: 0, regWrite: false, memWrite: false, memToReg: false, aluResult: 0, storeData: 0, asm: '(bubble)', idx: -1 };
+  memwb = { rd: 0, regWrite: false, memToReg: false, aluResult: 0, memRdata: 0, asm: '(bubble)', idx: -1 };
+  regs = new Array(32).fill(0);
+  mem = {};
+  cycle = 0; stalls = 0; forwards = 0; flushes = 0;
+  table = instrs.map(() => ({}));
+  events = [{ cycle: 0, type: 'info', msg: `Loaded program "${PROGRAMS[curProg].name}" — ${instrs.length} instructions` }];
+  running = false; finished = false;
+  renderAll();
+}
+
+function selectProgram(key, el) {
+  curProg = key;
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  resetSim();
+}
+
+function stepCycle() {
+  if (finished) return;
+  cycle++;
+
+  const idInstr = ifid.valid ? instrs[ifid.idx] : null;
+  const id_rs1 = idInstr ? idInstr.rs1 : 0;
+  const id_rs2 = idInstr ? idInstr.rs2 : 0;
+
+  const rd1 = id_rs1 === 0 ? 0 : (memwb.regWrite && memwb.rd === id_rs1 ? (memwb.memToReg ? memwb.memRdata : memwb.aluResult) : regs[id_rs1]);
+  const rd2 = id_rs2 === 0 ? 0 : (memwb.regWrite && memwb.rd === id_rs2 ? (memwb.memToReg ? memwb.memRdata : memwb.aluResult) : regs[id_rs2]);
+
+  const stall = idex.memRead && idex.rd !== 0 && (idex.rd === id_rs1 || idex.rd === id_rs2);
+  if (stall) { stalls++; events.push({ cycle, type: 'stall', msg: `Load-use hazard on x${idex.rd} — stalling "${idInstr.asm}" 1 cycle` }); }
+
+  let branchTaken = false, branchTargetIdx = -1;
+  if (idInstr && idInstr.isBranch && ifid.valid) {
+    branchTaken = rd1 === rd2;
+    branchTargetIdx = idInstr.target;
+    if (branchTaken) { flushes++; events.push({ cycle, type: 'flush', msg: `Branch "${idInstr.asm}" taken (x${id_rs1}==x${id_rs2}) — squashing next fetch` }); }
+  }
+
+  let forwardA = 0, forwardB = 0;
+  if (exmem.regWrite && exmem.rd !== 0 && exmem.rd === idex.rs1) forwardA = 1;
+  else if (memwb.regWrite && memwb.rd !== 0 && memwb.rd === idex.rs1) forwardA = 2;
+  if (exmem.regWrite && exmem.rd !== 0 && exmem.rd === idex.rs2) forwardB = 1;
+  else if (memwb.regWrite && memwb.rd !== 0 && memwb.rd === idex.rs2) forwardB = 2;
+  if (forwardA) { forwards++; events.push({ cycle, type: 'forward', msg: `Forward ${forwardA === 1 ? 'EX/MEM' : 'MEM/WB'} → ALU-A for "${idex.asm}"` }); }
+  if (forwardB) { forwards++; events.push({ cycle, type: 'forward', msg: `Forward ${forwardB === 1 ? 'EX/MEM' : 'MEM/WB'} → ALU-B for "${idex.asm}"` }); }
+
+  const exA = forwardA === 1 ? exmem.aluResult : forwardA === 2 ? (memwb.memToReg ? memwb.memRdata : memwb.aluResult) : idex.rdata1;
+  const exB = forwardB === 1 ? exmem.aluResult : forwardB === 2 ? (memwb.memToReg ? memwb.memRdata : memwb.aluResult) : idex.rdata2;
+  const aluOperandB = idex.aluSrc ? idex.imm : exB;
+  const aluResult = (idex.regWrite || idex.memRead || idex.memWrite) ? alu(idex.op, exA, aluOperandB) : 0;
+
+  if (ifid.valid) table[ifid.idx][cycle] = 'ID';
+  if (idex.idx >= 0) table[idex.idx][cycle] = stall && idex.idx === ifid.idx ? 'EX' : 'EX';
+  if (exmem.idx >= 0) table[exmem.idx][cycle] = 'MEM';
+  if (memwb.idx >= 0) table[memwb.idx][cycle] = 'WB';
+  if (!stall && pcIdx < instrs.length) table[pcIdx][cycle] = 'IF';
+  if (stall && ifid.idx >= 0) table[ifid.idx][cycle] = 'stall';
+
+  if (memwb.regWrite && memwb.rd !== 0) regs[memwb.rd] = memwb.memToReg ? memwb.memRdata : memwb.aluResult;
+  if (exmem.memWrite) mem[exmem.aluResult] = exmem.storeData;
+
+  const memRdata = mem[exmem.aluResult] || 0;
+  memwb = { rd: exmem.rd, regWrite: exmem.regWrite, memToReg: exmem.memToReg, aluResult: exmem.aluResult, memRdata, asm: exmem.asm, idx: exmem.idx };
+  exmem = { rd: idex.rd, regWrite: idex.regWrite, memWrite: idex.memWrite, memToReg: idex.memToReg, aluResult, storeData: exB, asm: idex.asm, idx: idex.idx };
+
+  if (stall || branchTaken) {
+    idex = bubble();
+  } else {
+    idex = {
+      rd: idInstr ? idInstr.rd : 0, rs1: id_rs1, rs2: id_rs2, rdata1: rd1, rdata2: rd2,
+      imm: idInstr ? (idInstr.imm || 0) : 0, op: idInstr ? idInstr.op : 'ADD',
+      aluSrc: idInstr ? (idInstr.op === 'ADDI' || idInstr.op === 'LW' || idInstr.op === 'SW') : false,
+      regWrite: idInstr ? !idInstr.isStore && !idInstr.isBranch : false,
+      memRead: idInstr ? !!idInstr.isLoad : false, memWrite: idInstr ? !!idInstr.isStore : false,
+      memToReg: idInstr ? !!idInstr.isLoad : false, asm: idInstr ? idInstr.asm : '(bubble)',
+      idx: ifid.valid ? ifid.idx : -1,
+    };
+  }
+
+  if (branchTaken) ifid = { valid: false, idx: -1 };
+  else if (!stall) ifid = pcIdx < instrs.length ? { valid: true, idx: pcIdx } : { valid: false, idx: -1 };
+
+  if (!stall) pcIdx = branchTaken ? branchTargetIdx : pcIdx + 1;
+
+  if (pcIdx >= instrs.length && !ifid.valid && !idex.regWrite && !idex.memWrite && !exmem.regWrite && !exmem.memWrite && !memwb.regWrite && cycle > instrs.length) {
+    finished = true;
+    events.push({ cycle, type: 'info', msg: `Pipeline drained — ${instrs.length} instructions retired in ${cycle} cycles (IPC ${(instrs.length/cycle).toFixed(2)})` });
+  }
+
+  renderAll();
+}
+
+function runAll() {
+  let guard = 0;
+  while (!finished && guard < 60) { stepCycle(); guard++; }
+}
+
+function renderAll() {
+  document.getElementById('mCycle').textContent = cycle;
+  document.getElementById('mStalls').textContent = stalls;
+  document.getElementById('mForwards').textContent = forwards;
+  document.getElementById('mFlushes').textContent = flushes;
+  const retired = instrs.filter((_, i) => Object.values(table[i]).includes('WB')).length;
+  document.getElementById('mRetired').textContent = retired + '/' + instrs.length;
+  document.getElementById('mIpc').textContent = cycle > 0 ? (retired / cycle).toFixed(2) : '—';
+  document.getElementById('statusMsg').textContent = finished
+    ? `Done — ${instrs.length} instructions in ${cycle} cycles`
+    : `Cycle ${cycle} — click Step or Run to continue`;
+
+  renderTable();
+  renderRegs();
+  renderLog();
+}
+
+function renderTable() {
+  const t = document.getElementById('pipeTable');
+  let html = '<tr><th class="instr-col">Instruction</th>';
+  for (let c = 1; c <= Math.max(cycle, 1); c++) html += `<th class="${c===cycle?'cur-col':''}">${c}</th>`;
+  html += '</tr>';
+  instrs.forEach((instr, i) => {
+    html += `<tr><td class="instr-col">${instr.asm}</td>`;
+    for (let c = 1; c <= Math.max(cycle, 1); c++) {
+      const stg = table[i][c];
+      html += `<td class="${c===cycle?'cur-col':''}">${stg ? `<span class="stg ${stg==='stall'?'stg-stall':'stg-'+stg}">${stg==='stall'?'•':stg}</span>` : ''}</td>`;
+    }
+    html += '</tr>';
+  });
+  t.innerHTML = html;
+}
+
+let prevRegs = new Array(32).fill(0);
+function renderRegs() {
+  const el = document.getElementById('regFile');
+  let html = '';
+  for (let i = 0; i < 16; i++) {
+    const changed = regs[i] !== prevRegs[i];
+    html += `<div class="reg-cell ${changed ? 'changed' : ''}"><div class="reg-name">x${i}</div><div class="reg-val">${regs[i]}</div></div>`;
+  }
+  el.innerHTML = html;
+  prevRegs = regs.slice();
+}
+
+function renderLog() {
+  const el = document.getElementById('pipeLog');
+  el.innerHTML = events.map(e => `<div class="log-${e.type}">[cycle ${e.cycle}] ${e.msg}</div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+resetSim();
+</script>
+</body>
+</html>

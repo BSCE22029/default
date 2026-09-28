@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PWM Motor Controller — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg2:#111128;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card h3{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+
+/* SLIDERS */
+.slider-group{margin-bottom:1.2rem}
+.slider-label{display:flex;justify-content:space-between;margin-bottom:.4rem}
+.slider-name{font-size:.78rem;font-weight:700;color:var(--muted)}
+.slider-val{font-size:.85rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+input[type=range]{width:100%;-webkit-appearance:none;height:6px;border-radius:3px;background:var(--bg3);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--purple2);cursor:pointer;box-shadow:0 0 8px rgba(168,85,247,.5)}
+
+/* MOTOR VIS */
+.motor-wrap{display:flex;flex-direction:column;align-items:center;gap:1rem}
+.motor-body{width:120px;height:120px;border-radius:50%;border:4px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.motor-rotor{width:60px;height:60px;border-radius:50%;background:conic-gradient(from 0deg,var(--purple) 0%,var(--blue) 33%,var(--purple2) 66%,var(--purple) 100%);position:absolute;transition:none}
+.motor-shaft{width:12px;height:50px;background:var(--border);position:absolute;bottom:-10px;border-radius:4px}
+.motor-speed{font-size:1.4rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.motor-rpm{font-size:.7rem;color:var(--muted)}
+
+/* LED */
+.led-wrap{display:flex;align-items:center;gap:1rem}
+.led-bulb{width:60px;height:60px;border-radius:50%;transition:all .1s}
+.led-info{font-size:.78rem;color:var(--muted)}
+.led-bright{font-size:1.2rem;font-weight:800;font-family:monospace;color:var(--text)}
+
+/* WAVEFORM */
+canvas.wave{display:block;width:100%;height:90px;border-radius:8px;background:#020208}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.75rem;text-align:center}
+.m-val{font-size:1.1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.62rem;color:var(--muted);margin-top:.2rem;text-transform:uppercase;letter-spacing:.05em}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.73rem;overflow-x:auto;line-height:1.6;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}
+@media(max-width:650px){.grid2{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Verilog HDL · Arduino · PWM · Motor Control</span></div>
+  <h1>PWM Motor &amp; LED Controller</h1>
+  <p class="subtitle">Pulse Width Modulation — control motor speed and LED brightness by adjusting duty cycle and frequency</p>
+
+  <!-- METRICS -->
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mDuty">50%</div><div class="m-label">Duty Cycle</div></div>
+    <div class="metric"><div class="m-val" id="mFreq">1kHz</div><div class="m-label">Frequency</div></div>
+    <div class="metric"><div class="m-val" id="mPeriod">1.0ms</div><div class="m-label">Period</div></div>
+    <div class="metric"><div class="m-val" id="mPulse">0.5ms</div><div class="m-label">Pulse Width</div></div>
+  </div>
+
+  <!-- CONTROLS + VIS -->
+  <div class="grid2">
+    <div class="card">
+      <h3>PWM Parameters</h3>
+      <div class="slider-group">
+        <div class="slider-label"><span class="slider-name">Duty Cycle</span><span class="slider-val" id="dutyLbl">50%</span></div>
+        <input type="range" id="dutySl" min="0" max="100" value="50" oninput="update()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span class="slider-name">Frequency</span><span class="slider-val" id="freqLbl">1000 Hz</span></div>
+        <input type="range" id="freqSl" min="1" max="8" value="3" oninput="update()">
+      </div>
+
+      <h3 style="margin-top:1rem;margin-bottom:.8rem">Presets</h3>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="back-link" style="border-radius:8px;cursor:pointer" onclick="setPreset(0,3)">Motor Off</button>
+        <button class="back-link" style="border-radius:8px;cursor:pointer" onclick="setPreset(25,3)">25% Speed</button>
+        <button class="back-link" style="border-radius:8px;cursor:pointer" onclick="setPreset(50,3)">Half Speed</button>
+        <button class="back-link" style="border-radius:8px;cursor:pointer" onclick="setPreset(75,3)">75% Speed</button>
+        <button class="back-link" style="border-radius:8px;cursor:pointer" onclick="setPreset(100,3)">Full Speed</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Motor Simulation</h3>
+      <div class="motor-wrap">
+        <div class="motor-body"><div class="motor-rotor" id="rotor"></div></div>
+        <div style="text-align:center"><div class="motor-speed" id="rpmVal">1500</div><div class="motor-rpm">RPM</div></div>
+      </div>
+      <div style="margin-top:1rem">
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">LED Brightness</div>
+        <div class="led-wrap">
+          <div class="led-bulb" id="ledBulb"></div>
+          <div><div class="led-bright" id="ledBright">50%</div><div class="led-info">avg voltage: <span id="avgV">—</span>V</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WAVEFORM -->
+  <div class="card">
+    <h3>PWM Waveform</h3>
+    <canvas class="wave" id="waveCanvas"></canvas>
+    <div style="display:flex;gap:1.5rem;margin-top:.6rem;font-size:.72rem;color:var(--muted)">
+      <span>■ <span style="color:var(--purple2)">HIGH</span> = On-time (duty cycle)</span>
+      <span>■ <span style="color:#374151">LOW</span> = Off-time</span>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <h3>Verilog Implementation</h3>
+<pre><span class="comment">// PWM Generator — Verilog HDL</span>
+<span class="comment">// Variable duty cycle and frequency</span>
+<span class="comment">// Author: Muhammad Moiz Ahmad</span>
+
+<span class="kw">module</span> <span class="type">pwm_gen</span> #(
+    <span class="kw">parameter</span> CLK_FREQ = <span class="num">50_000_000</span>,  <span class="comment">// 50 MHz</span>
+    <span class="kw">parameter</span> PWM_FREQ = <span class="num">1000</span>          <span class="comment">// 1 kHz</span>
+)(
+    <span class="kw">input</span>        clk, rst,
+    <span class="kw">input</span>  [<span class="num">7</span>:<span class="num">0</span>] duty,   <span class="comment">// 0–255 (0–100%)</span>
+    <span class="kw">output reg</span>   pwm_out
+);
+
+<span class="kw">localparam</span> PERIOD = CLK_FREQ / PWM_FREQ;   <span class="comment">// 50000 cycles</span>
+<span class="kw">reg</span> [<span class="num">15</span>:<span class="num">0</span>] counter;
+<span class="kw">wire</span> [<span class="num">15</span>:<span class="num">0</span>] threshold = (PERIOD * duty) >> <span class="num">8</span>;
+
+<span class="kw">always</span> @(<span class="kw">posedge</span> clk) <span class="kw">begin</span>
+    <span class="kw">if</span> (rst) <span class="kw">begin</span>
+        counter &lt;= <span class="num">0</span>; pwm_out &lt;= <span class="num">0</span>;
+    <span class="kw">end else begin</span>
+        counter &lt;= (counter == PERIOD-<span class="num">1</span>) ? <span class="num">0</span> : counter+<span class="num">1</span>;
+        pwm_out &lt;= (counter &lt; threshold);
+    <span class="kw">end</span>
+<span class="kw">end</span>
+<span class="kw">endmodule</span></pre>
+  </div>
+</div>
+
+<script>
+const freqs=[100,250,500,1000,2000,4000,8000,16000];
+let duty=50,freqIdx=3,angle=0,animId=null;
+
+function setPreset(d,f){
+  document.getElementById('dutySl').value=d;
+  document.getElementById('freqSl').value=f;
+  update();
+}
+
+function update(){
+  duty=parseInt(document.getElementById('dutySl').value);
+  freqIdx=parseInt(document.getElementById('freqSl').value)-1;
+  const freq=freqs[freqIdx];
+  const period=1/freq;
+  const pulse=period*duty/100;
+
+  document.getElementById('dutyLbl').textContent=duty+'%';
+  document.getElementById('freqLbl').textContent=freq>=1000?(freq/1000)+'kHz':freq+'Hz';
+  document.getElementById('mDuty').textContent=duty+'%';
+  document.getElementById('mFreq').textContent=freq>=1000?(freq/1000)+'kHz':freq+'Hz';
+  document.getElementById('mPeriod').textContent=period<0.001?(period*1000000).toFixed(1)+'μs':(period*1000).toFixed(2)+'ms';
+  document.getElementById('mPulse').textContent=pulse<0.001?(pulse*1000000).toFixed(1)+'μs':(pulse*1000).toFixed(3)+'ms';
+
+  const rpm=Math.round(duty*30);
+  document.getElementById('rpmVal').textContent=rpm;
+  document.getElementById('ledBright').textContent=duty+'%';
+  const avgV=(3.3*duty/100).toFixed(2);
+  document.getElementById('avgV').textContent=avgV;
+
+  // LED color
+  const a=duty/100;
+  document.getElementById('ledBulb').style.background=`rgba(${Math.round(255*a)},${Math.round(220*a)},${Math.round(50*a)},${0.1+0.9*a})`;
+  document.getElementById('ledBulb').style.boxShadow=duty>10?`0 0 ${duty/3}px ${duty/5}px rgba(255,220,50,${a*0.7})`:'none';
+
+  drawWave();
+}
+
+function drawWave(){
+  const canvas=document.getElementById('waveCanvas');
+  const W=canvas.offsetWidth||800, H=90;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const cycles=5;
+  const bw=W/cycles;
+  const hi=H*0.1, lo=H*0.8;
+  const onW=bw*duty/100;
+
+  ctx.strokeStyle='rgba(168,85,247,0.9)'; ctx.lineWidth=2;
+  ctx.shadowColor='#a855f7'; ctx.shadowBlur=5;
+  ctx.beginPath();
+  ctx.moveTo(0,lo);
+  for(let i=0;i<cycles;i++){
+    const x=i*bw;
+    ctx.lineTo(x,lo); ctx.lineTo(x,hi);
+    ctx.lineTo(x+onW,hi); ctx.lineTo(x+onW,lo);
+  }
+  ctx.lineTo(W,lo);
+  ctx.stroke(); ctx.shadowBlur=0;
+
+  // fill on-time
+  ctx.fillStyle='rgba(124,58,237,0.08)';
+  for(let i=0;i<cycles;i++){
+    ctx.fillRect(i*bw, hi, bw*duty/100, lo-hi);
+  }
+
+  // labels
+  ctx.fillStyle='rgba(148,163,184,0.6)'; ctx.font='9px monospace'; ctx.textAlign='center';
+  const freqLabel=freqs[freqIdx]>=1000?(freqs[freqIdx]/1000)+'kHz':freqs[freqIdx]+'Hz';
+  ctx.fillText(`${duty}% duty @ ${freqLabel}`, W/2, H-4);
+}
+
+// Motor animation
+function animateMotor(){
+  const rpm=duty*30;
+  const speed=rpm/3000*12;
+  angle+=speed;
+  document.getElementById('rotor').style.transform=`rotate(${angle}deg)`;
+  animId=requestAnimationFrame(animateMotor);
+}
+
+window.addEventListener('resize',drawWave);
+update();
+animateMotor();
+</script>
+</body>
+</html>

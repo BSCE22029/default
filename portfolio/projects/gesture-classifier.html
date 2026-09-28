@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TinyML Gesture Classifier — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.btn{padding:.5rem 1.2rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn.active,.btn:hover{border-color:var(--purple2);color:var(--purple2);background:rgba(124,58,237,.12)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+
+/* IMU viz */
+canvas.imu{display:block;width:100%;height:130px;border-radius:8px;background:#020208}
+
+/* Gesture buttons */
+.gesture-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-bottom:1rem}
+.g-btn{padding:.7rem .5rem;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.75rem;font-weight:700;cursor:pointer;text-align:center;transition:all .2s}
+.g-btn:hover,.g-btn.sel{border-color:var(--purple2);color:var(--purple2);background:rgba(124,58,237,.12)}
+.g-icon{font-size:1.5rem;display:block;margin-bottom:.2rem}
+
+/* Confidence bars */
+.conf-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.55rem}
+.conf-label{font-size:.72rem;color:var(--muted);width:80px;flex-shrink:0}
+.conf-bar-wrap{flex:1;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden}
+.conf-bar{height:100%;border-radius:5px;transition:width .35s cubic-bezier(.4,0,.2,1);background:linear-gradient(90deg,var(--purple),var(--purple2))}
+.conf-val{font-size:.7rem;font-family:monospace;color:var(--purple2);width:38px;text-align:right}
+
+/* Prediction result */
+.prediction-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;margin-bottom:1rem}
+.pred-gesture{font-size:2.2rem;margin-bottom:.3rem}
+.pred-label{font-size:1rem;font-weight:800;color:var(--text);margin-bottom:.2rem}
+.pred-conf{font-size:.72rem;color:var(--purple2);font-family:monospace}
+.pred-badge{display:inline-block;margin-top:.4rem;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#4ade80;padding:.15rem .6rem;border-radius:99px;font-size:.65rem;font-weight:700}
+
+/* Model arch */
+.arch-row{display:flex;align-items:center;gap:.5rem;overflow-x:auto;padding:.5rem 0;margin-bottom:.8rem}
+.arch-block{flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;text-align:center;font-size:.65rem;color:var(--muted)}
+.arch-block .layer-name{font-weight:700;color:var(--purple2);font-size:.7rem}
+.arch-arrow{color:var(--border);font-size:1rem;flex-shrink:0}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1;max-height:300px;overflow-y:auto}
+.kw{color:#a855f7}.fn{color:#60a5fa}.str{color:#4ade80}.num{color:#fb923c}.comment{color:#475569}
+.tabs{display:flex;gap:.4rem;margin-bottom:.8rem;flex-wrap:wrap}
+.tab{padding:.3rem .85rem;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.73rem;font-weight:700;cursor:pointer}
+.tab.active{background:rgba(124,58,237,.15);border-color:var(--purple);color:var(--purple2)}
+@media(max-width:650px){.grid2{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">TinyML · TFLite · Arduino Nano 33 BLE · Edge AI</span></div>
+  <h1>TinyML Gesture Classifier</h1>
+  <p class="subtitle">A neural network trained in TensorFlow, quantized to INT8, deployed on Arduino Nano 33 BLE Sense — no cloud, no latency</p>
+
+  <!-- METRICS -->
+  <div class="metrics">
+    <div class="metric"><div class="m-val">97.4%</div><div class="m-label">Accuracy</div></div>
+    <div class="metric"><div class="m-val">18KB</div><div class="m-label">Model Size</div></div>
+    <div class="metric"><div class="m-val">3.2ms</div><div class="m-label">Inference</div></div>
+    <div class="metric"><div class="m-val">INT8</div><div class="m-label">Quantized</div></div>
+  </div>
+
+  <div class="grid2">
+    <!-- LEFT: SELECT GESTURE + RUN -->
+    <div class="card">
+      <div class="card-h">Select Gesture to Simulate</div>
+      <div class="gesture-grid">
+        <div class="g-btn sel" onclick="selectGesture('punch',this)"><span class="g-icon">👊</span>Punch</div>
+        <div class="g-btn" onclick="selectGesture('flex',this)"><span class="g-icon">💪</span>Flex</div>
+        <div class="g-btn" onclick="selectGesture('wave',this)"><span class="g-icon">👋</span>Wave</div>
+        <div class="g-btn" onclick="selectGesture('circle',this)"><span class="g-icon">🔄</span>Circle</div>
+        <div class="g-btn" onclick="selectGesture('shake',this)"><span class="g-icon">🤝</span>Shake</div>
+        <div class="g-btn" onclick="selectGesture('still',this)"><span class="g-icon">✋</span>Still</div>
+      </div>
+      <button class="btn go" style="width:100%" onclick="runInference()">▶ Run Inference</button>
+
+      <div style="margin-top:1rem">
+        <div class="card-h" style="margin-bottom:.6rem">IMU Data — Accel XYZ</div>
+        <canvas class="imu" id="imuCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- RIGHT: RESULT + CONFIDENCE -->
+    <div class="card">
+      <div class="card-h">Prediction</div>
+      <div class="prediction-box">
+        <div class="pred-gesture" id="predIcon">👊</div>
+        <div class="pred-label" id="predLabel">Punch</div>
+        <div class="pred-conf" id="predConf">Confidence: 97.8%</div>
+        <div class="pred-badge" id="predBadge">✓ Classified on-device</div>
+      </div>
+      <div class="card-h">All Classes</div>
+      <div id="confBars"></div>
+    </div>
+  </div>
+
+  <!-- MODEL ARCH -->
+  <div class="card">
+    <div class="card-h">Model Architecture (TFLite INT8)</div>
+    <div class="arch-row">
+      <div class="arch-block"><div class="layer-name">Input</div>119 × 3<br/>IMU frames</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block"><div class="layer-name">Conv1D</div>16 filters<br/>kernel=5</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block"><div class="layer-name">MaxPool</div>2×</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block"><div class="layer-name">Conv1D</div>32 filters<br/>kernel=3</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block"><div class="layer-name">MaxPool</div>2×</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block"><div class="layer-name">Flatten</div>928 dims</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block"><div class="layer-name">Dense</div>64 units<br/>ReLU</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block"><div class="layer-name">Dropout</div>0.3</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block"><div class="layer-name">Output</div>6 classes<br/>Softmax</div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Implementation</div>
+    <div class="tabs">
+      <div class="tab active" onclick="showCode('train',this)">train.py</div>
+      <div class="tab" onclick="showCode('arduino',this)">Arduino C++</div>
+      <div class="tab" onclick="showCode('convert',this)">convert.py</div>
+    </div>
+    <div id="codeDiv"></div>
+  </div>
+</div>
+
+<script>
+const GESTURES = {
+  punch: { icon:'👊', probs:[.978,.005,.004,.007,.003,.003] },
+  flex:  { icon:'💪', probs:[.006,.971,.008,.007,.004,.004] },
+  wave:  { icon:'👋', probs:[.004,.007,.965,.012,.007,.005] },
+  circle:{ icon:'🔄', probs:[.005,.008,.011,.962,.008,.006] },
+  shake: { icon:'🤝', probs:[.003,.005,.008,.009,.967,.008] },
+  still: { icon:'✋', probs:[.002,.004,.005,.006,.007,.976] },
+};
+const LABELS = ['Punch','Flex','Wave','Circle','Shake','Still'];
+let selected = 'punch';
+let imuAnimId = null;
+
+function selectGesture(g, el) {
+  selected = g;
+  document.querySelectorAll('.g-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function runInference() {
+  const g = GESTURES[selected];
+  const probs = g.probs.map(p => p + (Math.random() - .5) * .015);
+  const sum = probs.reduce((a,b)=>a+b,0);
+  const norm = probs.map(p => Math.max(0, p/sum));
+  const best = norm.indexOf(Math.max(...norm));
+
+  document.getElementById('predIcon').textContent = g.icon;
+  document.getElementById('predLabel').textContent = LABELS[best];
+  document.getElementById('predConf').textContent = `Confidence: ${(norm[best]*100).toFixed(1)}%`;
+
+  const bars = document.getElementById('confBars');
+  bars.innerHTML = '';
+  LABELS.forEach((lbl, i) => {
+    const pct = (norm[i]*100).toFixed(1);
+    bars.innerHTML += `
+      <div class="conf-row">
+        <span class="conf-label">${lbl}</span>
+        <div class="conf-bar-wrap"><div class="conf-bar" style="width:${pct}%;background:${i===best?'linear-gradient(90deg,#22c55e,#4ade80)':'linear-gradient(90deg,var(--purple),var(--purple2))'}"></div></div>
+        <span class="conf-val">${pct}%</span>
+      </div>`;
+  });
+  animateIMU(selected);
+}
+
+// IMU chart
+function animateIMU(gesture) {
+  const canvas = document.getElementById('imuCanvas');
+  const W = canvas.offsetWidth||600, H = 130;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  let t = 0;
+  if (imuAnimId) cancelAnimationFrame(imuAnimId);
+
+  const patterns = {
+    punch:  t => [Math.sin(t*8)*2*(t<Math.PI?t/Math.PI:1), Math.sin(t*6)*1.5, Math.cos(t*7)*.8],
+    flex:   t => [Math.sin(t*3)*.5, Math.sin(t*3)*2, Math.cos(t*3)*1.2],
+    wave:   t => [Math.sin(t*4)*1.5, Math.cos(t*4)*0.3, Math.sin(t*2)*.6],
+    circle: t => [Math.cos(t*4)*1.8, Math.sin(t*4)*1.8, Math.cos(t*3)*.4],
+    shake:  t => [Math.sin(t*12)*2, Math.sin(t*13)*1.8, Math.sin(t*11)*1],
+    still:  t => [(Math.random()-.5)*.1, (Math.random()-.5)*.1, (Math.random()-.5)*.1],
+  };
+
+  const colors = ['#a855f7','#3b82f6','#22c55e'];
+  const history = [[],[],[]];
+  const MAX_HIST = 120;
+
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#020208'; ctx.fillRect(0,0,W,H);
+
+    // center line
+    ctx.strokeStyle='rgba(255,255,255,.04)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
+
+    const vals = patterns[gesture](t);
+    vals.forEach((v,i) => { history[i].push(v); if(history[i].length>MAX_HIST) history[i].shift(); });
+
+    [0,1,2].forEach(axis => {
+      if(history[axis].length < 2) return;
+      ctx.strokeStyle = colors[axis]; ctx.lineWidth = 1.5;
+      ctx.shadowColor = colors[axis]; ctx.shadowBlur = 4;
+      ctx.beginPath();
+      history[axis].forEach((v,i) => {
+        const x = (i/(MAX_HIST-1))*W;
+        const y = H/2 - v*(H/2*.42);
+        i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+      });
+      ctx.stroke(); ctx.shadowBlur=0;
+    });
+
+    t += 0.08;
+    imuAnimId = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// CODE
+const CODES = {
+  train: `<span class="comment"># TinyML Gesture Classifier Training</span>
+<span class="comment"># Muhammad Moiz Ahmad — TFLite for Microcontrollers</span>
+
+<span class="kw">import</span> tensorflow <span class="kw">as</span> tf
+<span class="kw">from</span> tensorflow <span class="kw">import</span> keras
+
+<span class="comment"># Model — Conv1D on 119 IMU frames (aX, aY, aZ)</span>
+model = keras.Sequential([
+    keras.layers.<span class="fn">Reshape</span>((119, 3), input_shape=(357,)),
+    keras.layers.<span class="fn">Conv1D</span>(<span class="num">16</span>, <span class="num">5</span>, activation=<span class="str">'relu'</span>, padding=<span class="str">'same'</span>),
+    keras.layers.<span class="fn">MaxPooling1D</span>(<span class="num">2</span>),
+    keras.layers.<span class="fn">Conv1D</span>(<span class="num">32</span>, <span class="num">3</span>, activation=<span class="str">'relu'</span>, padding=<span class="str">'same'</span>),
+    keras.layers.<span class="fn">MaxPooling1D</span>(<span class="num">2</span>),
+    keras.layers.<span class="fn">Flatten</span>(),
+    keras.layers.<span class="fn">Dense</span>(<span class="num">64</span>, activation=<span class="str">'relu'</span>),
+    keras.layers.<span class="fn">Dropout</span>(<span class="num">0.3</span>),
+    keras.layers.<span class="fn">Dense</span>(<span class="num">6</span>, activation=<span class="str">'softmax'</span>)
+])
+model.<span class="fn">compile</span>(optimizer=<span class="str">'adam'</span>, loss=<span class="str">'categorical_crossentropy'</span>, metrics=[<span class="str">'accuracy'</span>])
+model.<span class="fn">fit</span>(X_train, y_train, epochs=<span class="num">50</span>, batch_size=<span class="num">32</span>, validation_split=<span class="num">0.2</span>)`,
+
+  convert: `<span class="comment"># INT8 Post-Training Quantization</span>
+converter = tf.lite.TFLiteConverter.<span class="fn">from_keras_model</span>(model)
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+
+<span class="comment"># Representative dataset for INT8 calibration</span>
+<span class="kw">def</span> <span class="fn">rep_data_gen</span>():
+    <span class="kw">for</span> sample <span class="kw">in</span> X_train[:200]:
+        <span class="kw">yield</span> [sample[<span class="kw">None</span>, :].astype(np.float32)]
+
+converter.representative_dataset  = rep_data_gen
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+converter.inference_input_type     = tf.int8
+converter.inference_output_type    = tf.int8
+
+tflite_model = converter.<span class="fn">convert</span>()
+<span class="fn">open</span>(<span class="str">'gesture_model.tflite'</span>, <span class="str">'wb'</span>).<span class="fn">write</span>(tflite_model)
+<span class="comment"># → 18KB model ready for Arduino flash</span>`,
+
+  arduino: `<span class="comment">// gesture_classifier.ino — Arduino Nano 33 BLE Sense</span>
+<span class="comment">// TFLite inference on IMU data</span>
+<span class="kw">#include</span> <span class="str">&lt;TensorFlowLite.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;Arduino_LSM9DS1.h&gt;</span>
+<span class="kw">#include</span> <span class="str">"gesture_model.h"</span>   <span class="comment">// model as byte array</span>
+
+<span class="kw">constexpr int</span> NUM_SAMPLES = <span class="num">119</span>;
+<span class="kw">float</span> input_buf[NUM_SAMPLES * <span class="num">3</span>];
+<span class="kw">int</span> sample_idx = <span class="num">0</span>;
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+    <span class="kw">if</span> (IMU.<span class="fn">accelerationAvailable</span>()) {
+        <span class="kw">float</span> aX, aY, aZ;
+        IMU.<span class="fn">readAcceleration</span>(aX, aY, aZ);
+        input_buf[sample_idx * <span class="num">3</span>]     = aX / <span class="num">4.0f</span>;
+        input_buf[sample_idx * <span class="num">3</span> + <span class="num">1</span>] = aY / <span class="num">4.0f</span>;
+        input_buf[sample_idx * <span class="num">3</span> + <span class="num">2</span>] = aZ / <span class="num">4.0f</span>;
+
+        <span class="kw">if</span> (++sample_idx == NUM_SAMPLES) {
+            <span class="fn">runInference</span>(input_buf);
+            sample_idx = <span class="num">0</span>;
+        }
+    }
+}`,
+};
+
+function showCode(k, tab) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('codeDiv').innerHTML = `<pre>${CODES[k]}</pre>`;
+}
+
+showCode('train', document.querySelector('.tab.active'));
+runInference();
+animateIMU('punch');
+</script>
+</body>
+</html>

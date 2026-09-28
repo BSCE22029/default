@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Container Orchestrator Simulator — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn.danger{background:rgba(239,68,68,.15);border-color:var(--red);color:#f87171}
+.btn.danger:hover{border-color:#f87171;color:#fecaca}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.ctrl-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.ctrl-group{display:flex;flex-direction:column;gap:.25rem}
+.ctrl-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.num-input{width:80px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.4rem .6rem;color:var(--text);font-size:.8rem;font-family:inherit;outline:none}
+.num-input:focus{border-color:var(--purple)}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+/* cluster grid */
+.cluster-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.7rem;margin-bottom:.5rem}
+.node-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.7rem;transition:all .25s;position:relative;overflow:hidden}
+.node-card.dead{opacity:.35;filter:grayscale(1)}
+.node-card.pulse{border-color:var(--purple2);box-shadow:0 0 10px rgba(168,85,247,.3)}
+.node-card.unhealthy{border-color:var(--orange);box-shadow:0 0 10px rgba(249,115,22,.3)}
+.node-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.node-name{font-size:.72rem;font-weight:700;color:var(--purple2)}
+.node-status{font-size:.58rem;padding:.1rem .4rem;border-radius:99px;font-weight:700;text-transform:uppercase}
+.status-ready{background:rgba(34,197,94,.15);color:#4ade80}
+.status-dead{background:rgba(239,68,68,.15);color:#f87171}
+.status-unhealthy{background:rgba(249,115,22,.15);color:#fb923c}
+.res-row{margin-bottom:.4rem}
+.res-label{display:flex;justify-content:space-between;font-size:.6rem;color:var(--muted);font-family:monospace;margin-bottom:.2rem}
+.res-bar{height:7px;border-radius:4px;background:#0d0d1a;overflow:hidden}
+.res-fill{height:100%;transition:width .35s}
+.res-fill.cpu{background:linear-gradient(90deg,var(--blue),var(--purple2))}
+.res-fill.mem{background:linear-gradient(90deg,var(--green),var(--blue))}
+.res-fill.high{background:linear-gradient(90deg,var(--orange),var(--red))}
+.pod-list{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.5rem}
+.pod-chip{font-size:.58rem;font-family:monospace;padding:.15rem .4rem;border-radius:5px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);transition:all .2s}
+.pod-chip.unhealthy{background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.4);color:#fb923c}
+.pod-empty{font-size:.6rem;color:#475569;font-style:italic}
+
+.pending-row{display:flex;flex-wrap:wrap;gap:.35rem;min-height:24px}
+.pending-chip{font-size:.6rem;font-family:monospace;padding:.2rem .5rem;border-radius:5px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171}
+
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:230px;overflow-y:auto;font-family:monospace;font-size:.72rem;line-height:1.85;color:#64748b}
+.log-purple{color:#a855f7}.log-blue{color:#60a5fa}.log-green{color:#4ade80}.log-orange{color:#fb923c}.log-red{color:#f87171}.log-white{color:#e2e8f0;font-weight:700}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Distributed Systems · Container Orchestration · Scheduling</span></div>
+  <h1>Container Orchestrator Simulator</h1>
+  <p class="subtitle">A Kubernetes-style scheduler running for real in your browser — pods are placed onto worker nodes with a genuine best-fit bin-packing algorithm, not random placement. Kill a node and watch its pods actually get rescheduled; push CPU past threshold and watch a real horizontal auto-scaler add capacity.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mNodes">4</div><div class="m-label">Nodes Ready</div></div>
+    <div class="metric"><div class="m-val" id="mPods">0</div><div class="m-label">Pods Running</div></div>
+    <div class="metric"><div class="m-val" id="mCpu">0%</div><div class="m-label">Avg CPU Util</div></div>
+    <div class="metric"><div class="m-val" id="mReschedules">0</div><div class="m-label">Reschedules</div></div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="card">
+    <div class="card-h">Cluster Controls</div>
+    <div class="ctrl-row">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Pod CPU request (m)</span>
+        <input class="num-input" id="podCpuInput" type="number" value="250" min="50" max="1000" step="50"/>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Pod memory request (Mi)</span>
+        <input class="num-input" id="podMemInput" type="number" value="128" min="32" max="1024" step="32"/>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn go" onclick="addPod()">+ Schedule Pod</button>
+      <button class="btn go" onclick="addPod(5)">+ Schedule 5 Pods</button>
+      <button class="btn danger" onclick="killRandomNode()">☠ Kill a Node</button>
+      <button class="btn" onclick="addNode()">+ Add Node</button>
+      <button class="btn" onclick="resetAll()">Reset</button>
+    </div>
+    <span id="clusterStatus" style="font-size:.72rem;color:var(--muted)">Ready — scheduler idle, health-check loop running every 4s</span>
+  </div>
+
+  <!-- PENDING QUEUE -->
+  <div class="card">
+    <div class="card-h">Pending Queue (Unschedulable Pods)</div>
+    <p style="font-size:.72rem;color:var(--muted);margin-bottom:.5rem">Pods land here when no node has enough free CPU/memory to fit them — the scheduler retries this queue every time cluster capacity changes (node added, pod evicted, or auto-scale event).</p>
+    <div class="pending-row" id="pendingRow"><span class="pod-empty">queue empty</span></div>
+  </div>
+
+  <!-- CLUSTER -->
+  <div class="card">
+    <div class="card-h">Cluster — Worker Nodes</div>
+    <div class="cluster-grid" id="clusterGrid"></div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">Scheduler / Controller Log</div>
+    <div class="log" id="schedLog">
+      <div><span class="log-blue">[system]</span> Cluster online — 4 nodes, best-fit bin-packing scheduler active</div>
+      <div><span class="log-blue">[system]</span> Health-check loop started (interval 4000ms) · autoscaler threshold 75% avg CPU</div>
+      <div style="color:#374151">[idle] Waiting for workload...</div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Scheduler Core — Best-Fit Bin Packing</div>
+<pre><span class="comment">// scheduler.js — Muhammad Moiz Ahmad</span>
+<span class="comment">// Picks the node with the LEAST leftover capacity that can still fit the</span>
+<span class="comment">// pod (best-fit), which packs bins tighter than first-fit / random and</span>
+<span class="comment">// leaves larger contiguous free space on other nodes for big pods later.</span>
+
+<span class="kw">function</span> <span class="fn">scheduleBestFit</span>(pod, nodes) {
+  <span class="kw">let</span> best = <span class="kw">null</span>;
+  <span class="kw">let</span> bestLeftover = <span class="type">Infinity</span>;
+
+  <span class="kw">for</span> (<span class="kw">const</span> node <span class="kw">of</span> nodes) {
+    <span class="kw">if</span> (node.status !== <span class="str">'ready'</span>) <span class="kw">continue</span>;
+
+    <span class="kw">const</span> freeCpu = node.cpuCap - node.cpuUsed;
+    <span class="kw">const</span> freeMem = node.memCap - node.memUsed;
+    <span class="kw">const</span> fits = freeCpu >= pod.cpu && freeMem >= pod.mem;
+    <span class="kw">if</span> (!fits) <span class="kw">continue</span>;
+
+    <span class="comment">// leftover capacity if this pod lands here — smaller is "tighter fit"</span>
+    <span class="kw">const</span> leftover = (freeCpu - pod.cpu) + (freeMem - pod.mem);
+    <span class="kw">if</span> (leftover < bestLeftover) {
+      bestLeftover = leftover;
+      best = node;
+    }
+  }
+  <span class="kw">return</span> best; <span class="comment">// null => pod goes to the pending queue</span>
+}
+
+<span class="kw">function</span> <span class="fn">onNodeFailure</span>(deadNode, nodes, pendingPods) {
+  <span class="comment">// evict every pod that was on the dead node, then re-run the scheduler</span>
+  <span class="kw">const</span> orphans = deadNode.pods.splice(<span class="num">0</span>);
+  deadNode.status = <span class="str">'dead'</span>;
+  <span class="kw">for</span> (<span class="kw">const</span> pod <span class="kw">of</span> orphans) {
+    <span class="kw">const</span> target = scheduleBestFit(pod, nodes);
+    target ? placePod(pod, target) : pendingPods.push(pod);
+  }
+}
+
+<span class="kw">function</span> <span class="fn">maybeAutoscale</span>(nodes, threshold = <span class="num">0.75</span>) {
+  <span class="kw">const</span> live = nodes.filter(n => n.status === <span class="str">'ready'</span>);
+  <span class="kw">const</span> avgCpuUtil = live.reduce((s,n) => s + n.cpuUsed/n.cpuCap, <span class="num">0</span>) / live.length;
+  <span class="kw">if</span> (avgCpuUtil >= threshold) {
+    nodes.push(makeNode()); <span class="comment">// horizontal scale-out</span>
+    drainPendingQueue(nodes);
+  }
+}</pre>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───
+let nodes = [];
+let pending = [];
+let podCounter = 0;
+let nodeCounter = 0;
+let reschedules = 0;
+let healthTimer = null;
+const CPU_CAP = 1000;   // millicores per node
+const MEM_CAP = 1024;   // Mi per node
+const AUTOSCALE_THRESHOLD = 0.75;
+
+function makeNode() {
+  nodeCounter++;
+  return {
+    id: nodeCounter,
+    name: `node-${nodeCounter}`,
+    cpuCap: CPU_CAP,
+    memCap: MEM_CAP,
+    cpuUsed: 0,
+    memUsed: 0,
+    status: 'ready', // ready | dead | unhealthy
+    pods: [],
+    flash: 0
+  };
+}
+
+function initCluster() {
+  nodes = [];
+  for (let i = 0; i < 4; i++) nodes.push(makeNode());
+  pending = [];
+  podCounter = 0;
+  reschedules = 0;
+}
+
+// ─── SCHEDULER: real best-fit bin packing ───
+function scheduleBestFit(pod) {
+  let best = null;
+  let bestLeftover = Infinity;
+  for (const node of nodes) {
+    if (node.status !== 'ready') continue;
+    const freeCpu = node.cpuCap - node.cpuUsed;
+    const freeMem = node.memCap - node.memUsed;
+    if (freeCpu < pod.cpu || freeMem < pod.mem) continue;
+    const leftover = (freeCpu - pod.cpu) + (freeMem - pod.mem);
+    if (leftover < bestLeftover) {
+      bestLeftover = leftover;
+      best = node;
+    }
+  }
+  return best;
+}
+
+function placePod(pod, node) {
+  node.cpuUsed += pod.cpu;
+  node.memUsed += pod.mem;
+  pod.nodeId = node.id;
+  pod.healthy = true;
+  node.pods.push(pod);
+  node.flash = 1;
+}
+
+function log(html) {
+  const el = document.getElementById('schedLog');
+  el.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
+  el.scrollTop = el.scrollHeight;
+}
+
+function fmtPct(used, cap) { return Math.round((used/cap)*100); }
+
+// ─── ADD POD ───
+function addPod(count = 1) {
+  const cpu = Math.max(10, parseInt(document.getElementById('podCpuInput').value) || 250);
+  const mem = Math.max(8, parseInt(document.getElementById('podMemInput').value) || 128);
+  for (let i = 0; i < count; i++) {
+    podCounter++;
+    const pod = { id: podCounter, name: `api-${podCounter}`, cpu, mem, healthy: true, nodeId: null };
+    const target = scheduleBestFit(pod);
+    if (target) {
+      placePod(pod, target);
+      log(`<span class="log-purple">[scheduler]</span> Pod <span class="log-white">${pod.name}</span> (${pod.cpu}m CPU, ${pod.mem}Mi) scheduled on <span class="log-blue">${target.name}</span> via best-fit (leftover capacity minimized)`);
+    } else {
+      pending.push(pod);
+      log(`<span class="log-red">[scheduler]</span> Pod <span class="log-white">${pod.name}</span> (${pod.cpu}m CPU, ${pod.mem}Mi) is <span class="log-red">UNSCHEDULABLE</span> — no node has enough free capacity, added to pending queue`);
+    }
+  }
+  render();
+  maybeAutoscale();
+}
+
+// ─── DRAIN PENDING QUEUE (retry scheduling) ───
+function drainPendingQueue() {
+  if (pending.length === 0) return;
+  const stillPending = [];
+  for (const pod of pending) {
+    const target = scheduleBestFit(pod);
+    if (target) {
+      placePod(pod, target);
+      log(`<span class="log-green">[scheduler]</span> Pending pod <span class="log-white">${pod.name}</span> now fits — scheduled on <span class="log-blue">${target.name}</span>`);
+    } else {
+      stillPending.push(pod);
+    }
+  }
+  pending = stillPending;
+}
+
+// ─── NODE FAILURE + RESCHEDULE ───
+function killRandomNode() {
+  const live = nodes.filter(n => n.status === 'ready');
+  if (live.length === 0) { log(`<span class="log-red">[system]</span> No live nodes left to kill`); return; }
+  const victim = live[Math.floor(Math.random() * live.length)];
+  killNode(victim);
+}
+
+function killNode(node) {
+  node.status = 'dead';
+  const orphans = node.pods.splice(0);
+  node.cpuUsed = 0; node.memUsed = 0;
+  log(`<span class="log-red">[controller]</span> Node <span class="log-white">${node.name}</span> failure detected (missed 3 heartbeats) — marking <span class="log-red">NotReady</span>, evicting ${orphans.length} pod(s)`);
+
+  orphans.forEach(pod => {
+    const target = scheduleBestFit(pod);
+    if (target) {
+      placePod(pod, target);
+      reschedules++;
+      log(`<span class="log-orange">[controller]</span> Rescheduled <span class="log-white">${pod.name}</span> → <span class="log-blue">${target.name}</span> (self-healing)`);
+    } else {
+      pending.push(pod);
+      log(`<span class="log-red">[controller]</span> Could not reschedule <span class="log-white">${pod.name}</span> — cluster at capacity, added to pending queue`);
+    }
+  });
+  render();
+  maybeAutoscale();
+}
+
+function addNode() {
+  const n = makeNode();
+  nodes.push(n);
+  log(`<span class="log-green">[controller]</span> New node <span class="log-white">${n.name}</span> joined the cluster (${n.cpuCap}m CPU / ${n.memCap}Mi mem)`);
+  drainPendingQueue();
+  render();
+}
+
+// ─── AUTOSCALER ───
+function maybeAutoscale() {
+  const live = nodes.filter(n => n.status === 'ready');
+  if (live.length === 0) return;
+  const avgUtil = live.reduce((s,n) => s + n.cpuUsed / n.cpuCap, 0) / live.length;
+  if (avgUtil >= AUTOSCALE_THRESHOLD) {
+    const n = makeNode();
+    nodes.push(n);
+    log(`<span class="log-orange">[autoscaler]</span> Avg CPU util ${(avgUtil*100).toFixed(0)}% ≥ ${(AUTOSCALE_THRESHOLD*100)|0}% threshold — scaling out, added <span class="log-white">${n.name}</span>`);
+    drainPendingQueue();
+    render();
+  }
+}
+
+// ─── HEALTH CHECK LOOP — random node/pod goes unhealthy, self-heals ───
+function healthCheckTick() {
+  const liveNodes = nodes.filter(n => n.status === 'ready');
+  if (liveNodes.length === 0) return;
+
+  // Small chance a random pod goes unhealthy and gets restarted in place.
+  const allPods = liveNodes.flatMap(n => n.pods);
+  if (allPods.length > 0 && Math.random() < 0.35) {
+    const pod = allPods[Math.floor(Math.random() * allPods.length)];
+    pod.healthy = false;
+    render();
+    log(`<span class="log-orange">[health-check]</span> Liveness probe failed for <span class="log-white">${pod.name}</span> — restarting container in place`);
+    setTimeout(() => {
+      pod.healthy = true;
+      render();
+      log(`<span class="log-green">[health-check]</span> ${pod.name} passed liveness probe after restart — <span class="log-green">Healthy</span>`);
+    }, 1400);
+  }
+
+  // Small chance a whole node silently degrades (simulated hardware issue) then recovers.
+  if (Math.random() < 0.12) {
+    const node = liveNodes[Math.floor(Math.random() * liveNodes.length)];
+    if (node.status === 'ready') {
+      node.status = 'unhealthy';
+      render();
+      log(`<span class="log-orange">[health-check]</span> Node <span class="log-white">${node.name}</span> failed readiness probe — marked <span class="log-orange">Unhealthy</span>, cordoned (no new pods)`);
+      setTimeout(() => {
+        if (node.status === 'unhealthy') {
+          node.status = 'ready';
+          render();
+          log(`<span class="log-green">[health-check]</span> Node <span class="log-white">${node.name}</span> recovered — back to <span class="log-green">Ready</span>, uncordoned`);
+        }
+      }, 3000);
+    }
+  }
+}
+
+// ─── RENDER ───
+function render() {
+  const liveNodes = nodes.filter(n => n.status === 'ready');
+  document.getElementById('mNodes').textContent = liveNodes.length;
+  const totalPods = nodes.reduce((s,n) => s + n.pods.length, 0);
+  document.getElementById('mPods').textContent = totalPods;
+  const avgUtil = liveNodes.length ? Math.round(liveNodes.reduce((s,n) => s + n.cpuUsed/n.cpuCap, 0) / liveNodes.length * 100) : 0;
+  document.getElementById('mCpu').textContent = avgUtil + '%';
+  document.getElementById('mReschedules').textContent = reschedules;
+
+  const grid = document.getElementById('clusterGrid');
+  grid.innerHTML = nodes.map(n => {
+    const cpuPct = fmtPct(n.cpuUsed, n.cpuCap);
+    const memPct = fmtPct(n.memUsed, n.memCap);
+    const statusClass = n.status === 'ready' ? 'status-ready' : (n.status === 'dead' ? 'status-dead' : 'status-unhealthy');
+    const statusText = n.status === 'ready' ? 'Ready' : (n.status === 'dead' ? 'NotReady' : 'Unhealthy');
+    const cardClass = n.status === 'dead' ? 'dead' : (n.status === 'unhealthy' ? 'unhealthy' : (n.flash ? 'pulse' : ''));
+    const podsHtml = n.pods.length
+      ? `<div class="pod-list">${n.pods.map(p => `<span class="pod-chip ${p.healthy?'':'unhealthy'}" title="${p.cpu}m / ${p.mem}Mi">${p.name}</span>`).join('')}</div>`
+      : `<div class="pod-list"><span class="pod-empty">no pods</span></div>`;
+    return `
+      <div class="node-card ${cardClass}">
+        <div class="node-head">
+          <span class="node-name">${n.name}</span>
+          <span class="node-status ${statusClass}">${statusText}</span>
+        </div>
+        <div class="res-row">
+          <div class="res-label"><span>CPU</span><span>${n.cpuUsed}m / ${n.cpuCap}m</span></div>
+          <div class="res-bar"><div class="res-fill ${cpuPct>=80?'high':'cpu'}" style="width:${cpuPct}%"></div></div>
+        </div>
+        <div class="res-row">
+          <div class="res-label"><span>Mem</span><span>${n.memUsed}Mi / ${n.memCap}Mi</span></div>
+          <div class="res-bar"><div class="res-fill ${memPct>=80?'high':'mem'}" style="width:${memPct}%"></div></div>
+        </div>
+        ${podsHtml}
+      </div>`;
+  }).join('');
+
+  // clear flash after paint
+  nodes.forEach(n => { if (n.flash) setTimeout(() => { n.flash = 0; }, 500); });
+
+  const pendingRow = document.getElementById('pendingRow');
+  pendingRow.innerHTML = pending.length
+    ? pending.map(p => `<span class="pending-chip">${p.name} (${p.cpu}m / ${p.mem}Mi)</span>`).join('')
+    : `<span class="pod-empty">queue empty</span>`;
+
+  document.getElementById('clusterStatus').textContent =
+    `${liveNodes.length}/${nodes.length} nodes ready · ${totalPods} pods running · ${pending.length} pending · avg CPU ${avgUtil}%`;
+}
+
+function resetAll() {
+  clearInterval(healthTimer);
+  initCluster();
+  document.getElementById('schedLog').innerHTML = `
+    <div><span class="log-blue">[system]</span> Cluster online — 4 nodes, best-fit bin-packing scheduler active</div>
+    <div><span class="log-blue">[system]</span> Health-check loop started (interval 4000ms) · autoscaler threshold ${(AUTOSCALE_THRESHOLD*100)|0}% avg CPU</div>
+    <div style="color:#374151">[idle] Waiting for workload...</div>`;
+  render();
+  healthTimer = setInterval(healthCheckTick, 4000);
+}
+
+// ─── INIT ───
+initCluster();
+render();
+healthTimer = setInterval(healthCheckTick, 4000);
+</script>
+</body>
+</html>

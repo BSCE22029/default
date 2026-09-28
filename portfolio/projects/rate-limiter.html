@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Distributed Rate Limiter — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.ctrl-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.ctrl-group{display:flex;flex-direction:column;gap:.25rem}
+.ctrl-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.num-input{width:80px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.4rem .6rem;color:var(--text);font-size:.8rem;font-family:inherit;outline:none}
+.num-input:focus{border-color:var(--purple)}
+.preset-chip{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.3rem .8rem;border-radius:99px;font-size:.72rem;cursor:pointer;transition:all .2s}
+.preset-chip:hover{border-color:var(--purple2);color:var(--purple2)}
+
+.nodes-row{display:flex;gap:2px;margin-bottom:.8rem;flex-wrap:wrap}
+.node-box{flex:1;min-width:120px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);padding:.6rem;transition:all .2s}
+.node-box.active{border-color:var(--purple2);box-shadow:0 0 8px rgba(124,58,237,.25)}
+.node-name{font-size:.68rem;font-weight:700;color:var(--purple2);margin-bottom:.3rem}
+.node-bucket{height:8px;border-radius:4px;background:#0d0d1a;overflow:hidden;margin-bottom:.3rem}
+.node-bucket-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--blue));transition:width .3s}
+.node-stat{font-size:.62rem;color:var(--muted);font-family:monospace}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+.graph-wrap{overflow-x:auto}
+#graphCanvas{display:block;border-radius:10px;background:#020208}
+
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:230px;overflow-y:auto;font-family:monospace;font-size:.72rem;line-height:1.85;color:#64748b}
+.log-purple{color:#a855f7}.log-blue{color:#60a5fa}.log-green{color:#4ade80}.log-orange{color:#fb923c}.log-red{color:#f87171}.log-white{color:#e2e8f0;font-weight:700}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Distributed Systems · Backend Infra · Redis</span></div>
+  <h1>Distributed Rate Limiter</h1>
+  <p class="subtitle">A token-bucket rate limiter shared across multiple API nodes via a Redis-style atomic counter — the same pattern used to protect production APIs from abuse and noisy-neighbor traffic. Fire single requests or bursts and watch admission control happen in real time, synced across nodes.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mNodes">3</div><div class="m-label">API Nodes</div></div>
+    <div class="metric"><div class="m-val" id="mAdmitted">0</div><div class="m-label">Admitted</div></div>
+    <div class="metric"><div class="m-val" id="mRejected">0</div><div class="m-label">Rejected (429)</div></div>
+    <div class="metric"><div class="m-val" id="mLatency">—</div><div class="m-label">Sync Latency</div></div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="card">
+    <div class="card-h">Bucket Config</div>
+    <div class="ctrl-row">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Capacity (tokens)</span>
+        <input class="num-input" id="capacityInput" type="number" value="10" min="1" max="50"/>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Refill rate (tokens/s)</span>
+        <input class="num-input" id="refillInput" type="number" value="2" min="1" max="20"/>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn go" id="singleBtn" onclick="fireRequests(1)">Send 1 Request</button>
+      <button class="btn go" id="burstBtn" onclick="fireRequests(15)">Send Burst (15)</button>
+      <button class="btn" onclick="resetAll()">Reset</button>
+    </div>
+    <div class="preset-chip" style="display:inline-block" onclick="fireSustained()">▶ Simulate 30s sustained load (20 req/s)</div>
+    <div style="margin-top:.8rem"><span id="rlStatus" style="font-size:.72rem;color:var(--muted)">Ready — client key: <b style="color:var(--purple2)">api_key_7f3a</b>, shared bucket replicated across 3 nodes</span></div>
+  </div>
+
+  <!-- NODES -->
+  <div class="card">
+    <div class="card-h">Node Buckets (Local View, Synced via Shared Store)</div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:.8rem">Each node keeps a local cache of the bucket state and reconciles it against a shared atomic store (e.g. Redis <code>EVAL</code> with a Lua script) on every request — this is what makes the limit correct even when requests land on different nodes behind a load balancer.</p>
+    <div class="nodes-row" id="nodesRow"></div>
+  </div>
+
+  <!-- GRAPH -->
+  <div class="card">
+    <div class="card-h">Request Flow — Load Balancer → Nodes → Shared Store</div>
+    <div class="graph-wrap">
+      <canvas id="graphCanvas" width="560" height="300"></canvas>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">Admission Log</div>
+    <div class="log" id="rlLog">
+      <div><span class="log-blue">[system]</span> Rate limiter online — algorithm: token bucket, capacity=10, refill=2/s</div>
+      <div><span class="log-blue">[system]</span> Shared store: Redis (simulated) — 3 nodes attached</div>
+      <div style="color:#374151">[idle] Waiting for requests...</div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Atomic Token Bucket (Redis Lua Script)</div>
+<pre><span class="comment">-- rate_limiter.lua — Muhammad Moiz Ahmad</span>
+<span class="comment">-- Runs atomically inside Redis so concurrent requests across nodes</span>
+<span class="comment">-- never race on the same bucket (EVAL is single-threaded in Redis).</span>
+
+<span class="kw">local</span> key           = KEYS[<span class="num">1</span>]
+<span class="kw">local</span> capacity      = <span class="kw">tonumber</span>(ARGV[<span class="num">1</span>])
+<span class="kw">local</span> refill_rate   = <span class="kw">tonumber</span>(ARGV[<span class="num">2</span>])
+<span class="kw">local</span> now           = <span class="kw">tonumber</span>(ARGV[<span class="num">3</span>])
+
+<span class="kw">local</span> bucket = redis.call(<span class="str">"HMGET"</span>, key, <span class="str">"tokens"</span>, <span class="str">"ts"</span>)
+<span class="kw">local</span> tokens  = <span class="kw">tonumber</span>(bucket[<span class="num">1</span>]) <span class="kw">or</span> capacity
+<span class="kw">local</span> last_ts = <span class="kw">tonumber</span>(bucket[<span class="num">2</span>]) <span class="kw">or</span> now
+
+<span class="comment">-- refill based on elapsed time since last request</span>
+<span class="kw">local</span> elapsed = <span class="kw">math</span>.max(<span class="num">0</span>, now - last_ts)
+tokens = <span class="kw">math</span>.min(capacity, tokens + elapsed * refill_rate)
+
+<span class="kw">local</span> allowed = tokens >= <span class="num">1</span>
+<span class="kw">if</span> allowed <span class="kw">then</span> tokens = tokens - <span class="num">1</span> <span class="kw">end</span>
+
+redis.call(<span class="str">"HMSET"</span>, key, <span class="str">"tokens"</span>, tokens, <span class="str">"ts"</span>, now)
+redis.call(<span class="str">"EXPIRE"</span>, key, <span class="num">60</span>)
+
+<span class="kw">return</span> { allowed <span class="kw">and</span> <span class="num">1</span> <span class="kw">or</span> <span class="num">0</span>, <span class="kw">math</span>.floor(tokens) }</pre>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───
+let nodes = [];
+let admitted = 0, rejected = 0;
+let sharedTokens = 10;
+let capacity = 10, refillRate = 2;
+let lastRefillTs = Date.now();
+let running = false;
+let sustainedTimer = null;
+
+function makeNodes() {
+  nodes = [
+    { name: 'Node A (us-east)', color: '96,165,250', active: 0 },
+    { name: 'Node B (us-west)', color: '168,85,247', active: 0 },
+    { name: 'Node C (eu-west)', color: '74,222,128', active: 0 },
+  ];
+}
+
+function renderNodes() {
+  const row = document.getElementById('nodesRow');
+  row.innerHTML = nodes.map((n,i) => `
+    <div class="node-box ${n.active>0?'active':''}" id="node-${i}">
+      <div class="node-name">${n.name}</div>
+      <div class="node-bucket"><div class="node-bucket-fill" style="width:${(sharedTokens/capacity*100).toFixed(0)}%"></div></div>
+      <div class="node-stat">${sharedTokens.toFixed(1)}/${capacity} tokens</div>
+    </div>`).join('');
+}
+
+function refillBucket() {
+  const now = Date.now();
+  const elapsed = (now - lastRefillTs) / 1000;
+  sharedTokens = Math.min(capacity, sharedTokens + elapsed * refillRate);
+  lastRefillTs = now;
+}
+
+function log(html) {
+  const el = document.getElementById('rlLog');
+  el.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
+  el.scrollTop = el.scrollHeight;
+}
+
+function resetAll() {
+  clearInterval(sustainedTimer); sustainedTimer = null;
+  capacity = parseInt(document.getElementById('capacityInput').value) || 10;
+  refillRate = parseInt(document.getElementById('refillInput').value) || 2;
+  sharedTokens = capacity;
+  lastRefillTs = Date.now();
+  admitted = 0; rejected = 0;
+  makeNodes();
+  renderNodes();
+  document.getElementById('mAdmitted').textContent = '0';
+  document.getElementById('mRejected').textContent = '0';
+  document.getElementById('mLatency').textContent = '—';
+  document.getElementById('rlStatus').textContent = `Ready — bucket reset: capacity=${capacity}, refill=${refillRate}/s`;
+  document.getElementById('rlLog').innerHTML = `
+    <div><span class="log-blue">[system]</span> Rate limiter online — algorithm: token bucket, capacity=${capacity}, refill=${refillRate}/s</div>
+    <div><span class="log-blue">[system]</span> Shared store: Redis (simulated) — 3 nodes attached</div>
+    <div style="color:#374151">[idle] Waiting for requests...</div>`;
+  drawGraph(null);
+}
+
+function fireOne(i, delay) {
+  setTimeout(() => {
+    const nodeIdx = Math.floor(Math.random() * nodes.length);
+    const node = nodes[nodeIdx];
+    refillBucket();
+    const syncMs = (4 + Math.random()*6).toFixed(1);
+    const allowed = sharedTokens >= 1;
+    if (allowed) {
+      sharedTokens -= 1;
+      admitted++;
+      document.getElementById('mAdmitted').textContent = admitted;
+      log(`<span class="log-purple">[${node.name}]</span> req #${i+1} → <span class="log-blue">EVAL rate_limiter.lua</span> (sync ${syncMs}ms) → <span class="log-green">200 OK</span> tokens left: ${sharedTokens.toFixed(1)}`);
+    } else {
+      rejected++;
+      document.getElementById('mRejected').textContent = rejected;
+      log(`<span class="log-purple">[${node.name}]</span> req #${i+1} → <span class="log-blue">EVAL rate_limiter.lua</span> (sync ${syncMs}ms) → <span class="log-red">429 Too Many Requests</span>`);
+    }
+    document.getElementById('mLatency').textContent = syncMs + 'ms';
+    node.active = 1;
+    renderNodes();
+    pulseGraphNode(nodeIdx, allowed);
+    setTimeout(() => { node.active = 0; renderNodes(); }, 400);
+  }, delay);
+}
+
+function fireRequests(n) {
+  for (let i = 0; i < n; i++) fireOne(i, i * 90);
+}
+
+function fireSustained() {
+  if (sustainedTimer) return;
+  let count = 0;
+  document.getElementById('rlStatus').textContent = 'Running sustained load: 20 req/s for 30s...';
+  sustainedTimer = setInterval(() => {
+    fireOne(count, 0);
+    count++;
+    if (count >= 60) { clearInterval(sustainedTimer); sustainedTimer = null; document.getElementById('rlStatus').textContent = 'Sustained load complete.'; }
+  }, 50);
+}
+
+// ─── GRAPH VIZ ───
+const canvas = document.getElementById('graphCanvas');
+const ctx = canvas.getContext('2d');
+const CW = Math.min(560, window.innerWidth - 80);
+canvas.width = CW;
+const gNodes = [
+  { name: 'Load\nBalancer', x: 0.5, y: 0.12, color: '148,163,184' },
+  { name: 'Node A', x: 0.2, y: 0.45, color: '96,165,250' },
+  { name: 'Node B', x: 0.5, y: 0.45, color: '168,85,247' },
+  { name: 'Node C', x: 0.8, y: 0.45, color: '74,222,128' },
+  { name: 'Redis\nBucket Store', x: 0.5, y: 0.85, color: '249,115,22' },
+];
+const gEdges = [[0,1],[0,2],[0,3],[1,4],[2,4],[3,4]];
+let pulseState = new Array(gNodes.length).fill(0);
+let edgePulse = new Array(gEdges.length).fill(0);
+let denyFlash = 0;
+
+function nodePos(n) { return { x: n.x * canvas.width, y: n.y * canvas.height }; }
+
+function drawGraph() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#020208'; ctx.fillRect(0,0,W,H);
+
+  gEdges.forEach(([a,b], i) => {
+    const pa = nodePos(gNodes[a]), pb = nodePos(gNodes[b]);
+    const glow = edgePulse[i];
+    const c = denyFlash > 0 && (a===1||a===2||a===3) ? '239,68,68' : '168,85,247';
+    ctx.strokeStyle = `rgba(${c},${.12 + glow*.6})`;
+    ctx.lineWidth = 1 + glow*2;
+    if (glow > .1) { ctx.shadowColor = `rgba(${c},.6)`; ctx.shadowBlur = glow*14; }
+    ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    ctx.shadowBlur = 0;
+  });
+
+  gNodes.forEach((n, i) => {
+    const p = nodePos(n);
+    const pulse = pulseState[i];
+    const r = 32 + pulse*8;
+    if (pulse > .1) { ctx.shadowColor = `rgba(${n.color},${pulse*.7})`; ctx.shadowBlur = pulse*22; }
+    ctx.fillStyle = `rgba(${n.color},${.1 + pulse*.25})`;
+    ctx.strokeStyle = `rgba(${n.color},${.5 + pulse*.5})`;
+    ctx.lineWidth = 1.5 + pulse;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = `rgba(${n.color},${.75 + pulse*.25})`;
+    ctx.font = `bold ${10 + pulse}px monospace`;
+    ctx.textAlign = 'center';
+    n.name.split('\n').forEach((line, li) => {
+      ctx.fillText(line, p.x, p.y + 3 + li*11 - (n.name.includes('\n') ? 5 : 0));
+    });
+  });
+  if (denyFlash > 0) denyFlash -= 1;
+}
+
+function pulseGraphNode(nodeIdx, allowed) {
+  if (!allowed) denyFlash = 8;
+  const path = [0, nodeIdx+1, 4];
+  path.forEach((ni, step) => {
+    setTimeout(() => {
+      let t = 0;
+      const anim = setInterval(() => {
+        t += 1;
+        pulseState[ni] = Math.max(0, 1 - t/14);
+        gEdges.forEach((e, i) => { if (e.includes(ni)) edgePulse[i] = Math.max(0, 1 - t/18); });
+        drawGraph();
+        if (t > 18) clearInterval(anim);
+      }, 25);
+    }, step * 120);
+  });
+}
+
+makeNodes();
+renderNodes();
+drawGraph();
+</script>
+</body>
+</html>

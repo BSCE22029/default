@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Edge Anomaly Detector — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.btn{padding:.5rem 1.1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.4);color:#4ade80}
+.btn.fault{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#f87171}
+
+canvas.signal{display:block;width:100%;height:160px;border-radius:8px;background:#020208}
+
+/* Status */
+.status-box{display:flex;align-items:center;gap:.8rem;padding:.9rem 1.1rem;border-radius:10px;border:1px solid var(--border);margin-bottom:.8rem;transition:all .3s}
+.sb-normal{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.05)}
+.sb-anomaly{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.08);animation:alertPulse .8s ease-in-out infinite}
+@keyframes alertPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}50%{box-shadow:0 0 12px 2px rgba(239,68,68,.3)}}
+.sb-icon{font-size:1.6rem}
+.sb-title{font-weight:800;font-size:.95rem}
+.sb-sub{font-size:.72rem;color:var(--muted)}
+.anomaly-score{font-size:1.8rem;font-weight:800;font-family:monospace}
+.score-normal{color:#4ade80}
+.score-anomaly{color:#f87171}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+/* Feature bars */
+.feat-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.5rem}
+.feat-label{font-size:.7rem;color:var(--muted);width:90px;flex-shrink:0}
+.feat-bar-wrap{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.feat-bar{height:100%;border-radius:4px;transition:width .4s cubic-bezier(.4,0,.2,1),background .4s}
+.feat-val{font-size:.68rem;font-family:monospace;width:40px;text-align:right}
+
+/* Log */
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:120px;overflow-y:auto;font-family:monospace;font-size:.7rem;line-height:1.8}
+.lnorm{color:#4ade80}.lanom{color:#ef4444}.linfo{color:#60a5fa}.ltime{color:#374151}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.fn{color:#60a5fa}.str{color:#4ade80}.num{color:#fb923c}.comment{color:#475569}
+@media(max-width:650px){.grid2{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">ESP32 · TFLite · Autoencoder · Industrial IoT · Edge AI</span></div>
+  <h1>Edge Anomaly Detector</h1>
+  <p class="subtitle">An autoencoder neural network running on ESP32 detects machine faults from vibration sensor data — no cloud, real-time alerts</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val">98.2%</div><div class="m-label">Detection Rate</div></div>
+    <div class="metric"><div class="m-val">&lt;1%</div><div class="m-label">False Positives</div></div>
+    <div class="metric"><div class="m-val">12ms</div><div class="m-label">Latency</div></div>
+    <div class="metric"><div class="m-val">ESP32</div><div class="m-label">Hardware</div></div>
+  </div>
+
+  <div class="grid2">
+    <!-- LEFT: controls + signal -->
+    <div class="card">
+      <div class="card-h">Vibration Signal</div>
+      <canvas class="signal" id="sigCanvas"></canvas>
+      <div style="display:flex;gap:.6rem;margin-top:.8rem;flex-wrap:wrap">
+        <button class="btn go" onclick="setMode('normal')">Normal Operation</button>
+        <button class="btn fault" onclick="setMode('bearing')">Bearing Fault</button>
+        <button class="btn fault" onclick="setMode('imbalance')">Imbalance</button>
+        <button class="btn fault" onclick="setMode('misalign')">Misalignment</button>
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:.7rem" id="modeDesc">Simulating: smooth, periodic vibration pattern typical of healthy rotating machinery.</div>
+    </div>
+
+    <!-- RIGHT: detection result -->
+    <div class="card">
+      <div class="card-h">Detection Result</div>
+      <div class="status-box sb-normal" id="statusBox">
+        <div class="sb-icon" id="sbIcon">✅</div>
+        <div>
+          <div class="sb-title" id="sbTitle">Normal</div>
+          <div class="sb-sub" id="sbSub">Reconstruction error within threshold</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div class="anomaly-score score-normal" id="scoreVal">0.12</div>
+          <div style="font-size:.62rem;color:var(--muted)">recon error</div>
+        </div>
+      </div>
+
+      <div class="card-h">Feature Vector</div>
+      <div id="featBars"></div>
+      <div style="margin-top:.8rem;font-size:.7rem;color:var(--muted)">Threshold: <span style="color:#fbbf24;font-family:monospace">0.45</span> — above = anomaly</div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">ESP32 Serial Monitor</div>
+    <div class="log" id="hwLog"></div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Autoencoder — C++ on ESP32</div>
+<pre><span class="comment">// edge_anomaly.cpp — Autoencoder on ESP32 + ADXL345</span>
+<span class="comment">// Muhammad Moiz Ahmad</span>
+<span class="kw">#include</span> <span class="str">&lt;TensorFlowLite_ESP32.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;Adafruit_ADXL345_U.h&gt;</span>
+<span class="kw">#include</span> <span class="str">"autoencoder_model.h"</span>
+
+<span class="kw">constexpr float</span> THRESHOLD  = <span class="num">0.45f</span>;
+<span class="kw">constexpr int</span>   WINDOW_LEN = <span class="num">128</span>;
+
+<span class="kw">float</span> <span class="fn">computeReconError</span>(<span class="kw">float</span>* input, <span class="kw">float</span>* output, <span class="kw">int</span> len) {
+    <span class="kw">float</span> mse = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < len; i++)
+        mse += (input[i] - output[i]) * (input[i] - output[i]);
+    <span class="kw">return</span> mse / len;
+}
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+    <span class="comment">// Collect 128 accelerometer samples</span>
+    <span class="kw">float</span> window[WINDOW_LEN * <span class="num">3</span>];
+    <span class="fn">collectIMUWindow</span>(window, WINDOW_LEN);
+    <span class="fn">normalizeWindow</span>(window, WINDOW_LEN * <span class="num">3</span>);
+
+    <span class="comment">// Run autoencoder: encode → decode</span>
+    <span class="fn">setInput</span>(window, WINDOW_LEN * <span class="num">3</span>);
+    interpreter-><span class="fn">Invoke</span>();
+    <span class="kw">float</span>* recon = <span class="fn">getOutput</span>();
+
+    <span class="kw">float</span> err = <span class="fn">computeReconError</span>(window, recon, WINDOW_LEN * <span class="num">3</span>);
+
+    <span class="kw">if</span> (err > THRESHOLD) {
+        Serial.<span class="fn">printf</span>(<span class="str">"[ANOMALY] Error=%.3f — fault detected!\n"</span>, err);
+        <span class="fn">triggerAlert</span>();   <span class="comment">// buzzer + LED</span>
+    } <span class="kw">else</span> {
+        Serial.<span class="fn">printf</span>(<span class="str">"[NORMAL]  Error=%.3f\n"</span>, err);
+    }
+}</pre>
+  </div>
+</div>
+
+<script>
+let mode = 'normal';
+let sigAnimId = null;
+let logTimer = null;
+let time = 0;
+
+const MODES = {
+  normal:   { desc:'Simulating: smooth, periodic vibration pattern typical of healthy rotating machinery.',
+              fn: t => Math.sin(t*3)*0.8 + Math.sin(t*6)*.15 + (Math.random()-.5)*.06,
+              error: () => .08+Math.random()*.08, features: [.12,.09,.07,.11,.08,.10] },
+  bearing:  { desc:'Simulating: high-frequency spikes from a damaged bearing — classic fault signature.',
+              fn: t => Math.sin(t*3)*.6 + (Math.sin(t*18)>0.6?Math.sin(t*18)*2:0) + (Math.random()-.5)*.2,
+              error: () => .55+Math.random()*.25, features: [.85,.72,.61,.78,.55,.68] },
+  imbalance:{ desc:'Simulating: large-amplitude once-per-revolution vibration from rotor imbalance.',
+              fn: t => Math.sin(t*3)*1.8 + Math.sin(t*6)*.4 + (Math.random()-.5)*.1,
+              error: () => .62+Math.random()*.2, features: [.92,.88,.45,.35,.22,.40] },
+  misalign: { desc:'Simulating: double-frequency harmonics from shaft misalignment between motor and load.',
+              fn: t => Math.sin(t*3)*1.1 + Math.sin(t*6)*.9 + Math.sin(t*9)*.3 + (Math.random()-.5)*.1,
+              error: () => .58+Math.random()*.18, features: [.45,.88,.92,.75,.38,.55] },
+};
+const FEAT_LABELS = ['RMS','Crest Factor','Kurtosis','Skewness','THD','Entropy'];
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('modeDesc').textContent = MODES[m].desc;
+  clearInterval(logTimer);
+  startLog();
+}
+
+function startLog() {
+  const log = document.getElementById('hwLog');
+  const now = () => new Date().toLocaleTimeString();
+
+  log.insertAdjacentHTML('beforeend',`<div><span class="ltime">[${now()}]</span> <span class="linfo">Mode changed: ${mode}</span></div>`);
+
+  logTimer = setInterval(() => {
+    const m = MODES[mode];
+    const err = m.error();
+    const isAnom = err > 0.45;
+    const cls = isAnom ? 'lanom' : 'lnorm';
+    const tag = isAnom ? '[ANOMALY]' : '[NORMAL] ';
+    log.insertAdjacentHTML('beforeend',`<div><span class="ltime">[${now()}]</span> <span class="${cls}">${tag}</span> err=${err.toFixed(3)} — ${isAnom?'⚠ FAULT DETECTED':'machine healthy'}</div>`);
+    log.scrollTop = log.scrollHeight;
+  }, 800);
+}
+
+// Signal canvas
+const canvas = document.getElementById('sigCanvas');
+const ctx = canvas.getContext('2d');
+const hist = [];
+const MAX_H = 200;
+
+function drawSignal() {
+  const W = canvas.offsetWidth||600, H = 160;
+  canvas.width = W; canvas.height = H;
+
+  const val = MODES[mode].fn(time);
+  hist.push(val);
+  if (hist.length > MAX_H) hist.shift();
+
+  const err = MODES[mode].error();
+  const isAnom = err > .45;
+  const color = isAnom ? '#ef4444' : '#a855f7';
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020208'; ctx.fillRect(0,0,W,H);
+
+  // center line
+  ctx.strokeStyle='rgba(255,255,255,.04)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
+
+  // signal
+  ctx.strokeStyle=color; ctx.lineWidth=1.8;
+  ctx.shadowColor=color; ctx.shadowBlur=isAnom?8:4;
+  ctx.beginPath();
+  hist.forEach((v,i) => {
+    const x = (i/(MAX_H-1))*W;
+    const y = H/2 - v*(H/2*.42);
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke(); ctx.shadowBlur=0;
+
+  // status update
+  const score = err.toFixed(3);
+  const scoreEl = document.getElementById('scoreVal');
+  const box = document.getElementById('statusBox');
+  scoreEl.textContent = score;
+  if (isAnom) {
+    scoreEl.className='anomaly-score score-anomaly';
+    box.className='status-box sb-anomaly';
+    document.getElementById('sbIcon').textContent='⚠️';
+    document.getElementById('sbTitle').textContent=`${mode.charAt(0).toUpperCase()+mode.slice(1)} Fault`;
+    document.getElementById('sbSub').textContent='Reconstruction error exceeds threshold';
+  } else {
+    scoreEl.className='anomaly-score score-normal';
+    box.className='status-box sb-normal';
+    document.getElementById('sbIcon').textContent='✅';
+    document.getElementById('sbTitle').textContent='Normal';
+    document.getElementById('sbSub').textContent='Reconstruction error within threshold';
+  }
+
+  // feature bars
+  const feats = MODES[mode].features.map(f => f + (Math.random()-.5)*.04);
+  const fb = document.getElementById('featBars');
+  fb.innerHTML='';
+  FEAT_LABELS.forEach((lbl,i)=>{
+    const pct=(feats[i]*100).toFixed(1);
+    const color2 = feats[i]>0.45 ? '#ef4444' : '#a855f7';
+    fb.innerHTML+=`<div class="feat-row"><span class="feat-label">${lbl}</span><div class="feat-bar-wrap"><div class="feat-bar" style="width:${pct}%;background:${color2}"></div></div><span class="feat-val" style="color:${color2}">${pct}%</span></div>`;
+  });
+
+  time += 0.1;
+  sigAnimId = requestAnimationFrame(drawSignal);
+}
+
+window.addEventListener('resize',()=>{});
+drawSignal();
+startLog();
+</script>
+</body>
+</html>

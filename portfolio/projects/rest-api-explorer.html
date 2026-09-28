@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>REST API Explorer — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg2:#111128;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card h3{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.btn{padding:.5rem 1.1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--purple);color:var(--text)}
+
+/* METHOD BADGES */
+.m-get{background:rgba(34,197,94,.15);color:#4ade80;border-color:rgba(34,197,94,.3)}
+.m-post{background:rgba(59,130,246,.15);color:#60a5fa;border-color:rgba(59,130,246,.3)}
+.m-put{background:rgba(249,115,22,.15);color:#fb923c;border-color:rgba(249,115,22,.3)}
+.m-delete{background:rgba(239,68,68,.15);color:#f87171;border-color:rgba(239,68,68,.3)}
+.method-badge{font-size:.7rem;font-weight:800;padding:.15rem .5rem;border-radius:4px;border:1px solid;font-family:monospace;white-space:nowrap}
+
+/* ENDPOINT LIST */
+.ep-list{display:flex;flex-direction:column;gap:.5rem}
+.ep-row{display:flex;align-items:center;gap:.7rem;padding:.65rem .9rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s}
+.ep-row:hover,.ep-row.active{border-color:var(--purple);background:rgba(124,58,237,.07)}
+.ep-path{font-family:monospace;font-size:.8rem;color:var(--text);flex:1}
+.ep-desc{font-size:.7rem;color:var(--muted)}
+
+/* REQUEST PANEL */
+.req-panel{display:flex;flex-direction:column;gap:.8rem}
+.field-label{font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem}
+textarea.body-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:.75rem;padding:.7rem .85rem;resize:vertical;outline:none;min-height:90px}
+textarea.body-input:focus{border-color:var(--purple)}
+.send-btn{background:rgba(124,58,237,.25);border:1px solid var(--purple2);color:var(--purple2);padding:.6rem 1.4rem;border-radius:8px;font-weight:800;font-size:.82rem;cursor:pointer;transition:all .2s;width:100%}
+.send-btn:hover{background:rgba(124,58,237,.4)}
+
+/* RESPONSE */
+.status-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.7rem}
+.status-code{font-size:1rem;font-weight:800;font-family:monospace}
+.sc-2xx{color:#4ade80}.sc-4xx{color:#ef4444}.sc-5xx{color:#f97316}
+.latency{font-size:.72rem;color:var(--muted)}
+pre.resp{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:1rem;font-size:.72rem;max-height:280px;overflow-y:auto;line-height:1.7;color:#cbd5e1;white-space:pre-wrap;word-break:break-all}
+.json-key{color:#60a5fa}.json-str{color:#4ade80}.json-num{color:#fb923c}.json-bool{color:#a855f7}.json-null{color:#ef4444}
+
+/* CODE */
+pre.code{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.fn{color:#60a5fa}.str{color:#4ade80}.num{color:#fb923c}.comment{color:#475569}
+.tabs{display:flex;gap:.4rem;margin-bottom:.8rem;flex-wrap:wrap}
+.tab{padding:.3rem .85rem;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.73rem;font-weight:700;cursor:pointer}
+.tab.active{background:rgba(124,58,237,.15);border-color:var(--purple);color:var(--purple2)}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Node.js · Express · REST API · JWT Auth · CRUD</span></div>
+  <h1>REST API Explorer</h1>
+  <p class="subtitle">Interactive demo of a full CRUD REST API — users, posts, auth with JWT. Try every endpoint live.</p>
+
+  <div class="grid2">
+    <!-- LEFT: ENDPOINTS -->
+    <div class="card">
+      <h3>API Endpoints</h3>
+      <div class="ep-list" id="epList"></div>
+    </div>
+
+    <!-- RIGHT: REQUEST/RESPONSE -->
+    <div>
+      <div class="card req-panel">
+        <h3>Request</h3>
+        <div>
+          <div class="field-label">Endpoint</div>
+          <div id="selEp" style="font-family:monospace;font-size:.83rem;padding:.5rem .8rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:.6rem">
+            <span class="method-badge m-get">GET</span>
+            <span id="selPath">/api/users</span>
+          </div>
+        </div>
+        <div id="bodyWrap" style="display:none">
+          <div class="field-label">Body (JSON)</div>
+          <textarea class="body-input" id="bodyInput">{}</textarea>
+        </div>
+        <div>
+          <div class="field-label">Auth Token</div>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <div id="tokenBadge" style="font-family:monospace;font-size:.7rem;padding:.35rem .7rem;background:var(--bg3);border:1px solid var(--border);border-radius:6px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)">No token — call POST /auth/login first</div>
+            <button class="btn" onclick="clearToken()">Clear</button>
+          </div>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendReq()">▶ Send Request</button>
+      </div>
+
+      <div class="card">
+        <h3>Response</h3>
+        <div class="status-row">
+          <span class="status-code" id="statusCode" style="color:var(--muted)">—</span>
+          <span id="statusText" style="font-size:.75rem;color:var(--muted)">No request sent yet</span>
+          <span class="latency" id="latency"></span>
+        </div>
+        <pre class="resp" id="respPre">Select an endpoint and click Send Request</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <h3>Node.js + Express Implementation</h3>
+    <div class="tabs">
+      <div class="tab active" onclick="showCode('server',this)">server.js</div>
+      <div class="tab" onclick="showCode('auth',this)">auth.js</div>
+      <div class="tab" onclick="showCode('users',this)">users.js</div>
+    </div>
+    <pre class="code" id="codeBlock"></pre>
+  </div>
+</div>
+
+<script>
+// ---- MOCK DB ----
+let db = {
+  users: [
+    {id:1, name:"Moiz Ahmad", email:"moiz@example.com", role:"admin", createdAt:"2026-01-15"},
+    {id:2, name:"Ali Hassan", email:"ali@example.com", role:"user", createdAt:"2026-02-03"},
+    {id:3, name:"Sara Khan",  email:"sara@example.com", role:"user", createdAt:"2026-03-20"},
+  ],
+  posts: [
+    {id:1, userId:1, title:"Building UART in Verilog", likes:42, createdAt:"2026-05-01"},
+    {id:2, userId:2, title:"React vs Vue in 2026",    likes:18, createdAt:"2026-05-10"},
+    {id:3, userId:1, title:"PWM Motor Control Guide", likes:31, createdAt:"2026-06-05"},
+  ],
+  nextUserId:4, nextPostId:4
+};
+let jwtToken=null;
+
+// ---- ENDPOINTS ----
+const endpoints=[
+  {method:'GET',  path:'/api/users',       desc:'List all users',         auth:true,  body:false, handler:getUsers},
+  {method:'GET',  path:'/api/users/:id',   desc:'Get user by ID',         auth:true,  body:false, handler:getUser, paramHint:'Replace :id with 1, 2, or 3'},
+  {method:'POST', path:'/api/users',       desc:'Create a new user',      auth:true,  body:true,  bodyDefault:'{"name":"New User","email":"new@example.com","role":"user"}', handler:createUser},
+  {method:'PUT',  path:'/api/users/:id',   desc:'Update a user',          auth:true,  body:true,  bodyDefault:'{"name":"Updated Name"}', handler:updateUser},
+  {method:'DELETE',path:'/api/users/:id',  desc:'Delete a user',          auth:true,  body:false, handler:deleteUser},
+  {method:'GET',  path:'/api/posts',       desc:'List all posts',         auth:false, body:false, handler:getPosts},
+  {method:'POST', path:'/api/posts',       desc:'Create a post',          auth:true,  body:true,  bodyDefault:'{"title":"My New Post","userId":1}', handler:createPost},
+  {method:'POST', path:'/auth/login',      desc:'Login — returns JWT',    auth:false, body:true,  bodyDefault:'{"email":"moiz@example.com","password":"password123"}', handler:login},
+  {method:'POST', path:'/auth/register',   desc:'Register new account',   auth:false, body:true,  bodyDefault:'{"name":"Ahmad","email":"ahmad@test.com","password":"pass123"}', handler:register},
+  {method:'GET',  path:'/auth/me',         desc:'Get current user',       auth:true,  body:false, handler:getMe},
+];
+
+let selectedIdx=0;
+
+function methodClass(m){return 'm-'+m.toLowerCase().replace('delete','delete');}
+function buildList(){
+  const el=document.getElementById('epList');
+  endpoints.forEach((ep,i)=>{
+    const row=document.createElement('div');
+    row.className='ep-row'+(i===0?' active':'');
+    row.innerHTML=`<span class="method-badge ${methodClass(ep.method)}">${ep.method}</span><span class="ep-path">${ep.path}</span>`;
+    row.onclick=()=>selectEp(i,row);
+    el.appendChild(row);
+  });
+}
+
+function selectEp(i,row){
+  selectedIdx=i;
+  document.querySelectorAll('.ep-row').forEach(r=>r.classList.remove('active'));
+  row.classList.add('active');
+  const ep=endpoints[i];
+  const badge=document.querySelector('#selEp .method-badge');
+  badge.className=`method-badge ${methodClass(ep.method)}`;
+  badge.textContent=ep.method;
+  document.getElementById('selPath').textContent=ep.path;
+  const bw=document.getElementById('bodyWrap');
+  if(ep.body){bw.style.display='block';document.getElementById('bodyInput').value=ep.bodyDefault||'{}';}
+  else bw.style.display='none';
+}
+
+// ---- HANDLERS ----
+function requireAuth(ep){
+  if(ep.auth&&!jwtToken) return {error:"Unauthorized — call POST /auth/login first to get a token",status:401};
+  return null;
+}
+
+function getUsers(ep,body){
+  const a=requireAuth(ep); if(a) return a;
+  return {status:200,data:{users:db.users,total:db.users.length}};
+}
+function getUser(ep,body){
+  const a=requireAuth(ep); if(a) return a;
+  const id=parseInt(prompt('Enter user ID (1-3):','1'));
+  const u=db.users.find(x=>x.id===id);
+  if(!u) return {status:404,data:{error:`User ${id} not found`}};
+  return {status:200,data:{user:u}};
+}
+function createUser(ep,body){
+  const a=requireAuth(ep); if(a) return a;
+  if(!body.name||!body.email) return {status:400,data:{error:"name and email are required"}};
+  const u={id:db.nextUserId++,...body,createdAt:new Date().toISOString().split('T')[0]};
+  db.users.push(u);
+  return {status:201,data:{message:"User created",user:u}};
+}
+function updateUser(ep,body){
+  const a=requireAuth(ep); if(a) return a;
+  const id=parseInt(prompt('Enter user ID to update (1-3):','1'));
+  const u=db.users.find(x=>x.id===id);
+  if(!u) return {status:404,data:{error:`User ${id} not found`}};
+  Object.assign(u,body);
+  return {status:200,data:{message:"User updated",user:u}};
+}
+function deleteUser(ep,body){
+  const a=requireAuth(ep); if(a) return a;
+  const id=parseInt(prompt('Enter user ID to delete (1-3):','3'));
+  const idx=db.users.findIndex(x=>x.id===id);
+  if(idx===-1) return {status:404,data:{error:`User ${id} not found`}};
+  db.users.splice(idx,1);
+  return {status:200,data:{message:`User ${id} deleted`}};
+}
+function getPosts(){
+  return {status:200,data:{posts:db.posts,total:db.posts.length}};
+}
+function createPost(ep,body){
+  const a=requireAuth(ep); if(a) return a;
+  if(!body.title) return {status:400,data:{error:"title is required"}};
+  const p={id:db.nextPostId++,...body,likes:0,createdAt:new Date().toISOString().split('T')[0]};
+  db.posts.push(p);
+  return {status:201,data:{message:"Post created",post:p}};
+}
+function login(ep,body){
+  if(!body.email||!body.password) return {status:400,data:{error:"email and password required"}};
+  const u=db.users.find(x=>x.email===body.email);
+  if(!u||body.password!=='password123') return {status:401,data:{error:"Invalid credentials"}};
+  jwtToken='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'+btoa(JSON.stringify({sub:u.id,name:u.name,role:u.role,exp:Date.now()+3600000}))+'.mock_signature';
+  document.getElementById('tokenBadge').textContent=jwtToken.slice(0,40)+'...';
+  document.getElementById('tokenBadge').style.color='#4ade80';
+  return {status:200,data:{message:"Login successful",token:jwtToken,user:{id:u.id,name:u.name,email:u.email,role:u.role}}};
+}
+function register(ep,body){
+  if(!body.name||!body.email||!body.password) return {status:400,data:{error:"name, email, password required"}};
+  if(db.users.find(x=>x.email===body.email)) return {status:409,data:{error:"Email already registered"}};
+  const u={id:db.nextUserId++,name:body.name,email:body.email,role:'user',createdAt:new Date().toISOString().split('T')[0]};
+  db.users.push(u);
+  return {status:201,data:{message:"Account created",user:u}};
+}
+function getMe(ep){
+  const a=requireAuth(ep); if(a) return a;
+  try{
+    const payload=JSON.parse(atob(jwtToken.split('.')[1]));
+    const u=db.users.find(x=>x.id===payload.sub);
+    return {status:200,data:{user:u,tokenPayload:payload}};
+  }catch(e){return {status:401,data:{error:"Invalid token"}};}
+}
+
+// ---- SEND ----
+function sendReq(){
+  const ep=endpoints[selectedIdx];
+  let body={};
+  if(ep.body){
+    try{body=JSON.parse(document.getElementById('bodyInput').value);}
+    catch(e){showResp(400,'Bad Request',{error:'Invalid JSON body'},0);return;}
+  }
+  const start=Date.now();
+  // simulate latency
+  setTimeout(()=>{
+    const result=ep.handler(ep,body);
+    const ms=Date.now()-start;
+    showResp(result.status, statusText(result.status), result.data||result.error, ms);
+  }, 60+Math.random()*80);
+}
+
+function statusText(s){
+  return {200:'OK',201:'Created',400:'Bad Request',401:'Unauthorized',404:'Not Found',409:'Conflict',500:'Internal Server Error'}[s]||'Unknown';
+}
+
+function showResp(code,text,data,ms){
+  const sc=document.getElementById('statusCode');
+  sc.textContent=code;
+  sc.className='status-code '+(code<300?'sc-2xx':code<500?'sc-4xx':'sc-5xx');
+  document.getElementById('statusText').textContent=text;
+  document.getElementById('latency').textContent=ms?`${ms}ms`:'';
+  document.getElementById('respPre').innerHTML=highlight(JSON.stringify(data,null,2));
+}
+function clearToken(){jwtToken=null;document.getElementById('tokenBadge').textContent='No token — call POST /auth/login first';document.getElementById('tokenBadge').style.color='';}
+
+function highlight(json){
+  return json
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"([^"]+)":/g,'<span class="json-key">"$1"</span>:')
+    .replace(/: "([^"]*)"/g,': <span class="json-str">"$1"</span>')
+    .replace(/: (-?\d+\.?\d*)/g,': <span class="json-num">$1</span>')
+    .replace(/: (true|false)/g,': <span class="json-bool">$1</span>')
+    .replace(/: (null)/g,': <span class="json-null">$1</span>');
+}
+
+// ---- CODE ----
+const CODES={
+  server:`<span class="comment">// server.js — Express REST API</span>
+<span class="comment">// Muhammad Moiz Ahmad</span>
+<span class="kw">const</span> express = <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> cors    = <span class="fn">require</span>(<span class="str">'cors'</span>);
+<span class="kw">const</span> app     = <span class="fn">express</span>();
+app.<span class="fn">use</span>(<span class="fn">cors</span>()); app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+<span class="comment">// Routes</span>
+app.<span class="fn">use</span>(<span class="str">'/auth'</span>,     <span class="fn">require</span>(<span class="str">'./routes/auth'</span>));
+app.<span class="fn">use</span>(<span class="str">'/api/users'</span>,<span class="fn">require</span>(<span class="str">'./routes/users'</span>));
+app.<span class="fn">use</span>(<span class="str">'/api/posts'</span>,<span class="fn">require</span>(<span class="str">'./routes/posts'</span>));
+
+<span class="comment">// Global error handler</span>
+app.<span class="fn">use</span>((err, req, res, next) => {
+  res.<span class="fn">status</span>(err.status || <span class="num">500</span>).<span class="fn">json</span>({ error: err.message });
+});
+
+app.<span class="fn">listen</span>(<span class="num">3000</span>, () => console.<span class="fn">log</span>(<span class="str">'API running on :3000'</span>));`,
+
+  auth:`<span class="comment">// routes/auth.js — JWT Authentication</span>
+<span class="kw">const</span> router = <span class="fn">require</span>(<span class="str">'express'</span>).<span class="fn">Router</span>();
+<span class="kw">const</span> jwt    = <span class="fn">require</span>(<span class="str">'jsonwebtoken'</span>);
+<span class="kw">const</span> bcrypt = <span class="fn">require</span>(<span class="str">'bcryptjs'</span>);
+
+<span class="comment">// POST /auth/login</span>
+router.<span class="fn">post</span>(<span class="str">'/login'</span>, <span class="kw">async</span> (req, res) => {
+  <span class="kw">const</span> { email, password } = req.body;
+  <span class="kw">const</span> user = <span class="kw">await</span> User.<span class="fn">findOne</span>({ email });
+  <span class="kw">if</span> (!user || !<span class="kw">await</span> bcrypt.<span class="fn">compare</span>(password, user.passwordHash))
+    <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({ error: <span class="str">'Invalid credentials'</span> });
+  <span class="kw">const</span> token = jwt.<span class="fn">sign</span>(
+    { sub: user.id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: <span class="str">'1h'</span> }
+  );
+  res.<span class="fn">json</span>({ token, user: user.<span class="fn">toPublic</span>() });
+});
+
+<span class="comment">// Middleware — verify token</span>
+<span class="kw">const</span> <span class="fn">auth</span> = (req, res, next) => {
+  <span class="kw">const</span> token = req.headers.authorization?.split(<span class="str">' '</span>)[<span class="num">1</span>];
+  <span class="kw">if</span> (!token) <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({ error: <span class="str">'Unauthorized'</span> });
+  <span class="kw">try</span> { req.user = jwt.<span class="fn">verify</span>(token, process.env.JWT_SECRET); next(); }
+  <span class="kw">catch</span> { res.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({ error: <span class="str">'Invalid token'</span> }); }
+};
+
+module.exports = { router, auth };`,
+
+  users:`<span class="comment">// routes/users.js — CRUD endpoints</span>
+<span class="kw">const</span> { Router } = <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> { auth }   = <span class="fn">require</span>(<span class="str">'./auth'</span>);
+<span class="kw">const</span> router     = <span class="fn">Router</span>();
+
+router.<span class="fn">get</span>   (<span class="str">'/'</span>,   auth, <span class="kw">async</span> (req,res) => res.<span class="fn">json</span>(<span class="kw">await</span> User.<span class="fn">findAll</span>()));
+router.<span class="fn">get</span>   (<span class="str">'/:id'</span>, auth, <span class="kw">async</span> (req,res) => {
+  <span class="kw">const</span> u = <span class="kw">await</span> User.<span class="fn">findById</span>(req.params.id);
+  u ? res.<span class="fn">json</span>(u) : res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">json</span>({ error: <span class="str">'Not found'</span> });
+});
+router.<span class="fn">post</span>  (<span class="str">'/'</span>,   auth, <span class="kw">async</span> (req,res) => {
+  <span class="kw">const</span> u = <span class="kw">await</span> User.<span class="fn">create</span>(req.body);
+  res.<span class="fn">status</span>(<span class="num">201</span>).<span class="fn">json</span>(u);
+});
+router.<span class="fn">put</span>   (<span class="str">'/:id'</span>, auth, <span class="kw">async</span> (req,res) => {
+  <span class="kw">const</span> u = <span class="kw">await</span> User.<span class="fn">update</span>(req.params.id, req.body);
+  u ? res.<span class="fn">json</span>(u) : res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">json</span>({ error: <span class="str">'Not found'</span> });
+});
+router.<span class="fn">delete</span>(<span class="str">'/:id'</span>, auth, <span class="kw">async</span> (req,res) => {
+  <span class="kw">await</span> User.<span class="fn">delete</span>(req.params.id);
+  res.<span class="fn">json</span>({ message: <span class="str">'Deleted'</span> });
+});
+module.exports = router;`
+};
+
+function showCode(k,tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('codeBlock').innerHTML=CODES[k];
+}
+
+buildList();
+showCode('server',document.querySelector('.tab.active'));
+</script>
+</body>
+</html>

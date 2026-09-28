@@ -1,0 +1,5 @@
+.env*
+.vercel
+.vercel.old-*
+.claude
+platform-copy.md

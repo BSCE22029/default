@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Trading Exchange: Matching Engine + Ledger + Risk — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:760px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:1080px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.85rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.5rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn.buy{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.4);color:#4ade80}
+.btn.sell{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);color:#f87171}
+.preset-chip{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.35rem .85rem;border-radius:99px;font-size:.72rem;cursor:pointer;transition:all .2s}
+.preset-chip:hover{border-color:var(--purple2);color:var(--purple2)}
+
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.6rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.55rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem;letter-spacing:.03em}
+.m-val.ok{color:var(--green)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.2rem}
+@media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(3,1fr)}}
+
+.field{display:flex;flex-direction:column;gap:.3rem;margin-bottom:.7rem}
+.field label{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.input,select.input{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.5rem .6rem;color:var(--text);font-size:.8rem;outline:none;font-family:inherit}
+.input:focus{border-color:var(--purple)}
+.row{display:flex;gap:.6rem;flex-wrap:wrap}
+
+table.book{width:100%;border-collapse:collapse;font-size:.72rem}
+table.book th{color:var(--muted);text-align:right;padding:.25rem .4rem;font-weight:700;font-size:.62rem;text-transform:uppercase}
+table.book td{padding:.2rem .4rem;text-align:right;font-family:monospace}
+.depth-bar{height:4px;border-radius:2px;margin-top:2px}
+.bid-row td:first-child, .bid-row .depth-bar{background:rgba(34,197,94,.15)}
+.ask-row td:first-child, .ask-row .depth-bar{background:rgba(239,68,68,.15)}
+.bid-price{color:#4ade80;font-weight:800}
+.ask-price{color:#f87171;font-weight:800}
+
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.7rem .9rem;height:190px;overflow-y:auto;font-family:monospace;font-size:.7rem;line-height:1.8;color:#64748b}
+.log-trade{color:#4ade80}.log-reject{color:#f87171}.log-flag{color:#fb923c}.log-info{color:#60a5fa}.log-white{color:#e2e8f0;font-weight:700}
+
+table.acct{width:100%;border-collapse:collapse;font-size:.75rem}
+table.acct th{color:var(--muted);text-align:left;padding:.4rem .5rem;font-weight:700;font-size:.62rem;text-transform:uppercase;border-bottom:1px solid var(--border)}
+table.acct td{padding:.4rem .5rem;border-bottom:1px solid #1a1a35;font-family:monospace}
+
+.balance-check{display:flex;align-items:center;gap:.5rem;padding:.6rem .9rem;border-radius:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;font-weight:700;font-size:.8rem;margin-bottom:.8rem}
+.balance-check.bad{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#f87171}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.7rem;overflow-x:auto;line-height:1.6;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">FinTech · Matching Engine · Double-Entry Ledger · Risk Engine</span></div>
+  <h1>Trading Exchange Simulator</h1>
+  <p class="subtitle">A real price-time-priority limit order book with partial fills and market-order sweeps, settling every trade through a genuine double-entry ledger (debits always equal credits), gated by a pre-trade risk engine that checks buying power, position limits, and flags large or rapid-fire orders. This is the same core algorithm running inside every stock and crypto exchange.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mTrades">0</div><div class="m-label">Trades</div></div>
+    <div class="metric"><div class="m-val" id="mVolume">0</div><div class="m-label">Volume (shares)</div></div>
+    <div class="metric"><div class="m-val" id="mRejected">0</div><div class="m-label">Orders Rejected</div></div>
+    <div class="metric"><div class="m-val" id="mFlagged">0</div><div class="m-label">Orders Flagged</div></div>
+    <div class="metric"><div class="m-val" id="mLedger">0</div><div class="m-label">Ledger Entries</div></div>
+    <div class="metric"><div class="m-val ok" id="mCash">—</div><div class="m-label">Total Cash (conserved)</div></div>
+  </div>
+
+  <!-- ORDER ENTRY -->
+  <div class="card">
+    <div class="card-h">Submit Order</div>
+    <div class="row" style="margin-bottom:.8rem">
+      <span class="preset-chip" onclick="presetCrossSpread()">Cross the spread (full fill)</span>
+      <span class="preset-chip" onclick="presetPartialFill()">Partial fill</span>
+      <span class="preset-chip" onclick="presetMarketSweep()">Market sweep (2 price levels)</span>
+      <span class="preset-chip" onclick="presetNakedShort()">Naked short (risk-rejected)</span>
+      <span class="preset-chip" onclick="presetLargeOrder()">Large order (flagged)</span>
+    </div>
+    <div class="row">
+      <div class="field"><label>Trader</label>
+        <select class="input" id="fTrader"><option>alice</option><option>bob</option><option>carol</option></select></div>
+      <div class="field"><label>Symbol</label>
+        <select class="input" id="fSymbol" onchange="renderBooks()"><option>AAPL</option><option>MSFT</option></select></div>
+      <div class="field"><label>Side</label>
+        <select class="input" id="fSide"><option value="BUY">Buy</option><option value="SELL">Sell</option></select></div>
+      <div class="field"><label>Type</label>
+        <select class="input" id="fType" onchange="toggleprice()"><option value="LIMIT">Limit</option><option value="MARKET">Market</option></select></div>
+      <div class="field"><label>Price</label>
+        <input class="input" id="fPrice" type="number" step="0.01" value="150" style="width:100px"/></div>
+      <div class="field"><label>Qty</label>
+        <input class="input" id="fQty" type="number" value="10" style="width:80px"/></div>
+      <div class="field"><label>&nbsp;</label>
+        <button class="btn go" onclick="doSubmit()">Submit Order</button></div>
+    </div>
+    <div id="orderMsg" style="font-size:.76rem;color:var(--muted)"></div>
+  </div>
+
+  <!-- ORDER BOOK -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-h">Order Book — <span id="bookSymbolLabel">AAPL</span></div>
+      <table class="book" id="bookTable"></table>
+    </div>
+    <div class="card">
+      <div class="card-h">Trade Tape</div>
+      <div class="log" id="tradeTape"></div>
+    </div>
+  </div>
+
+  <!-- LEDGER + ACCOUNTS -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-h">Accounts</div>
+      <table class="acct" id="acctTable"></table>
+    </div>
+    <div class="card">
+      <div class="card-h">Double-Entry Ledger</div>
+      <div class="balance-check" id="balanceCheck">✓ Trial Balance OK</div>
+      <div class="log" id="ledgerLog"></div>
+    </div>
+  </div>
+
+  <!-- RISK LOG -->
+  <div class="card">
+    <div class="card-h">Risk Engine Log</div>
+    <div class="log" id="riskLog"></div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Matching Loop + Double-Entry Settlement (JavaScript)</div>
+<pre><span class="comment">// Price-time-priority match: walk the resting contra-side book,</span>
+<span class="comment">// filling at the RESTING (maker) order's price, until the</span>
+<span class="comment">// incoming order is filled or the book stops crossing.</span>
+<span class="kw">while</span> (remaining &gt; <span class="num">0</span> &amp;&amp; contraSide.length &gt; <span class="num">0</span>) {
+    <span class="kw">const</span> best = contraSide[<span class="num">0</span>];
+    <span class="kw">const</span> crosses = type === <span class="str">'MARKET'</span> ||
+        (side === <span class="str">'BUY'</span>  &amp;&amp; price &gt;= best.price) ||
+        (side === <span class="str">'SELL'</span> &amp;&amp; price &lt;= best.price);
+    <span class="kw">if</span> (!crosses) <span class="kw">break</span>;
+
+    <span class="kw">const</span> fillQty  = Math.min(remaining, best.qty);
+    <span class="kw">const</span> notional = fillQty * best.price;
+
+    <span class="comment">// ── settle: 4 balanced entries per trade, debits === credits ──</span>
+    postLedger(tradeId, [
+        { account: buyer,  line: symbol, debit: fillQty,  credit: <span class="num">0</span> },
+        { account: buyer,  line: <span class="str">'CASH'</span>,  debit: <span class="num">0</span>,      credit: notional },
+        { account: seller, line: <span class="str">'CASH'</span>,  debit: notional, credit: <span class="num">0</span> },
+        { account: seller, line: symbol, debit: <span class="num">0</span>,      credit: fillQty },
+    ]);
+
+    remaining -= fillQty;
+    best.qty  -= fillQty;
+    <span class="kw">if</span> (best.qty &lt;= <span class="num">0</span>) contraSide.shift();  <span class="comment">// resting order fully consumed</span>
+}
+<span class="kw">if</span> (remaining &gt; <span class="num">0</span> &amp;&amp; type === <span class="str">'LIMIT'</span>) insertSorted(book, order); <span class="comment">// rest the remainder</span></pre>
+  </div>
+</div>
+
+<script>
+// ─── Engine state (mirrors the verified standalone simulation) ───
+let state;
+
+function makeState() {
+  return {
+    nextOrderId: 1, nextTradeId: 1,
+    books: { AAPL: { bids: [], asks: [] }, MSFT: { bids: [], asks: [] } },
+    accounts: {
+      alice: { CASH: 100000, AAPL: 50, MSFT: 30 },
+      bob:   { CASH: 100000, AAPL: 50, MSFT: 30 },
+      carol: { CASH: 5000,   AAPL: 10, MSFT: 5 },
+    },
+    ledger: [], trades: [], riskEvents: [],
+    recentOrderTimes: {}, now: 0,
+  };
+}
+function ensureAccount(trader) { if (!state.accounts[trader]) state.accounts[trader] = { CASH: 0, AAPL: 0, MSFT: 0 }; }
+
+function postLedger(tradeId, entries) {
+  let sumD = 0, sumC = 0;
+  entries.forEach(e => { sumD += e.debit || 0; sumC += e.credit || 0; state.ledger.push({ tradeId, ...e }); });
+  if (Math.abs(sumD - sumC) > 1e-9) throw new Error('Ledger imbalance on trade ' + tradeId);
+}
+
+function estimateMarketCost(order) {
+  const book = state.books[order.symbol];
+  let remaining = order.qty, cost = 0;
+  for (const resting of book.asks) {
+    if (remaining <= 0) break;
+    const fillQty = Math.min(remaining, resting.qty);
+    cost += fillQty * resting.price;
+    remaining -= fillQty;
+  }
+  return cost;
+}
+
+function riskCheck(order) {
+  ensureAccount(order.trader);
+  const acct = state.accounts[order.trader];
+  const flags = [];
+  if (order.side === 'BUY') {
+    const cost = order.type === 'MARKET' ? estimateMarketCost(order) : order.price * order.qty;
+    if (acct.CASH < cost) return { rejected: true, reason: `Insufficient buying power for ${order.trader}: needs ${cost.toFixed(2)}, has ${acct.CASH.toFixed(2)}`, flags };
+  } else {
+    if ((acct[order.symbol] || 0) < order.qty) return { rejected: true, reason: `Insufficient position for ${order.trader}: needs ${order.qty} ${order.symbol}, has ${acct[order.symbol] || 0}`, flags };
+  }
+  if (order.qty >= 40) flags.push(`Large order (${order.qty} shares) by ${order.trader} flagged for review`);
+  state.recentOrderTimes[order.trader] = (state.recentOrderTimes[order.trader] || []).filter(t => t >= state.now - 3);
+  state.recentOrderTimes[order.trader].push(state.now);
+  if (state.recentOrderTimes[order.trader].length >= 4) flags.push(`Rapid order submission by ${order.trader} — possible wash-trading pattern`);
+  return { rejected: false, flags };
+}
+
+function insertSorted(book, order) {
+  if (order.side === 'BUY') { book.bids.push(order); book.bids.sort((a,b) => b.price - a.price || a.seq - b.seq); }
+  else { book.asks.push(order); book.asks.sort((a,b) => a.price - b.price || a.seq - b.seq); }
+}
+
+function submitOrder({ trader, symbol, side, type, price, qty }) {
+  state.now++;
+  const order = { id: state.nextOrderId++, trader, symbol, side, type, price: price || null, qty, seq: state.now };
+  const risk = riskCheck(order);
+  if (risk.rejected) { state.riskEvents.push({ order, reason: risk.reason, kind: 'REJECT' }); return { order, rejected: true, reason: risk.reason, trades: [] }; }
+  risk.flags.forEach(f => state.riskEvents.push({ order, reason: f, kind: 'FLAG' }));
+
+  const book = state.books[symbol];
+  const contraSide = side === 'BUY' ? book.asks : book.bids;
+  const trades = [];
+  let remaining = qty;
+
+  while (remaining > 0 && contraSide.length > 0) {
+    const best = contraSide[0];
+    const crosses = type === 'MARKET' || (side === 'BUY' && price >= best.price) || (side === 'SELL' && price <= best.price);
+    if (!crosses) break;
+    const fillQty = Math.min(remaining, best.qty);
+    const fillPrice = best.price;
+    const buyer = side === 'BUY' ? trader : best.trader;
+    const seller = side === 'BUY' ? best.trader : trader;
+    ensureAccount(buyer); ensureAccount(seller);
+    const tradeId = state.nextTradeId++;
+    const notional = fillQty * fillPrice;
+
+    state.accounts[buyer][symbol] = (state.accounts[buyer][symbol] || 0) + fillQty;
+    state.accounts[buyer].CASH -= notional;
+    state.accounts[seller][symbol] = (state.accounts[seller][symbol] || 0) - fillQty;
+    state.accounts[seller].CASH += notional;
+
+    postLedger(tradeId, [
+      { account: buyer, line: symbol, debit: fillQty, credit: 0 },
+      { account: buyer, line: 'CASH', debit: 0, credit: notional },
+      { account: seller, line: 'CASH', debit: notional, credit: 0 },
+      { account: seller, line: symbol, debit: 0, credit: fillQty },
+    ]);
+
+    const trade = { id: tradeId, symbol, price: fillPrice, qty: fillQty, buyer, seller };
+    trades.push(trade); state.trades.push(trade);
+    remaining -= fillQty; best.qty -= fillQty;
+    if (best.qty <= 0) contraSide.shift();
+  }
+
+  if (remaining > 0 && type === 'LIMIT') { order.qty = remaining; insertSorted(book, order); }
+  return { order, rejected: false, trades };
+}
+
+function checkTrialBalance() {
+  let sumD = 0, sumC = 0;
+  state.ledger.forEach(e => { sumD += e.debit; sumC += e.credit; });
+  return { ok: Math.abs(sumD - sumC) < 1e-9, sumD, sumC };
+}
+
+// ─── UI wiring ───
+function toggleprice() {
+  document.getElementById('fPrice').disabled = document.getElementById('fType').value === 'MARKET';
+}
+
+function doSubmit() {
+  const order = {
+    trader: document.getElementById('fTrader').value,
+    symbol: document.getElementById('fSymbol').value,
+    side: document.getElementById('fSide').value,
+    type: document.getElementById('fType').value,
+    price: parseFloat(document.getElementById('fPrice').value),
+    qty: parseInt(document.getElementById('fQty').value),
+  };
+  const result = submitOrder(order);
+  const msg = document.getElementById('orderMsg');
+  if (result.rejected) {
+    msg.innerHTML = `<span style="color:var(--red)">✗ Rejected: ${result.reason}</span>`;
+  } else if (result.trades.length) {
+    msg.innerHTML = `<span style="color:var(--green)">✓ Executed ${result.trades.length} trade(s), ${result.trades.reduce((s,t)=>s+t.qty,0)} shares</span>`;
+  } else {
+    msg.innerHTML = `<span style="color:var(--blue)">Order resting in book (no immediate match)</span>`;
+  }
+  renderAll();
+}
+
+function presetCrossSpread() {
+  submitOrder({ trader: 'bob', symbol: 'AAPL', side: 'SELL', type: 'LIMIT', price: 150, qty: 10 });
+  submitOrder({ trader: 'alice', symbol: 'AAPL', side: 'BUY', type: 'LIMIT', price: 150, qty: 10 });
+  document.getElementById('orderMsg').innerHTML = '<span style="color:var(--green)">✓ Bob rested a sell @150 x10; Alice crossed it — full fill.</span>';
+  renderAll();
+}
+function presetPartialFill() {
+  submitOrder({ trader: 'bob', symbol: 'AAPL', side: 'SELL', type: 'LIMIT', price: 151, qty: 5 });
+  submitOrder({ trader: 'alice', symbol: 'AAPL', side: 'BUY', type: 'LIMIT', price: 151, qty: 12 });
+  document.getElementById('orderMsg').innerHTML = '<span style="color:var(--blue)">Alice bid for 12 @151 but only 5 were resting — 5 filled, 7 now rest in the bid book.</span>';
+  renderAll();
+}
+function presetMarketSweep() {
+  submitOrder({ trader: 'bob', symbol: 'AAPL', side: 'SELL', type: 'LIMIT', price: 152, qty: 5 });
+  submitOrder({ trader: 'bob', symbol: 'AAPL', side: 'SELL', type: 'LIMIT', price: 153, qty: 5 });
+  submitOrder({ trader: 'alice', symbol: 'AAPL', side: 'BUY', type: 'MARKET', qty: 8 });
+  document.getElementById('orderMsg').innerHTML = '<span style="color:var(--green)">✓ Market buy for 8 swept both resting price levels (5@152, 3@153).</span>';
+  renderAll();
+}
+function presetNakedShort() {
+  const r = submitOrder({ trader: 'carol', symbol: 'AAPL', side: 'SELL', type: 'LIMIT', price: 150, qty: 1000 });
+  document.getElementById('orderMsg').innerHTML = `<span style="color:var(--red)">✗ Rejected: ${r.reason}</span>`;
+  renderAll();
+}
+function presetLargeOrder() {
+  submitOrder({ trader: 'alice', symbol: 'AAPL', side: 'SELL', type: 'LIMIT', price: 200, qty: 45 });
+  document.getElementById('orderMsg').innerHTML = '<span style="color:var(--orange)">⚠ Order accepted but flagged — 45 shares exceeds the large-order threshold.</span>';
+  renderAll();
+}
+
+function renderAll() {
+  document.getElementById('mTrades').textContent = state.trades.length;
+  document.getElementById('mVolume').textContent = state.trades.reduce((s,t)=>s+t.qty,0);
+  document.getElementById('mRejected').textContent = state.riskEvents.filter(r=>r.kind==='REJECT').length;
+  document.getElementById('mFlagged').textContent = state.riskEvents.filter(r=>r.kind==='FLAG').length;
+  document.getElementById('mLedger').textContent = state.ledger.length;
+  const totalCash = Object.values(state.accounts).reduce((s,a)=>s+a.CASH,0);
+  document.getElementById('mCash').textContent = totalCash.toFixed(0);
+
+  renderBooks();
+  renderTape();
+  renderAccounts();
+  renderLedger();
+  renderRisk();
+}
+
+function renderBooks() {
+  const sym = document.getElementById('fSymbol').value;
+  document.getElementById('bookSymbolLabel').textContent = sym;
+  const book = state.books[sym];
+  const maxQty = Math.max(1, ...book.bids.map(b=>b.qty), ...book.asks.map(a=>a.qty));
+  let html = '<tr><th>Bid Qty</th><th>Bid Price</th><th>Ask Price</th><th>Ask Qty</th></tr>';
+  const rows = Math.max(book.bids.length, book.asks.length, 1);
+  for (let i = 0; i < rows; i++) {
+    const b = book.bids[i], a = book.asks[i];
+    html += `<tr class="${b?'bid-row':''}">
+      <td>${b ? b.qty : ''}${b?`<div class="depth-bar" style="width:${b.qty/maxQty*100}%;margin-left:auto"></div>`:''}</td>
+      <td class="bid-price">${b ? b.price.toFixed(2) : ''}</td>
+      <td class="ask-price">${a ? a.price.toFixed(2) : ''}</td>
+      <td>${a ? a.qty : ''}${a?`<div class="depth-bar" style="width:${a.qty/maxQty*100}%"></div>`:''}</td>
+    </tr>`;
+  }
+  document.getElementById('bookTable').innerHTML = html;
+}
+
+function renderTape() {
+  const el = document.getElementById('tradeTape');
+  if (state.trades.length === 0) { el.innerHTML = '<div style="color:#374151">No trades yet — submit or use a preset above.</div>'; return; }
+  el.innerHTML = state.trades.slice(-25).reverse().map(t =>
+    `<div class="log-trade">#${t.id} ${t.symbol} ${t.qty}@${t.price.toFixed(2)} — <span class="log-white">${t.buyer}</span> bought from <span class="log-white">${t.seller}</span></div>`
+  ).join('');
+}
+
+function renderAccounts() {
+  let html = '<tr><th>Trader</th><th>Cash</th><th>AAPL</th><th>MSFT</th></tr>';
+  Object.entries(state.accounts).forEach(([name, a]) => {
+    html += `<tr><td>${name}</td><td>${a.CASH.toFixed(2)}</td><td>${a.AAPL||0}</td><td>${a.MSFT||0}</td></tr>`;
+  });
+  document.getElementById('acctTable').innerHTML = html;
+}
+
+function renderLedger() {
+  const { ok, sumD, sumC } = checkTrialBalance();
+  const bc = document.getElementById('balanceCheck');
+  bc.className = 'balance-check' + (ok ? '' : ' bad');
+  bc.textContent = ok ? `✓ Trial Balance OK — ΣDebits = ΣCredits = ${sumD.toFixed(2)}` : `✗ IMBALANCE — Debits ${sumD.toFixed(2)} ≠ Credits ${sumC.toFixed(2)}`;
+
+  const el = document.getElementById('ledgerLog');
+  if (state.ledger.length === 0) { el.innerHTML = '<div style="color:#374151">No postings yet.</div>'; return; }
+  el.innerHTML = state.ledger.slice(-20).reverse().map(e =>
+    `<div class="log-info">trade #${e.tradeId} — ${e.account}.${e.line}: ${e.debit ? 'Dr ' + e.debit.toFixed(2) : 'Cr ' + e.credit.toFixed(2)}</div>`
+  ).join('');
+}
+
+function renderRisk() {
+  const el = document.getElementById('riskLog');
+  if (state.riskEvents.length === 0) { el.innerHTML = '<div style="color:#374151">No risk events yet.</div>'; return; }
+  el.innerHTML = state.riskEvents.slice(-20).reverse().map(r =>
+    `<div class="${r.kind==='REJECT'?'log-reject':'log-flag'}">[${r.kind}] ${r.reason}</div>`
+  ).join('');
+}
+
+state = makeState();
+toggleprice();
+renderAll();
+</script>
+</body>
+</html>

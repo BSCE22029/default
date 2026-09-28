@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>UART Transceiver Simulator — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg2:#111128;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card h3{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+
+/* INPUT */
+.tx-row{display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap}
+.tx-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-size:.9rem;font-family:monospace;outline:none;min-width:200px}
+.tx-input:focus{border-color:var(--purple)}
+.btn{padding:.55rem 1.3rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn.primary{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn:hover{border-color:var(--purple);color:var(--text)}
+select{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.55rem .8rem;font-size:.8rem}
+
+/* FRAME VIS */
+.frame-wrap{overflow-x:auto;padding-bottom:.5rem}
+.frame-bits{display:flex;align-items:stretch;gap:2px;min-width:max-content;margin-bottom:.5rem}
+.bit-cell{display:flex;flex-direction:column;align-items:center;min-width:38px}
+.bit-label{font-size:.6rem;color:var(--muted);margin-bottom:.2rem;font-weight:700}
+.bit-block{width:100%;height:44px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;font-family:monospace;transition:all .3s;border:1px solid transparent}
+.bb-idle{background:#0d0d1a;color:var(--muted);border-color:#1a1a30}
+.bb-start{background:rgba(239,68,68,.15);color:#ef4444;border-color:rgba(239,68,68,.3)}
+.bb-data{background:rgba(124,58,237,.15);color:var(--purple2);border-color:rgba(124,58,237,.3)}
+.bb-parity{background:rgba(249,115,22,.15);color:#fb923c;border-color:rgba(249,115,22,.3)}
+.bb-stop{background:rgba(34,197,94,.15);color:#4ade80;border-color:rgba(34,197,94,.3)}
+.bb-active{transform:scaleY(1.1);filter:brightness(1.5)}
+
+/* WAVEFORM */
+.wave-wrap{overflow-x:auto}
+canvas.wave{display:block;width:100%;height:80px;border-radius:8px;background:#020208}
+
+/* DECODED */
+.decoded-row{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.8rem}
+.decoded-cell{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem;font-size:.78rem}
+.dc-label{color:var(--muted);font-size:.65rem;font-weight:700;text-transform:uppercase;margin-bottom:.2rem}
+.dc-val{font-family:monospace;font-weight:700}
+
+/* SERIAL LOG */
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:140px;overflow-y:auto;font-family:monospace;font-size:.72rem;line-height:1.8}
+.log-tx{color:#a855f7}.log-rx{color:#4ade80}.log-time{color:#374151}.log-err{color:#ef4444}
+
+/* CODE */
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.73rem;overflow-x:auto;line-height:1.6;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Verilog HDL · UART · Serial Protocol</span></div>
+  <h1>UART Transceiver Simulator</h1>
+  <p class="subtitle">Type any text and watch it serialize into UART frames — start bit, data bits, parity, stop bit</p>
+
+  <!-- TRANSMITTER -->
+  <div class="card">
+    <h3>Transmitter (TX)</h3>
+    <div class="tx-row">
+      <input class="tx-input" id="txInput" placeholder="Type text to transmit..." maxlength="64" value="Hello"/>
+      <select id="baudSel"><option value="9600">9600 baud</option><option value="115200" selected>115200 baud</option><option value="57600">57600 baud</option></select>
+      <select id="paritySel"><option value="none">No Parity</option><option value="even">Even Parity</option><option value="odd">Odd Parity</option></select>
+      <button class="btn primary" onclick="transmit()">▶ Transmit</button>
+    </div>
+
+    <div id="charSelect" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem"></div>
+
+    <div class="wave-wrap"><canvas class="wave" id="waveCanvas"></canvas></div>
+    <div class="frame-wrap"><div class="frame-bits" id="frameBits"></div></div>
+
+    <div class="decoded-row" id="decodedRow"></div>
+  </div>
+
+  <!-- RECEIVER LOG -->
+  <div class="card">
+    <h3>Receiver (RX) — Serial Log</h3>
+    <div class="log" id="serialLog">
+      <div><span class="log-time">[boot]</span> UART initialized — 115200 8N1</div>
+      <div><span class="log-time">[boot]</span> Waiting for data...</div>
+    </div>
+    <div style="display:flex;gap:.6rem;margin-top:.8rem">
+      <button class="btn" onclick="document.getElementById('serialLog').innerHTML=''">Clear Log</button>
+      <span style="font-size:.72rem;color:var(--muted);align-self:center" id="rxStats">0 bytes received</span>
+    </div>
+  </div>
+
+  <!-- VERILOG -->
+  <div class="card">
+    <h3>Verilog Implementation</h3>
+<pre><span class="comment">// UART Transmitter — Verilog HDL</span>
+<span class="comment">// 8-bit data, configurable parity, 1 stop bit</span>
+<span class="comment">// Author: Muhammad Moiz Ahmad</span>
+
+<span class="kw">module</span> <span class="type">uart_tx</span> #(
+    <span class="kw">parameter</span> CLK_FREQ  = <span class="num">50_000_000</span>,
+    <span class="kw">parameter</span> BAUD_RATE = <span class="num">115200</span>
+)(
+    <span class="kw">input</span>        clk, rst, tx_start,
+    <span class="kw">input</span>  [<span class="num">7</span>:<span class="num">0</span>] tx_data,
+    <span class="kw">output reg</span>   tx, tx_busy
+);
+
+<span class="kw">localparam</span> CLKS_PER_BIT = CLK_FREQ / BAUD_RATE;  <span class="comment">// 434 @ 50MHz/115200</span>
+
+<span class="kw">localparam</span> IDLE=0, START=1, DATA=2, PARITY=3, STOP=4;
+<span class="kw">reg</span> [<span class="num">2</span>:<span class="num">0</span>] state;
+<span class="kw">reg</span> [<span class="num">8</span>:<span class="num">0</span>] clk_cnt;
+<span class="kw">reg</span> [<span class="num">2</span>:<span class="num">0</span>] bit_idx;
+<span class="kw">reg</span> [<span class="num">7</span>:<span class="num">0</span>] shift_reg;
+
+<span class="kw">always</span> @(<span class="kw">posedge</span> clk) <span class="kw">begin</span>
+  <span class="kw">if</span> (rst) <span class="kw">begin</span> state&lt;=IDLE; tx&lt;=<span class="num">1</span>; tx_busy&lt;=<span class="num">0</span>; <span class="kw">end</span>
+  <span class="kw">else case</span>(state)
+    IDLE: <span class="kw">if</span>(tx_start) <span class="kw">begin</span> state&lt;=START; shift_reg&lt;=tx_data; tx_busy&lt;=<span class="num">1</span>; clk_cnt&lt;=<span class="num">0</span>; <span class="kw">end</span>
+    START: <span class="kw">begin</span> tx&lt;=<span class="num">0</span>;
+      <span class="kw">if</span>(clk_cnt==CLKS_PER_BIT-<span class="num">1</span>) <span class="kw">begin</span> state&lt;=DATA; bit_idx&lt;=<span class="num">0</span>; clk_cnt&lt;=<span class="num">0</span>; <span class="kw">end</span>
+      <span class="kw">else</span> clk_cnt&lt;=clk_cnt+<span class="num">1</span>; <span class="kw">end</span>
+    DATA: <span class="kw">begin</span> tx&lt;=shift_reg[bit_idx];
+      <span class="kw">if</span>(clk_cnt==CLKS_PER_BIT-<span class="num">1</span>) <span class="kw">begin</span>
+        clk_cnt&lt;=<span class="num">0</span>;
+        <span class="kw">if</span>(bit_idx==<span class="num">7</span>) state&lt;=STOP; <span class="kw">else</span> bit_idx&lt;=bit_idx+<span class="num">1</span>;
+      <span class="kw">end else</span> clk_cnt&lt;=clk_cnt+<span class="num">1</span>; <span class="kw">end</span>
+    STOP: <span class="kw">begin</span> tx&lt;=<span class="num">1</span>;
+      <span class="kw">if</span>(clk_cnt==CLKS_PER_BIT-<span class="num">1</span>) <span class="kw">begin</span> state&lt;=IDLE; tx_busy&lt;=<span class="num">0</span>; <span class="kw">end</span>
+      <span class="kw">else</span> clk_cnt&lt;=clk_cnt+<span class="num">1</span>; <span class="kw">end</span>
+  <span class="kw">endcase</span>
+<span class="kw">end</span>
+<span class="kw">endmodule</span></pre>
+  </div>
+</div>
+
+<script>
+let totalBytes=0, animFrame=null, currentChar=null;
+
+function buildCharSelect(){
+  const txt=document.getElementById('txInput').value;
+  const c=document.getElementById('charSelect');
+  c.innerHTML='';
+  if(!txt) return;
+  txt.split('').forEach((ch,i)=>{
+    const b=document.createElement('button');
+    b.className='btn'+(i===0?' primary':'');
+    b.textContent=`'${ch}' (0x${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2,'0')})`;
+    b.onclick=()=>{
+      document.querySelectorAll('#charSelect .btn').forEach(x=>x.classList.remove('primary'));
+      b.classList.add('primary');
+      showChar(ch);
+    };
+    c.appendChild(b);
+  });
+  showChar(txt[0]);
+}
+
+function getBits(ch){
+  const code=ch.charCodeAt(0);
+  const bits=[];
+  for(let i=0;i<8;i++) bits.push((code>>i)&1);
+  return bits; // LSB first (UART)
+}
+
+function parity(bits,mode){
+  if(mode==='none') return null;
+  const ones=bits.filter(b=>b===1).length;
+  return mode==='even'?(ones%2===0?0:1):(ones%2===1?0:1);
+}
+
+function showChar(ch){
+  currentChar=ch;
+  const mode=document.getElementById('paritySel').value;
+  const dataBits=getBits(ch);
+  const parBit=parity(dataBits,mode);
+  const code=ch.charCodeAt(0);
+
+  // Frame bits display
+  const fb=document.getElementById('frameBits');
+  fb.innerHTML='';
+  const frames=[
+    {label:'IDLE',val:'1',cls:'bb-idle'},
+    {label:'START',val:'0',cls:'bb-start'},
+    ...dataBits.map((b,i)=>({label:`D${i}`,val:String(b),cls:'bb-data'})),
+    ...(parBit!==null?[{label:'PAR',val:String(parBit),cls:'bb-parity'}]:[]),
+    {label:'STOP',val:'1',cls:'bb-stop'},
+    {label:'IDLE',val:'1',cls:'bb-idle'},
+  ];
+  frames.forEach(f=>{
+    const cell=document.createElement('div');
+    cell.className='bit-cell';
+    cell.innerHTML=`<div class="bit-label">${f.label}</div><div class="bit-block ${f.cls}">${f.val}</div>`;
+    fb.appendChild(cell);
+  });
+
+  // Decoded info
+  const dr=document.getElementById('decodedRow');
+  dr.innerHTML=`
+    <div class="decoded-cell"><div class="dc-label">Char</div><div class="dc-val">'${ch}'</div></div>
+    <div class="decoded-cell"><div class="dc-label">ASCII Dec</div><div class="dc-val">${code}</div></div>
+    <div class="decoded-cell"><div class="dc-label">Hex</div><div class="dc-val">0x${code.toString(16).toUpperCase().padStart(2,'0')}</div></div>
+    <div class="decoded-cell"><div class="dc-label">Binary (LSB first)</div><div class="dc-val">${dataBits.join(' ')}</div></div>
+    ${parBit!==null?`<div class="decoded-cell"><div class="dc-label">Parity (${mode})</div><div class="dc-val">${parBit}</div></div>`:''}
+  `;
+  drawWave(dataBits, parBit);
+}
+
+function drawWave(dataBits, parBit){
+  const canvas=document.getElementById('waveCanvas');
+  const W=canvas.offsetWidth||800, H=80;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const allBits=[1,0,...dataBits,...(parBit!==null?[parBit]:[]),1,1];
+  const bw=W/allBits.length;
+  const hi=H*0.15, lo=H*0.75;
+
+  ctx.strokeStyle='rgba(168,85,247,0.8)'; ctx.lineWidth=2;
+  ctx.shadowColor='#a855f7'; ctx.shadowBlur=4;
+  ctx.beginPath();
+  allBits.forEach((b,i)=>{
+    const x=i*bw, y=b?hi:lo;
+    const xn=(i+1)*bw;
+    if(i===0) ctx.moveTo(x,y);
+    else{const prev=allBits[i-1]; if(prev!==b){ctx.lineTo(x,prev?hi:lo);ctx.lineTo(x,y);}}
+    ctx.lineTo(xn,y);
+  });
+  ctx.stroke(); ctx.shadowBlur=0;
+
+  // labels
+  const labels=['IDLE','START',...dataBits.map((_,i)=>`D${i}`),...(parBit!==null?['PAR']:[]),'STOP','IDLE'];
+  ctx.fillStyle='rgba(148,163,184,0.7)'; ctx.font='9px monospace'; ctx.textAlign='center';
+  labels.forEach((l,i)=>ctx.fillText(l,(i+.5)*bw,H-4));
+}
+
+function transmit(){
+  const txt=document.getElementById('txInput').value;
+  if(!txt) return;
+  buildCharSelect();
+  const mode=document.getElementById('paritySel').value;
+  const baud=document.getElementById('baudSel').value;
+  const log=document.getElementById('serialLog');
+  const now=new Date().toLocaleTimeString();
+
+  txt.split('').forEach((ch,i)=>{
+    setTimeout(()=>{
+      const code=ch.charCodeAt(0);
+      const bits=getBits(ch);
+      const par=parity(bits,mode);
+      const frame=`0 ${bits.join('')}${par!==null?' '+par:''} 1`;
+      log.insertAdjacentHTML('beforeend',
+        `<div><span class="log-time">[${now}]</span> <span class="log-tx">[TX]</span> '${ch}' → 0x${code.toString(16).toUpperCase().padStart(2,'0')} | frame: ${frame}</div>`);
+      setTimeout(()=>{
+        log.insertAdjacentHTML('beforeend',
+          `<div><span class="log-time">[${now}]</span> <span class="log-rx">[RX]</span> received 0x${code.toString(16).toUpperCase().padStart(2,'0')} = '${ch}' ✓</div>`);
+        log.scrollTop=log.scrollHeight;
+      },100);
+      log.scrollTop=log.scrollHeight;
+      totalBytes++;
+      document.getElementById('rxStats').textContent=`${totalBytes} bytes received`;
+    },i*250);
+  });
+}
+
+document.getElementById('txInput').addEventListener('input',buildCharSelect);
+document.getElementById('paritySel').addEventListener('change',()=>{if(currentChar)showChar(currentChar)});
+window.addEventListener('resize',()=>{if(currentChar)showChar(currentChar)});
+buildCharSelect();
+</script>
+</body>
+</html>

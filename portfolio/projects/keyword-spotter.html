@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Keyword Spotter — Edge AI — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.btn{padding:.5rem 1.1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--purple2);color:var(--purple2)}
+.btn.active,.btn.sel{background:rgba(124,58,237,.15);border-color:var(--purple2);color:var(--purple2)}
+
+/* Spectrogram */
+canvas.spec{display:block;width:100%;border-radius:8px;background:#020208}
+
+/* Word buttons */
+.word-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:1rem}
+.w-btn{padding:.55rem .4rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.75rem;font-weight:700;cursor:pointer;text-align:center;transition:all .2s}
+.w-btn:hover,.w-btn.sel{border-color:var(--purple2);color:var(--purple2);background:rgba(124,58,237,.12)}
+.wakeword-btn{border-color:rgba(34,197,94,.3);color:#4ade80;background:rgba(34,197,94,.06)}
+.wakeword-btn.sel,.wakeword-btn:hover{background:rgba(34,197,94,.15)}
+
+/* Prediction */
+.pred-big{text-align:center;padding:1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg3);margin-bottom:1rem;transition:all .3s}
+.pred-big.triggered{border-color:rgba(34,197,94,.5);background:rgba(34,197,94,.08);animation:wakeAnim .6s ease-in-out 3}
+@keyframes wakeAnim{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}50%{box-shadow:0 0 20px 4px rgba(34,197,94,.3)}}
+.pred-word{font-size:1.6rem;font-weight:800;color:var(--text);margin-bottom:.2rem}
+.pred-sub{font-size:.72rem;color:var(--muted)}
+
+/* Confidence bars */
+.conf-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
+.conf-label{font-size:.7rem;color:var(--muted);width:80px;flex-shrink:0;font-family:monospace}
+.conf-bar-wrap{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.conf-bar{height:100%;border-radius:4px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+.conf-val{font-size:.68rem;font-family:monospace;width:38px;text-align:right}
+
+/* MFCC pipeline */
+.pipeline-steps{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.ps{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.45rem .7rem;font-size:.68rem;color:var(--muted);text-align:center}
+.ps .psn{font-weight:700;color:var(--purple2);font-size:.7rem}
+.ps-arrow{color:var(--border);font-size:.9rem}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.fn{color:#60a5fa}.str{color:#4ade80}.num{color:#fb923c}.comment{color:#475569}
+@media(max-width:650px){.grid2{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.word-grid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">STM32 · MFCC · DS-CNN · Wake Word · Edge AI</span></div>
+  <h1>Keyword Spotter — Wake Word</h1>
+  <p class="subtitle">MFCC feature extraction + depthwise separable CNN running on STM32F4 — detects "Hey Moiz" without ever hitting the cloud</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val">95.3%</div><div class="m-label">Accuracy</div></div>
+    <div class="metric"><div class="m-val">22KB</div><div class="m-label">Model</div></div>
+    <div class="metric"><div class="m-val">8ms</div><div class="m-label">Latency</div></div>
+    <div class="metric"><div class="m-val">STM32F4</div><div class="m-label">Hardware</div></div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="card">
+    <div class="card-h">Audio Processing Pipeline</div>
+    <div class="pipeline-steps">
+      <div class="ps"><div class="psn">Microphone</div>16kHz PCM</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps"><div class="psn">Pre-emphasis</div>0.97 coeff</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps"><div class="psn">STFT</div>25ms frames<br/>10ms hop</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps"><div class="psn">Mel Filterbank</div>40 filters<br/>0–8kHz</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps"><div class="psn">DCT → MFCC</div>40×49 spec<br/>(49 frames)</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps"><div class="psn">DS-CNN</div>INT8 model</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps"><div class="psn">Softmax</div>8 classes</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <!-- LEFT: spectrogram + word select -->
+    <div class="card">
+      <div class="card-h">MFCC Spectrogram (40 × 49)</div>
+      <canvas class="spec" id="specCanvas" height="140"></canvas>
+      <div style="margin-top:.8rem">
+        <div class="card-h" style="margin-bottom:.5rem">Say a word to simulate</div>
+        <div class="word-grid">
+          <div class="w-btn wakeword-btn sel" onclick="selectWord('hey_moiz',this)">🎙️ Hey Moiz<br/><span style="font-size:.6rem;color:#4ade80">wake word</span></div>
+          <div class="w-btn" onclick="selectWord('yes',this)">Yes</div>
+          <div class="w-btn" onclick="selectWord('no',this)">No</div>
+          <div class="w-btn" onclick="selectWord('stop',this)">Stop</div>
+          <div class="w-btn" onclick="selectWord('go',this)">Go</div>
+          <div class="w-btn" onclick="selectWord('up',this)">Up</div>
+          <div class="w-btn" onclick="selectWord('down',this)">Down</div>
+          <div class="w-btn" onclick="selectWord('unknown',this)">Unknown</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: prediction -->
+    <div class="card">
+      <div class="card-h">Prediction</div>
+      <div class="pred-big" id="predBox">
+        <div class="pred-word" id="predWord">Hey Moiz 🎙️</div>
+        <div class="pred-sub" id="predSub">Wake word detected — STM32 triggered</div>
+      </div>
+      <div class="card-h">All Classes</div>
+      <div id="confBars"></div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">MFCC + Inference — C on STM32</div>
+<pre><span class="comment">// keyword_spotter.c — STM32F4 + I2S microphone</span>
+<span class="comment">// Muhammad Moiz Ahmad — Wake word detection</span>
+<span class="kw">#include</span> <span class="str">"arm_math.h"</span>
+<span class="kw">#include</span> <span class="str">"mfcc.h"</span>
+<span class="kw">#include</span> <span class="str">"ds_cnn_model.h"</span>
+
+<span class="kw">#define</span> SAMPLE_RATE   <span class="num">16000</span>
+<span class="kw">#define</span> FRAME_LEN     <span class="num">400</span>   <span class="comment">// 25ms</span>
+<span class="kw">#define</span> HOP_LEN       <span class="num">160</span>   <span class="comment">// 10ms</span>
+<span class="kw">#define</span> NUM_MFCC      <span class="num">40</span>
+<span class="kw">#define</span> NUM_FRAMES    <span class="num">49</span>
+
+<span class="kw">static float</span> mfcc_buf[NUM_MFCC * NUM_FRAMES];
+<span class="kw">static float</span> audio_buf[SAMPLE_RATE];  <span class="comment">// 1s rolling window</span>
+
+<span class="kw">void</span> <span class="fn">process_audio</span>(<span class="kw">int16_t</span>* pcm, <span class="kw">int</span> len) {
+    <span class="comment">// 1. Pre-emphasis filter</span>
+    <span class="kw">for</span> (<span class="kw">int</span> i = len-<span class="num">1</span>; i > <span class="num">0</span>; i--)
+        pcm[i] -= (<span class="kw">int16_t</span>)(<span class="num">0.97f</span> * pcm[i-<span class="num">1</span>]);
+
+    <span class="comment">// 2. Compute MFCC (uses ARM CMSIS-DSP FFT)</span>
+    <span class="fn">mfcc_compute</span>(pcm, len, mfcc_buf, NUM_MFCC, NUM_FRAMES);
+
+    <span class="comment">// 3. Run DS-CNN inference (INT8 quantized)</span>
+    <span class="kw">float</span> probs[<span class="num">8</span>];
+    <span class="fn">ds_cnn_infer</span>(mfcc_buf, probs);
+
+    <span class="kw">int</span> best = <span class="fn">argmax</span>(probs, <span class="num">8</span>);
+    <span class="kw">if</span> (best == WAKE_WORD_IDX && probs[best] > <span class="num">0.85f</span>)
+        <span class="fn">trigger_wake_event</span>();  <span class="comment">// activate assistant</span>
+}</pre>
+  </div>
+</div>
+
+<script>
+const WORDS = ['hey_moiz','yes','no','stop','go','up','down','unknown'];
+const WORD_LABELS = ['Hey Moiz','Yes','No','Stop','Go','Up','Down','Unknown'];
+const BASE_PROBS = {
+  hey_moiz:{ probs:[.942,.014,.010,.008,.007,.006,.007,.006] },
+  yes:      { probs:[.012,.937,.015,.012,.009,.006,.005,.004] },
+  no:       { probs:[.008,.011,.941,.014,.010,.008,.005,.003] },
+  stop:     { probs:[.007,.009,.012,.935,.016,.010,.007,.004] },
+  go:       { probs:[.006,.008,.010,.013,.938,.012,.008,.005] },
+  up:       { probs:[.005,.007,.009,.011,.014,.940,.010,.004] },
+  down:     { probs:[.004,.006,.008,.010,.012,.013,.939,.008] },
+  unknown:  { probs:[.035,.040,.038,.042,.035,.038,.030,.742] },
+};
+const COLORS = ['#22c55e','#60a5fa','#a855f7','#f97316','#ec4899','#14b8a6','#eab308','#94a3b8'];
+let selected = 'hey_moiz';
+let specAnimId = null;
+
+function selectWord(w, el) {
+  selected = w;
+  document.querySelectorAll('.w-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  predict();
+}
+
+function predict() {
+  const base = BASE_PROBS[selected].probs;
+  const probs = base.map(p => Math.max(0, p + (Math.random()-.5)*.02));
+  const s = probs.reduce((a,b)=>a+b,0);
+  const norm = probs.map(p=>p/s);
+  const best = norm.indexOf(Math.max(...norm));
+  const isWake = best === 0 && selected === 'hey_moiz';
+
+  const pb = document.getElementById('predBox');
+  pb.className = 'pred-big' + (isWake ? ' triggered' : '');
+  document.getElementById('predWord').textContent = WORD_LABELS[best] + (isWake ? ' 🎙️' : '');
+  document.getElementById('predSub').textContent = isWake
+    ? 'Wake word detected — STM32 triggered'
+    : `Confidence: ${(norm[best]*100).toFixed(1)}% — ${isWake?'wake':'command'} mode`;
+
+  const bars = document.getElementById('confBars');
+  bars.innerHTML='';
+  WORD_LABELS.forEach((lbl,i)=>{
+    const pct=(norm[i]*100).toFixed(1);
+    bars.innerHTML+=`<div class="conf-row">
+      <span class="conf-label">${lbl}</span>
+      <div class="conf-bar-wrap"><div class="conf-bar" style="width:${pct}%;background:${i===best?COLORS[0]:'linear-gradient(90deg,var(--purple),var(--purple2))'}"></div></div>
+      <span class="conf-val" style="color:${i===best?COLORS[0]:'var(--muted)'}">${pct}%</span>
+    </div>`;
+  });
+}
+
+// Spectrogram visualization
+const specCanvas = document.getElementById('specCanvas');
+const sctx = specCanvas.getContext('2d');
+
+function drawSpec() {
+  const W = specCanvas.offsetWidth||600;
+  specCanvas.width = W;
+  const H = specCanvas.height;
+  const t = Date.now() * 0.001;
+
+  const COLS = 49, ROWS = 40;
+  const cw = W/COLS, ch = H/ROWS;
+
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      let val;
+      const baseFreq = (ROWS-r)/ROWS;
+      const timePhase = c/COLS;
+
+      if (selected === 'hey_moiz') {
+        // Distinct formant patterns for wake word
+        const f1 = Math.exp(-Math.pow(r-12,2)/20) * Math.abs(Math.sin(timePhase*Math.PI*2+t));
+        const f2 = Math.exp(-Math.pow(r-28,2)/15) * Math.abs(Math.sin(timePhase*Math.PI*3+t+1));
+        val = (f1 + f2*0.7) * (0.6 + 0.4*Math.sin(t*2+c*0.3));
+      } else if (selected === 'yes') {
+        val = Math.exp(-Math.pow(r-18,2)/25) * Math.abs(Math.sin(timePhase*Math.PI+t)) * (c < COLS*.7 ? 1 : 0.1);
+      } else if (selected === 'no') {
+        val = Math.exp(-Math.pow(r-22,2)/30) * (1 - timePhase*.8) * Math.abs(Math.sin(t));
+      } else if (selected === 'unknown') {
+        val = (Math.random() * .3 + Math.sin(r*.2+t)*0.15);
+      } else {
+        val = Math.exp(-Math.pow(r-15,2)/20) * Math.abs(Math.sin(timePhase*Math.PI*1.5+t));
+      }
+      val = Math.max(0, Math.min(1, val + (Math.random()-.5)*.08));
+
+      // Color: dark purple → purple → blue → cyan → white (like a spectrogram)
+      const hue = 260 - val * 180;
+      const sat = 60 + val * 40;
+      const light = 5 + val * 70;
+      sctx.fillStyle = `hsl(${hue},${sat}%,${light}%)`;
+      sctx.fillRect(c*cw, r*ch, cw+.5, ch+.5);
+    }
+  }
+
+  specAnimId = requestAnimationFrame(drawSpec);
+}
+
+drawSpec();
+predict();
+</script>
+</body>
+</html>

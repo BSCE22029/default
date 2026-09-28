@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>In-Browser SQL Query Engine — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:660px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:1000px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.5rem 1.1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+textarea{width:100%;min-height:70px;background:#020208;border:1px solid var(--border);border-radius:10px;color:#4ade80;font-family:monospace;font-size:.85rem;padding:.8rem;resize:vertical;line-height:1.6}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem;align-items:center}
+.preset-chip{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.3rem .8rem;border-radius:99px;font-size:.68rem;cursor:pointer;transition:all .2s}
+.preset-chip:hover{border-color:var(--purple2);color:var(--purple2)}
+table{width:100%;border-collapse:collapse;font-size:.72rem}
+th,td{text-align:left;padding:.4rem .6rem;border-bottom:1px solid var(--border);white-space:nowrap}
+th{color:var(--purple2);font-size:.65rem;text-transform:uppercase;letter-spacing:.03em;position:sticky;top:0;background:var(--card)}
+td{color:#cbd5e1}
+.tbl-wrap{overflow-x:auto;max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+.err{color:#f87171;font-size:.78rem;font-family:monospace;padding:.6rem;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px}
+.meta{font-size:.72rem;color:var(--muted);margin-bottom:.6rem}
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Data Engineering · SQL Engine · In-Browser Analytics</span></div>
+  <h1>In-Browser SQL Query Engine</h1>
+  <p class="subtitle">A real SQL interpreter written from scratch in JavaScript — a genuine tokenizer and executor for SELECT / WHERE / GROUP BY / ORDER BY / LIMIT, running against a 40-row embedded orders dataset. Type any query below; it's actually parsed and executed, not pattern-matched against canned answers.</p>
+
+  <div class="card">
+    <div class="card-h">Query</div>
+    <textarea id="q" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="btn go" onclick="run()">▶ Run Query</button>
+      <span class="preset-chip" onclick="setQ(0)">Filter + sort</span>
+      <span class="preset-chip" onclick="setQ(1)">GROUP BY + SUM</span>
+      <span class="preset-chip" onclick="setQ(2)">AVG per category</span>
+      <span class="preset-chip" onclick="setQ(3)">LIKE + LIMIT</span>
+      <span class="preset-chip" onclick="setQ(4)">COUNT per region</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Result</div>
+    <div id="meta" class="meta"></div>
+    <div id="resultWrap"><div class="tbl-wrap"><table id="resTable"><thead id="resHead"></thead><tbody id="resBody"></tbody></table></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Dataset — orders (40 rows)</div>
+    <div class="meta">columns: id, customer, region, category, product, qty, price, order_date, status</div>
+    <div class="tbl-wrap"><table id="dataTable"><thead id="dataHead"></thead><tbody id="dataBody"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Query Executor (JavaScript)</div>
+<pre><span class="comment">// sql_engine.js — Muhammad Moiz Ahmad</span>
+<span class="comment">// Real parse + execute, not a lookup table of canned results.</span>
+
+<span class="kw">function</span> <span class="fn">execute</span>(sql, table) {
+  <span class="kw">const</span> { cols, where, groupBy, orderBy, limit } = <span class="fn">parse</span>(sql);
+  <span class="kw">let</span> rows = table.filter(row =&gt; !where || <span class="fn">evalWhere</span>(where, row));
+
+  <span class="kw">if</span> (groupBy) {
+    rows = <span class="fn">aggregate</span>(rows, groupBy, cols);   <span class="comment">// COUNT / SUM / AVG / MIN / MAX</span>
+  } <span class="kw">else</span> {
+    rows = rows.map(row =&gt; <span class="fn">project</span>(row, cols));
+  }
+  <span class="kw">if</span> (orderBy) rows.sort(<span class="fn">comparator</span>(orderBy));
+  <span class="kw">if</span> (limit)   rows = rows.slice(<span class="num">0</span>, limit);
+  <span class="kw">return</span> rows;
+}</pre>
+  </div>
+</div>
+
+<script>
+// ── DATASET ──
+const REGIONS = ['North','South','East','West'];
+const CATS = ['Electronics','Home','Sports','Books','Grocery'];
+const PRODUCTS = { Electronics:['Headphones','Monitor','Keyboard','Webcam'], Home:['Lamp','Blender','Rug'], Sports:['Yoga Mat','Dumbbells','Bike Pump'], Books:['Novel','Cookbook','Atlas'], Grocery:['Coffee','Rice 5kg','Olive Oil'] };
+const NAMES = ['Ali Khan','Sara Ahmed','Bilal Hussain','Nadia Farooq','Imran Sheikh','Zainab Malik','Hassan Raza','Ayesha Noor','Usman Tariq','Mahnoor Iqbal'];
+const STATUS = ['completed','pending','cancelled'];
+let seed = 42;
+function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+function pick(arr) { return arr[Math.floor(rnd() * arr.length)]; }
+
+const orders = [];
+for (let i = 1; i <= 40; i++) {
+  const cat = pick(CATS);
+  const day = 1 + Math.floor(rnd() * 28);
+  orders.push({
+    id: i,
+    customer: pick(NAMES),
+    region: pick(REGIONS),
+    category: cat,
+    product: pick(PRODUCTS[cat]),
+    qty: 1 + Math.floor(rnd() * 6),
+    price: +(5 + rnd() * 195).toFixed(2),
+    order_date: `2026-03-${String(day).padStart(2,'0')}`,
+    status: pick(STATUS),
+  });
+}
+const TABLES = { orders };
+
+// ── PARSER ──
+function tokenizeClause(sql, re) { const m = sql.match(re); return m ? m[1].trim() : null; }
+
+function parse(sql) {
+  sql = sql.trim().replace(/;$/, '');
+  const selectMatch = sql.match(/select\s+(.+?)\s+from\s+(\w+)/i);
+  if (!selectMatch) throw new Error('Expected: SELECT <cols> FROM <table>');
+  const colsRaw = selectMatch[1].trim();
+  const table = selectMatch[2].trim();
+
+  const where = tokenizeClause(sql, /where\s+(.+?)(\s+group by|\s+order by|\s+limit|$)/i);
+  const groupBy = tokenizeClause(sql, /group by\s+(\w+)/i);
+  const orderByRaw = tokenizeClause(sql, /order by\s+(.+?)(\s+limit|$)/i);
+  const limitRaw = tokenizeClause(sql, /limit\s+(\d+)/i);
+
+  const cols = colsRaw === '*' ? ['*'] : colsRaw.split(',').map(c => c.trim());
+  const orderBy = orderByRaw ? (() => { const [f, dir] = orderByRaw.split(/\s+/); return { field: f, dir: (dir||'asc').toLowerCase() }; })() : null;
+  const limit = limitRaw ? parseInt(limitRaw, 10) : null;
+
+  return { table, cols, where, groupBy, orderBy, limit };
+}
+
+function coerce(v) { const n = Number(v); return v !== '' && !isNaN(n) ? n : v; }
+
+function evalWhere(clause, row) {
+  return clause.split(/\s+and\s+/i).every(cond => {
+    let m;
+    if (m = cond.match(/(\w+)\s*(>=|<=|!=|=|>|<)\s*'([^']*)'/)) return cmp(row[m[1]], m[2], m[3]);
+    if (m = cond.match(/(\w+)\s*(>=|<=|!=|=|>|<)\s*([\w.\-]+)/)) return cmp(row[m[1]], m[2], coerce(m[3]));
+    if (m = cond.match(/(\w+)\s+like\s+'%?([^%']*)%?'/i)) return String(row[m[1]]).toLowerCase().includes(m[2].toLowerCase());
+    throw new Error('Cannot parse WHERE condition: ' + cond);
+  });
+}
+function cmp(a, op, b) {
+  a = coerce(a); b = coerce(b);
+  switch (op) { case '=': return a == b; case '!=': return a != b; case '>': return a > b; case '<': return a < b; case '>=': return a >= b; case '<=': return a <= b; }
+}
+
+const AGG_RE = /(count|sum|avg|min|max)\(([^)]+)\)/i;
+function aggregate(rows, groupField, cols) {
+  const groups = new Map();
+  rows.forEach(row => {
+    const key = row[groupField];
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  });
+  return [...groups.entries()].map(([key, groupRows]) => {
+    const out = { [groupField]: key };
+    cols.forEach(c => {
+      const m = c.match(AGG_RE);
+      if (m) {
+        const [, fn, field] = m;
+        const vals = groupRows.map(r => field === '*' ? 1 : Number(r[field.trim()]) || 0);
+        const label = c.trim();
+        if (fn.toLowerCase() === 'count') out[label] = groupRows.length;
+        else if (fn.toLowerCase() === 'sum') out[label] = +vals.reduce((a,b)=>a+b,0).toFixed(2);
+        else if (fn.toLowerCase() === 'avg') out[label] = +(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2);
+        else if (fn.toLowerCase() === 'min') out[label] = Math.min(...vals);
+        else if (fn.toLowerCase() === 'max') out[label] = Math.max(...vals);
+      } else if (c.trim() !== groupField && c.trim() !== '*') {
+        out[c.trim()] = groupRows[0][c.trim()];
+      }
+    });
+    return out;
+  });
+}
+
+function project(row, cols) {
+  if (cols[0] === '*') return { ...row };
+  const out = {};
+  cols.forEach(c => out[c] = row[c]);
+  return out;
+}
+
+function comparator({ field, dir }) {
+  return (a, b) => {
+    const av = a[field], bv = b[field];
+    const r = av < bv ? -1 : av > bv ? 1 : 0;
+    return dir === 'desc' ? -r : r;
+  };
+}
+
+function execute(sql) {
+  const { table, cols, where, groupBy, orderBy, limit } = parse(sql);
+  if (!TABLES[table]) throw new Error(`Unknown table "${table}" — only "orders" exists`);
+  let rows = TABLES[table].filter(row => !where || evalWhere(where, row));
+  rows = groupBy ? aggregate(rows, groupBy, cols) : rows.map(r => project(r, cols));
+  if (orderBy) rows.sort(comparator(orderBy));
+  if (limit != null) rows = rows.slice(0, limit);
+  return rows;
+}
+
+// ── UI ──
+const PRESETS = [
+  `SELECT id, customer, region, price\nFROM orders\nWHERE region = 'North' AND price > 50\nORDER BY price DESC`,
+  `SELECT category, SUM(price) as revenue, COUNT(*) as orders\nFROM orders\nGROUP BY category\nORDER BY revenue DESC`,
+  `SELECT category, AVG(price) as avg_price\nFROM orders\nGROUP BY category\nORDER BY avg_price DESC`,
+  `SELECT id, product, customer\nFROM orders\nWHERE product LIKE '%mat%'\nLIMIT 5`,
+  `SELECT region, COUNT(*) as orders\nFROM orders\nGROUP BY region\nORDER BY orders DESC`,
+];
+function setQ(i) { document.getElementById('q').value = PRESETS[i]; run(); }
+
+function run() {
+  const sql = document.getElementById('q').value;
+  const meta = document.getElementById('meta');
+  const head = document.getElementById('resHead'), body = document.getElementById('resBody');
+  const t0 = performance.now();
+  try {
+    const rows = execute(sql);
+    const elapsed = (performance.now() - t0).toFixed(2);
+    const cols = rows.length ? Object.keys(rows[0]) : [];
+    head.innerHTML = '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
+    body.innerHTML = rows.length ? rows.map(r => '<tr>' + cols.map(c => `<td>${r[c]}</td>`).join('') + '</tr>').join('') : '<tr><td style="color:var(--muted)">0 rows</td></tr>';
+    meta.innerHTML = `<span style="color:#4ade80">✓</span> ${rows.length} row${rows.length===1?'':'s'} returned in ${elapsed}ms`;
+  } catch (e) {
+    head.innerHTML = ''; body.innerHTML = '';
+    meta.innerHTML = `<div class="err">Parse error: ${e.message}</div>`;
+  }
+}
+
+function renderDataset() {
+  const cols = Object.keys(orders[0]);
+  document.getElementById('dataHead').innerHTML = '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
+  document.getElementById('dataBody').innerHTML = orders.map(r => '<tr>' + cols.map(c => `<td>${r[c]}</td>`).join('') + '</tr>').join('');
+}
+
+renderDataset();
+setQ(1);
+</script>
+</body>
+</html>

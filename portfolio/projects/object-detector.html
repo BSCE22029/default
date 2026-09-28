@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Real-Time Object Detection — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.6}
+.container{max-width:960px;margin:0 auto}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.ctrl-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.file-label{display:inline-flex;align-items:center;gap:.5rem;padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.file-label:hover{border-color:var(--purple2);color:var(--purple2)}
+
+.stage{position:relative;background:#020208;border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:280px}
+.stage video, .stage canvas, .stage img{max-width:100%;display:block}
+#videoEl{display:none}
+#overlayCanvas{position:absolute;top:0;left:0;width:100%;height:100%}
+.stage-placeholder{color:var(--muted);font-size:.8rem;text-align:center;padding:2rem}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:230px;overflow-y:auto;font-family:monospace;font-size:.72rem;line-height:1.85;color:#64748b}
+.log-purple{color:#a855f7}.log-blue{color:#60a5fa}.log-green{color:#4ade80}.log-orange{color:#fb923c}.log-red{color:#f87171}.log-white{color:#e2e8f0;font-weight:700}
+
+.status-line{font-size:.72rem;color:var(--muted);margin-top:.8rem}
+.status-line.err{color:#f87171}
+.status-line.ok{color:#4ade80}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@latest/dist/coco-ssd.min.js"></script>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Computer Vision · TensorFlow.js · Real-Time Inference</span></div>
+  <h1>Real-Time Object Detection</h1>
+  <p class="subtitle">A COCO-SSD model (via TensorFlow.js) running entirely in your browser — no server, no data leaves your machine. Turn on your webcam for live bounding boxes, or upload a still image if you'd rather not grant camera access. The model and all 80 COCO classes load straight from a CDN and run on-device.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mObjects">0</div><div class="m-label">Objects Detected</div></div>
+    <div class="metric"><div class="m-val" id="mInference">—</div><div class="m-label">Avg Inference</div></div>
+    <div class="metric"><div class="m-val" id="mModel">Loading…</div><div class="m-label">Model Status</div></div>
+    <div class="metric"><div class="m-val" id="mFps">—</div><div class="m-label">FPS (webcam)</div></div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="card">
+    <div class="card-h">Input Source</div>
+    <div class="ctrl-row">
+      <button class="btn go" id="webcamBtn" onclick="startWebcam()" disabled>Enable Webcam</button>
+      <label class="file-label">
+        Upload Image
+        <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload(event)"/>
+      </label>
+      <button class="btn" onclick="stopAll()">Stop / Reset</button>
+    </div>
+    <div class="stage" id="stage">
+      <div class="stage-placeholder" id="stagePlaceholder">Waiting for TensorFlow.js and the COCO-SSD model to load…</div>
+      <video id="videoEl" autoplay playsinline muted></video>
+      <canvas id="overlayCanvas"></canvas>
+    </div>
+    <div class="status-line" id="statusLine">Loading model from CDN — this can take a few seconds on first load.</div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">Detection Log</div>
+    <div class="log" id="detLog">
+      <div><span class="log-blue">[system]</span> Fetching tf.min.js and coco-ssd.min.js from jsdelivr CDN...</div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">Core Detection Loop (actual code running on this page)</div>
+<pre><span class="comment">// object-detector.html — Muhammad Moiz Ahmad</span>
+<span class="comment">// Loads COCO-SSD once, then runs detect() on either a &lt;video&gt; stream</span>
+<span class="comment">// or a static &lt;img&gt;, and draws boxes on a &lt;canvas&gt; overlay.</span>
+
+<span class="kw">let</span> model = <span class="kw">null</span>;
+
+<span class="kw">async function</span> <span class="fn">loadModel</span>() {
+  model = <span class="kw">await</span> cocoSsd.load();  <span class="comment">// downloads + initializes the SSD weights</span>
+}
+
+<span class="kw">async function</span> <span class="fn">detectOnVideo</span>(video, canvas) {
+  <span class="kw">const</span> ctx = canvas.getContext(<span class="str">'2d'</span>);
+  <span class="kw">const</span> t0 = performance.now();
+  <span class="kw">const</span> predictions = <span class="kw">await</span> model.detect(video);
+  <span class="kw">const</span> ms = performance.now() - t0;
+
+  ctx.clearRect(<span class="num">0</span>, <span class="num">0</span>, canvas.width, canvas.height);
+  <span class="kw">for</span> (<span class="kw">const</span> p <span class="kw">of</span> predictions) {
+    <span class="kw">const</span> [x, y, w, h] = p.bbox;           <span class="comment">// {bbox:[x,y,w,h], class, score}</span>
+    ctx.strokeStyle = colorFor(p.class);
+    ctx.lineWidth = <span class="num">2</span>;
+    ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = colorFor(p.class);
+    ctx.fillText(<span class="str">`${p.class} ${(p.score*</span><span class="num">100</span><span class="str">).toFixed(0)}%`</span>, x + <span class="num">4</span>, y - <span class="num">6</span>);
+  }
+  <span class="kw">return</span> { predictions, ms };
+}
+
+<span class="comment">// Live loop for webcam mode — re-runs detection every animation frame</span>
+<span class="kw">function</span> <span class="fn">renderLoop</span>(video, canvas) {
+  <span class="kw">async function</span> <span class="fn">tick</span>() {
+    <span class="kw">if</span> (!streaming) <span class="kw">return</span>;
+    <span class="kw">const</span> { predictions, ms } = <span class="kw">await</span> detectOnVideo(video, canvas);
+    updateMetrics(predictions.length, ms);
+    requestAnimationFrame(tick);
+  }
+  tick();
+}</pre>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───
+let model = null;
+let modelReady = false;
+let streaming = false;
+let inferenceTimes = [];
+let objectCount = 0;
+let fpsFrames = [];
+let currentImageEl = null;
+
+const stage = document.getElementById('stage');
+const placeholder = document.getElementById('stagePlaceholder');
+const video = document.getElementById('videoEl');
+const overlay = document.getElementById('overlayCanvas');
+const octx = overlay.getContext('2d');
+const statusLine = document.getElementById('statusLine');
+const webcamBtn = document.getElementById('webcamBtn');
+
+const CLASS_COLORS = {};
+const PALETTE = ['#a855f7','#3b82f6','#22c55e','#f97316','#ef4444','#eab308','#06b6d4','#ec4899','#84cc16','#f43f5e'];
+function colorFor(cls) {
+  if (!CLASS_COLORS[cls]) {
+    const idx = Object.keys(CLASS_COLORS).length % PALETTE.length;
+    CLASS_COLORS[cls] = PALETTE[idx];
+  }
+  return CLASS_COLORS[cls];
+}
+
+function log(html) {
+  const el = document.getElementById('detLog');
+  el.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
+  el.scrollTop = el.scrollHeight;
+  // keep log from growing unbounded
+  while (el.children.length > 200) el.removeChild(el.firstChild);
+}
+
+function setStatus(msg, cls) {
+  statusLine.textContent = msg;
+  statusLine.className = 'status-line' + (cls ? ' ' + cls : '');
+}
+
+function updateMetrics(count, ms) {
+  objectCount = count;
+  document.getElementById('mObjects').textContent = objectCount;
+  inferenceTimes.push(ms);
+  if (inferenceTimes.length > 30) inferenceTimes.shift();
+  const avg = inferenceTimes.reduce((a,b) => a+b, 0) / inferenceTimes.length;
+  document.getElementById('mInference').textContent = avg.toFixed(0) + 'ms';
+}
+
+function updateFps() {
+  const now = performance.now();
+  fpsFrames.push(now);
+  fpsFrames = fpsFrames.filter(t => now - t < 1000);
+  document.getElementById('mFps').textContent = fpsFrames.length;
+}
+
+// ─── MODEL LOADING ───
+async function loadModel() {
+  try {
+    if (typeof tf === 'undefined' || typeof cocoSsd === 'undefined') {
+      throw new Error('TensorFlow.js / coco-ssd script failed to load from CDN');
+    }
+    log(`<span class="log-blue">[system]</span> tf.js loaded, backend: <span class="log-white">${tf.getBackend ? tf.getBackend() : 'unknown'}</span>`);
+    log(`<span class="log-blue">[system]</span> Loading COCO-SSD model weights (base_model: lite_mobilenet_v2)...`);
+    model = await cocoSsd.load();
+    modelReady = true;
+    document.getElementById('mModel').textContent = 'Ready';
+    document.getElementById('mModel').style.color = '#4ade80';
+    webcamBtn.disabled = false;
+    setStatus('Model ready — enable your webcam or upload an image to begin.', 'ok');
+    log(`<span class="log-green">[system]</span> COCO-SSD model ready — 80 classes available`);
+  } catch (err) {
+    document.getElementById('mModel').textContent = 'Failed';
+    document.getElementById('mModel').style.color = '#f87171';
+    setStatus('Could not load the model: ' + err.message + ' (check your internet connection — this demo needs the TensorFlow.js CDN).', 'err');
+    log(`<span class="log-red">[error]</span> ${escapeHtml(err.message)}`);
+  }
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ─── WEBCAM MODE ───
+async function startWebcam() {
+  if (!modelReady) { setStatus('Model is not ready yet — please wait.', 'err'); return; }
+  stopAll(false);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    video.srcObject = stream;
+    placeholder.style.display = 'none';
+    video.style.display = 'block';
+    await new Promise(resolve => { video.onloadedmetadata = () => { video.play(); resolve(); }; });
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+    stage.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+    streaming = true;
+    setStatus('Webcam live — detecting objects every frame.', 'ok');
+    log(`<span class="log-blue">[system]</span> Webcam stream started (${video.videoWidth}x${video.videoHeight})`);
+    renderLoop();
+  } catch (err) {
+    let msg = 'Webcam unavailable: ' + err.message;
+    if (err.name === 'NotAllowedError') msg = 'Camera permission denied — you can still upload a static image below.';
+    else if (err.name === 'NotFoundError') msg = 'No camera detected — try uploading a static image instead.';
+    setStatus(msg, 'err');
+    log(`<span class="log-red">[error]</span> ${escapeHtml(msg)}`);
+  }
+}
+
+async function renderLoop() {
+  async function tick() {
+    if (!streaming) return;
+    try {
+      const t0 = performance.now();
+      const predictions = await model.detect(video);
+      const ms = performance.now() - t0;
+      drawPredictions(predictions, overlay, octx, video.videoWidth, video.videoHeight);
+      updateMetrics(predictions.length, ms);
+      updateFps();
+      predictions.forEach(p => {
+        log(`<span class="log-purple">[detect]</span> <span class="log-white">${escapeHtml(p.class)}</span> — confidence <span class="log-green">${(p.score*100).toFixed(1)}%</span>`);
+      });
+    } catch (err) {
+      log(`<span class="log-red">[error]</span> Detection frame failed: ${escapeHtml(err.message)}`);
+    }
+    if (streaming) requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ─── IMAGE UPLOAD MODE ───
+function handleImageUpload(event) {
+  if (!modelReady) { setStatus('Model is not ready yet — please wait.', 'err'); return; }
+  const file = event.target.files[0];
+  if (!file) return;
+  stopAll(false);
+
+  const img = new Image();
+  img.onload = async () => {
+    placeholder.style.display = 'none';
+    video.style.display = 'none';
+    if (currentImageEl) currentImageEl.remove();
+    img.style.maxWidth = '100%';
+    img.style.display = 'block';
+    stage.insertBefore(img, overlay);
+    currentImageEl = img;
+
+    overlay.width = img.naturalWidth;
+    overlay.height = img.naturalHeight;
+    stage.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+
+    try {
+      const t0 = performance.now();
+      const predictions = await model.detect(img);
+      const ms = performance.now() - t0;
+      drawPredictions(predictions, overlay, octx, img.naturalWidth, img.naturalHeight);
+      updateMetrics(predictions.length, ms);
+      setStatus(`Detected ${predictions.length} object(s) in uploaded image (${ms.toFixed(0)}ms inference).`, 'ok');
+      log(`<span class="log-blue">[system]</span> Ran detection on uploaded image "${escapeHtml(file.name)}"`);
+      if (predictions.length === 0) {
+        log(`<span class="log-orange">[detect]</span> No recognizable objects found`);
+      }
+      predictions.forEach(p => {
+        log(`<span class="log-purple">[detect]</span> <span class="log-white">${escapeHtml(p.class)}</span> — confidence <span class="log-green">${(p.score*100).toFixed(1)}%</span>`);
+      });
+    } catch (err) {
+      setStatus('Detection failed on this image: ' + err.message, 'err');
+      log(`<span class="log-red">[error]</span> ${escapeHtml(err.message)}`);
+    }
+  };
+  img.onerror = () => setStatus('Could not read the selected file as an image.', 'err');
+  img.src = URL.createObjectURL(file);
+}
+
+// ─── SHARED DRAW ───
+function drawPredictions(predictions, canvas, ctx, w, h) {
+  canvas.width = w;
+  canvas.height = h;
+  ctx.clearRect(0, 0, w, h);
+  ctx.font = 'bold 14px monospace';
+  ctx.textBaseline = 'bottom';
+  predictions.forEach(p => {
+    const [x, y, bw, bh] = p.bbox;
+    const color = colorFor(p.class);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(2, w / 300);
+    ctx.strokeRect(x, y, bw, bh);
+    const label = `${p.class} ${(p.score*100).toFixed(0)}%`;
+    const textW = ctx.measureText(label).width;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, Math.max(0, y - 18), textW + 8, 18);
+    ctx.fillStyle = '#0a0a12';
+    ctx.fillText(label, x + 4, Math.max(18, y));
+  });
+}
+
+// ─── RESET ───
+function stopAll(resetStatus = true) {
+  streaming = false;
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+  }
+  video.style.display = 'none';
+  if (currentImageEl) { currentImageEl.remove(); currentImageEl = null; }
+  octx.clearRect(0, 0, overlay.width, overlay.height);
+  placeholder.style.display = 'block';
+  stage.style.aspectRatio = '';
+  inferenceTimes = [];
+  fpsFrames = [];
+  document.getElementById('mObjects').textContent = '0';
+  document.getElementById('mInference').textContent = '—';
+  document.getElementById('mFps').textContent = '—';
+  if (resetStatus) setStatus(modelReady ? 'Ready — enable your webcam or upload an image.' : 'Loading model…', modelReady ? 'ok' : '');
+}
+
+// catch any unhandled promise rejection so the page never hard-crashes
+window.addEventListener('unhandledrejection', (e) => {
+  setStatus('Unexpected error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason), 'err');
+  log(`<span class="log-red">[error]</span> Unhandled: ${escapeHtml(e.reason && e.reason.message ? e.reason.message : String(e.reason))}`);
+  e.preventDefault();
+});
+
+loadModel();
+</script>
+</body>
+</html>

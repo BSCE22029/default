@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Interview Prep — Muhammad Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a12;--bg2:#0d0d1a;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;
+  --blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f97316;--yellow:#fbbf24;
+  --text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a;--radius:12px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* Grid bg */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(124,58,237,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,18,.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-size:1rem;font-weight:800;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-right{display:flex;align-items:center;gap:.8rem}
+#timer{font-family:monospace;font-size:.9rem;color:var(--purple2);font-weight:700;padding:.3rem .7rem;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:8px;cursor:pointer;user-select:none}
+.back-btn{color:var(--muted);text-decoration:none;font-size:.8rem;padding:.35rem .75rem;border:1px solid var(--border);border-radius:8px}
+.back-btn:hover{border-color:var(--purple);color:var(--text)}
+
+/* HEADER */
+.header{text-align:center;padding:3rem 2rem 2rem;position:relative;z-index:1}
+.header h1{font-size:clamp(1.8rem,4vw,3rem);font-weight:800;margin-bottom:.5rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{color:var(--muted);font-size:.9rem}
+.stats-row{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem}
+.stat-chip{background:var(--card);border:1px solid var(--border);border-radius:99px;padding:.35rem 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem}
+.stat-chip strong{color:var(--purple2)}
+
+/* FILTER TABS */
+.filter-wrap{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;padding:1rem 2rem;position:relative;z-index:1}
+.f-btn{padding:.45rem 1.1rem;border-radius:99px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s}
+.f-btn.active,.f-btn:hover{background:rgba(124,58,237,.18);border-color:var(--purple2);color:var(--purple2)}
+
+/* SEARCH */
+.search-wrap{padding:.5rem 2rem 1.5rem;display:flex;justify-content:center;position:relative;z-index:1}
+.search-input{width:100%;max-width:520px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.65rem 1rem .65rem 2.5rem;color:var(--text);font-size:.85rem;outline:none;transition:border-color .2s}
+.search-input:focus{border-color:var(--purple)}
+.search-wrap{position:relative}
+.search-icon{position:absolute;left:calc(50% - 248px);top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem;pointer-events:none}
+
+/* MAIN GRID */
+.main{padding:0 2rem 4rem;max-width:1100px;margin:0 auto;position:relative;z-index:1}
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.2rem}
+
+/* PROJECT CARD */
+.proj-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:border-color .2s,transform .2s;cursor:default}
+.proj-card:hover{border-color:rgba(168,85,247,.4);transform:translateY(-2px)}
+.proj-card.hidden{display:none}
+
+.pc-header{padding:1rem 1.2rem .7rem;display:flex;align-items:flex-start;gap:.8rem}
+.pc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.pc-meta{flex:1;min-width:0}
+.pc-title{font-size:.95rem;font-weight:800;margin-bottom:.2rem;line-height:1.3}
+.pc-tags{display:flex;gap:.3rem;flex-wrap:wrap}
+.tag{font-size:.62rem;font-weight:700;padding:.15rem .48rem;border-radius:99px}
+.t-purple{background:rgba(124,58,237,.15);color:var(--purple2);border:1px solid rgba(124,58,237,.3)}
+.t-blue{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.25)}
+.t-green{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.t-orange{background:rgba(249,115,22,.1);color:#fb923c;border:1px solid rgba(249,115,22,.2)}
+.t-red{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.cat-badge{font-size:.6rem;font-weight:700;padding:.12rem .48rem;border-radius:4px;margin-left:auto;flex-shrink:0}
+.cat-edge{background:rgba(168,85,247,.15);color:var(--purple2)}
+.cat-embedded{background:rgba(249,115,22,.1);color:#fb923c}
+.cat-web{background:rgba(59,130,246,.12);color:#60a5fa}
+.cat-ai{background:rgba(34,197,94,.1);color:#4ade80}
+.cat-algo{background:rgba(251,191,36,.1);color:#fbbf24}
+
+/* PITCH BOX */
+.pitch-box{margin:0 1.2rem .8rem;padding:.75rem .9rem;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;font-size:.8rem;line-height:1.65;color:var(--text);position:relative}
+.pitch-label{font-size:.6rem;font-weight:700;color:var(--purple2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;padding:.2rem .55rem;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:6px;font-size:.6rem;font-weight:700;color:var(--purple2);cursor:pointer;transition:all .15s}
+.copy-btn:hover{background:rgba(124,58,237,.3)}
+.copy-btn.copied{color:#4ade80;border-color:#4ade80}
+
+/* KEY NUMBERS */
+.key-nums{display:flex;gap:.5rem;margin:0 1.2rem .8rem;flex-wrap:wrap}
+.kn{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.35rem .65rem;font-size:.7rem;text-align:center}
+.kn-val{font-weight:800;font-family:monospace;color:var(--purple2);font-size:.82rem}
+.kn-label{color:var(--muted);font-size:.58rem;text-transform:uppercase}
+
+/* Q&A accordion */
+.qa-section{margin:0 1.2rem 1rem}
+.qa-header{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.qa-item{border:1px solid var(--border);border-radius:8px;margin-bottom:.4rem;overflow:hidden}
+.qa-q{padding:.6rem .8rem;font-size:.78rem;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .15s;gap:.5rem}
+.qa-q:hover{background:rgba(124,58,237,.06)}
+.qa-q .q-text{flex:1}
+.qa-q .q-diff{font-size:.6rem;padding:.1rem .4rem;border-radius:4px;flex-shrink:0}
+.diff-easy{background:rgba(34,197,94,.1);color:#4ade80}
+.diff-med{background:rgba(251,191,36,.1);color:#fbbf24}
+.diff-hard{background:rgba(239,68,68,.1);color:#f87171}
+.qa-arrow{color:var(--muted);font-size:.7rem;flex-shrink:0;transition:transform .2s}
+.qa-item.open .qa-arrow{transform:rotate(180deg)}
+.qa-a{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
+.qa-item.open .qa-a{max-height:500px;padding:.7rem .85rem}
+.qa-a-inner{font-size:.78rem;line-height:1.7;color:var(--muted);border-top:1px solid var(--border);padding-top:.65rem}
+.qa-a-inner code{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.1rem .35rem;font-family:monospace;font-size:.75rem;color:var(--purple2)}
+.qa-a-inner strong{color:var(--text)}
+
+/* GOTCHA */
+.gotcha-box{margin:0 1.2rem .9rem;padding:.65rem .85rem;background:rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.2);border-radius:8px}
+.gotcha-label{font-size:.6rem;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem}
+.gotcha-q{font-size:.75rem;color:var(--muted);margin-bottom:.3rem;padding-left:.8rem;position:relative}
+.gotcha-q::before{content:'⚠';position:absolute;left:0;font-size:.65rem}
+
+/* COMPANIES */
+.companies{margin:0 1.2rem 1rem;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}
+.company-label{font-size:.62rem;color:var(--muted);margin-right:.2rem}
+.company-chip{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.15rem .55rem;font-size:.65rem;font-weight:700;color:var(--muted)}
+
+/* QUICK REF SECTION */
+.quick-ref{margin:3rem auto 2rem;max-width:1100px;padding:0 2rem;position:relative;z-index:1}
+.qr-title{font-size:1.1rem;font-weight:800;margin-bottom:1rem;color:var(--purple2)}
+.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.8rem}
+.qr-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem}
+.qr-card h4{font-size:.8rem;font-weight:800;margin-bottom:.6rem;color:var(--text)}
+.qr-card ul{padding-left:1rem}
+.qr-card li{font-size:.75rem;color:var(--muted);margin-bottom:.3rem;line-height:1.5}
+.qr-card li strong{color:var(--text)}
+
+/* PRINT MODE */
+@media print{
+  body::before,.nav,.filter-wrap,.search-wrap,#timer{display:none}
+  .proj-card{break-inside:avoid;transform:none!important;border:1px solid #ccc!important}
+  .qa-a{max-height:none!important;padding:.7rem .85rem!important}
+}
+@media(max-width:600px){.main{padding:0 1rem 3rem}.filter-wrap{padding:.5rem 1rem}}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-logo">🎯 Interview Prep — Moiz Ahmad</div>
+  <div class="nav-right">
+    <div id="timer" onclick="toggleTimer()" title="Click to start/stop mock interview timer">⏱ 00:00</div>
+    <a href="index.html" class="back-btn">← Portfolio</a>
+    <button onclick="window.print()" style="padding:.3rem .75rem;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:var(--purple2);font-size:.75rem;font-weight:700;cursor:pointer">🖨 Print</button>
+  </div>
+</div>
+
+<div class="header">
+  <h1>Interview Prep Guide</h1>
+  <p>Every project — pitch, Q&A, gotcha questions, and companies that care about each skill</p>
+  <div class="stats-row">
+    <div class="stat-chip"><strong>16</strong> Projects</div>
+    <div class="stat-chip"><strong>60+</strong> Q&A Pairs</div>
+    <div class="stat-chip"><strong>5</strong> Categories</div>
+    <div class="stat-chip">⏱ Click timer for mock interview mode</div>
+  </div>
+</div>
+
+<div class="filter-wrap">
+  <button class="f-btn active" onclick="filter('all',this)">All</button>
+  <button class="f-btn" onclick="filter('edge',this)">🤖 Edge AI</button>
+  <button class="f-btn" onclick="filter('embedded',this)">⚙️ Embedded & HDL</button>
+  <button class="f-btn" onclick="filter('web',this)">🌐 Web & Backend</button>
+  <button class="f-btn" onclick="filter('ai',this)">🧠 AI & ML</button>
+  <button class="f-btn" onclick="filter('algo',this)">📊 Algorithms</button>
+</div>
+
+<div class="search-wrap">
+  <span class="search-icon">🔍</span>
+  <input class="search-input" id="searchInput" placeholder="Search projects, technologies, concepts..." oninput="searchProjects()" style="padding-left:2.4rem"/>
+</div>
+
+<div class="main">
+<div class="proj-grid" id="projGrid">
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- EDGE AI PROJECTS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="proj-card" data-cat="edge" data-keywords="tinyml gesture arduino tflite int8 conv1d imu tensorflow lite quantization">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(34,197,94,.1)">🤜</div>
+    <div class="pc-meta">
+      <div class="pc-title">TinyML Gesture Classifier</div>
+      <div class="pc-tags">
+        <span class="tag t-green">TFLite</span><span class="tag t-orange">Arduino Nano 33 BLE</span><span class="tag t-purple">Conv1D</span><span class="tag t-blue">INT8</span>
+      </div>
+    </div>
+    <span class="cat-badge cat-edge">Edge AI</span>
+  </div>
+  <div class="key-nums">
+    <div class="kn"><div class="kn-val">97.4%</div><div class="kn-label">Accuracy</div></div>
+    <div class="kn"><div class="kn-val">18KB</div><div class="kn-label">Model Size</div></div>
+    <div class="kn"><div class="kn-val">3.2ms</div><div class="kn-label">Inference</div></div>
+    <div class="kn"><div class="kn-val">INT8</div><div class="kn-label">Quantized</div></div>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    I trained a Conv1D neural network on IMU data from 119 accelerometer frames — three axes each — then quantized it to INT8 using TensorFlow Lite post-training quantization. The result is an 18KB model that runs on an Arduino Nano 33 BLE Sense with no WiFi, no cloud, and no latency — just 3.2ms inference at 97.4% accuracy across six hand gestures.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">Why Conv1D instead of an RNN or LSTM for gesture classification?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Gesture data is a short, fixed-length time series (119 frames, ~1.2 seconds). Conv1D is faster, needs less memory, and doesn't have vanishing gradient issues. LSTMs need sequential state — expensive on microcontrollers. For a bounded window like this, Conv1D gets 97%+ while staying under 20KB. I only use RNNs when context window is variable or very long.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">Explain INT8 quantization. What's the trade-off?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner"><strong>What it does:</strong> replaces 32-bit float weights with 8-bit integers using a scale factor and zero point. <code>float = (int8 − zero_point) × scale</code>. Reduces model size 4×, speeds up inference 2–4× on integer-only hardware.<br/><br/><strong>Trade-off:</strong> ~0.5–2% accuracy drop. Fixed with representative dataset calibration — I passed 200 training samples to the converter so it could pick optimal scale factors per layer.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">How did you collect training data? How many samples?</span><span class="q-diff diff-easy">Easy</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Collected 200+ samples per gesture class (6 classes = 1200+ samples) using a simple Arduino sketch that buffers 119 IMU frames at 119Hz and logs them over serial. Captured from multiple people to reduce person-specific bias. Augmented by adding Gaussian noise and slight time shifts to each sample during preprocessing.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What's the TFLite for Microcontrollers workflow end to end?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">1. Train in Keras (full float32). 2. Convert with <code>TFLiteConverter</code> + <code>TFLITE_BUILTINS_INT8</code> — needs a representative dataset for calibration. 3. Save as <code>.tflite</code>. 4. Convert to C byte array: <code>xxd -i model.tflite > model.h</code>. 5. On Arduino: <code>GetModel() → AllOpsResolver → AllocateTensors() → Invoke()</code>. The tensor arena (static RAM buffer) must be sized correctly — too small = crash, too big = OOM.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">What happens if the accelerometer sample rate drifts? How does your model handle timing jitter?</div>
+    <div class="gotcha-q">Could you run this on an ATmega328P (regular Arduino Uno)? Why not?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">STMicroelectronics</span><span class="company-chip">Nordic Semiconductor</span><span class="company-chip">Qualcomm</span><span class="company-chip">Edge Impulse</span><span class="company-chip">Arduino</span></div>
+</div>
+
+
+<div class="proj-card" data-cat="edge" data-keywords="fpga verilog systolic array neural network accelerator mac pe hardware ai xilinx artix-7">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(124,58,237,.15)">⚡</div>
+    <div class="pc-meta">
+      <div class="pc-title">FPGA Neural Network Accelerator</div>
+      <div class="pc-tags"><span class="tag t-orange">Verilog HDL</span><span class="tag t-purple">Systolic Array</span><span class="tag t-blue">Xilinx Artix-7</span></div>
+    </div>
+    <span class="cat-badge cat-edge">Edge AI</span>
+  </div>
+  <div class="key-nums">
+    <div class="kn"><div class="kn-val">4×4</div><div class="kn-label">PE Array</div></div>
+    <div class="kn"><div class="kn-val">50MHz</div><div class="kn-label">Clock</div></div>
+    <div class="kn"><div class="kn-val">12.8</div><div class="kn-label">GOPS</div></div>
+    <div class="kn"><div class="kn-val">INT8</div><div class="kn-label">Precision</div></div>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    I implemented a 4×4 systolic array of Processing Elements in Verilog HDL where each PE computes a multiply-accumulate operation. Data flows left to right, weights flow top to bottom — this is the same architecture Google uses in their TPUs. Running at 50MHz on Xilinx Artix-7, it achieves 12.8 GOPS for INT8 matrix multiply, which is the bottleneck operation in neural network inference.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What is a systolic array and why is it efficient for matrix multiply?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">A systolic array is a grid of simple processing elements that pass data between neighbors every clock cycle — like a heartbeat (systole). For matrix multiply A×B: row elements of A flow right across rows of PEs; column elements of B flow down columns. Each PE does <code>acc += a × b</code> every cycle. <strong>Why efficient:</strong> data reuse — each value passes through N PEs before leaving, so we get N MACs per load instead of 1. No global memory bus bottleneck.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">How does your design handle the difference between training precision (FP32) and inference (INT8)?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Training stays in FP32 on a GPU — the hardware accelerator only does inference. Before deployment, weights are quantized: <code>w_int8 = round(w_float32 / scale)</code> where scale is computed per-layer during calibration. The accumulator is INT32 (32-bit) to avoid overflow from multiplying two INT8 values — max product is 127×127=16129, which fits in INT32. After accumulation, we clamp back to INT8 with the bias and activation.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What is the difference between ASIC, FPGA, and GPU for neural network inference?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner"><strong>GPU:</strong> Flexible, massively parallel, high bandwidth but high power (50–300W). Best for training and large-batch cloud inference.<br/><strong>FPGA:</strong> Reconfigurable, medium power (5–25W), good for custom precision and streaming data. My accelerator runs here. Latency is deterministic — critical for real-time systems.<br/><strong>ASIC:</strong> Fixed function (like Google TPU, Apple Neural Engine). Highest TOPS/W but zero flexibility. Can't reprogram after fabrication.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">What is the memory bandwidth bottleneck in your design? How would you fix it at scale?</div>
+    <div class="gotcha-q">How would you extend this to support depthwise separable convolutions, not just dense layers?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Intel (Altera)</span><span class="company-chip">Xilinx/AMD</span><span class="company-chip">Google (TPU)</span><span class="company-chip">Samsung LSI</span><span class="company-chip">Groq</span></div>
+</div>
+
+
+<div class="proj-card" data-cat="edge" data-keywords="esp32 anomaly detection autoencoder vibration industrial iot reconstruction error fault bearing">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(239,68,68,.1)">🔬</div>
+    <div class="pc-meta">
+      <div class="pc-title">Edge Anomaly Detector</div>
+      <div class="pc-tags"><span class="tag t-red">Autoencoder</span><span class="tag t-orange">ESP32</span><span class="tag t-blue">IIoT</span><span class="tag t-green">TFLite</span></div>
+    </div>
+    <span class="cat-badge cat-edge">Edge AI</span>
+  </div>
+  <div class="key-nums">
+    <div class="kn"><div class="kn-val">98.2%</div><div class="kn-label">Detection</div></div>
+    <div class="kn"><div class="kn-val">&lt;1%</div><div class="kn-label">False +ve</div></div>
+    <div class="kn"><div class="kn-val">12ms</div><div class="kn-label">Latency</div></div>
+    <div class="kn"><div class="kn-val">0.45</div><div class="kn-label">Threshold</div></div>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    This uses an autoencoder — trained only on normal machine vibration data — to detect faults without ever seeing a labeled fault example. The idea is: the autoencoder learns to reconstruct normal patterns perfectly, so when a fault occurs, the reconstruction error spikes above a threshold. Running on ESP32 at 12ms latency, it catches bearing damage, rotor imbalance, and shaft misalignment with 98.2% detection rate and under 1% false positives.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">Why use an autoencoder for anomaly detection instead of a classifier?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">A classifier needs labeled examples of every fault type — but in industry you rarely have enough fault data, and new fault types appear unexpectedly. An autoencoder only needs normal data to train. It learns <em>what normal looks like</em>. When something abnormal happens, it can't reconstruct it well, so reconstruction error = MSE(input, decoded) spikes above threshold. This is called <strong>unsupervised anomaly detection</strong> — no fault labels needed.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">How did you pick the anomaly threshold (0.45)? What if it's wrong?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">I computed reconstruction errors on a validation set of normal data and set the threshold at <strong>mean + 3σ</strong> (three standard deviations above average normal error). This catches 99.7% of genuine anomalies in a Gaussian distribution. You can also use ROC curve analysis to pick the threshold that maximizes F1 score on your test set. The trade-off: lower threshold = more false alarms; higher threshold = missed faults. In safety-critical systems you bias toward more false alarms.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What features did you extract from the vibration signal?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Time-domain: <strong>RMS</strong> (overall vibration level), <strong>crest factor</strong> (peak/RMS — high in bearing faults), <strong>kurtosis</strong> (impulsiveness — very sensitive to early bearing damage), <strong>skewness</strong>. Frequency-domain: <strong>THD</strong> (total harmonic distortion — catches misalignment harmonics), <strong>spectral entropy</strong>. The autoencoder operates on the raw windowed time series (128 samples × 3 axes), but these features are the interpretable signals I used to validate it.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">What happens if the "normal" operating conditions change (different load, temperature, RPM)? How do you retrain without stopping production?</div>
+    <div class="gotcha-q">Explain why kurtosis is particularly useful for early bearing fault detection.</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Siemens</span><span class="company-chip">GE Digital</span><span class="company-chip">Emerson</span><span class="company-chip">National Instruments</span><span class="company-chip">AWS IoT</span></div>
+</div>
+
+
+<div class="proj-card" data-cat="edge" data-keywords="keyword spotter wake word mfcc stm32 ds-cnn depthwise separable audio spectrogram cmsis-dsp">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(59,130,246,.12)">🎙️</div>
+    <div class="pc-meta">
+      <div class="pc-title">Keyword Spotter — Wake Word</div>
+      <div class="pc-tags"><span class="tag t-orange">STM32F4</span><span class="tag t-blue">MFCC</span><span class="tag t-purple">DS-CNN</span><span class="tag t-green">ARM CMSIS</span></div>
+    </div>
+    <span class="cat-badge cat-edge">Edge AI</span>
+  </div>
+  <div class="key-nums">
+    <div class="kn"><div class="kn-val">95.3%</div><div class="kn-label">Accuracy</div></div>
+    <div class="kn"><div class="kn-val">22KB</div><div class="kn-label">Model</div></div>
+    <div class="kn"><div class="kn-val">8ms</div><div class="kn-label">Latency</div></div>
+    <div class="kn"><div class="kn-val">40×49</div><div class="kn-label">MFCC spec</div></div>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    I built a wake word detector using the same architecture as Alexa or Google Assistant — MFCC feature extraction feeding a depthwise separable CNN. The audio pipeline runs entirely on STM32F4: 16kHz PCM → pre-emphasis → 25ms STFT frames with 10ms hop → 40-band mel filterbank → DCT → 40×49 spectrogram → DS-CNN inference in 8ms. The DS-CNN is 9× cheaper than a standard CNN with comparable accuracy because depthwise convolutions factorize the computation.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">Explain MFCC step by step. Why Mel scale instead of linear frequency?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">1. <strong>Pre-emphasis</strong>: boost high freqs with <code>y[n] = x[n] − 0.97×x[n−1]</code> to compensate for vocal tract roll-off.<br/>2. <strong>Frame + window</strong>: split into 25ms frames with 10ms hop, apply Hamming window to reduce spectral leakage.<br/>3. <strong>FFT</strong>: compute magnitude spectrum.<br/>4. <strong>Mel filterbank</strong>: apply 40 triangular filters spaced on the Mel scale (<code>mel = 2595 × log(1 + f/700)</code>). Human hearing is logarithmic — we hear differences between 100Hz and 200Hz much more clearly than between 8000Hz and 8100Hz.<br/>5. <strong>Log + DCT</strong>: take log (compresses dynamic range) then DCT (decorrelates features). Result: 40 MFCC coefficients per frame.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What is a depthwise separable convolution and why is it useful on embedded?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">A standard Conv2D with F filters of size K×K×C costs <code>K²×C×F</code> multiplications per output. A depthwise separable conv splits this into:<br/>• <strong>Depthwise conv</strong>: one K×K filter per input channel — cost <code>K²×C</code><br/>• <strong>Pointwise conv</strong>: 1×1 convolution to mix channels — cost <code>C×F</code><br/>Total: <code>K²×C + C×F = C(K² + F)</code> vs <code>K²×C×F</code>. For K=3, F=32: 9× cheaper. Same expressiveness, 9× fewer MACs. Critical for MCUs with no FPU.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">How do you handle the sliding window — does every 1 second of audio get classified?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Yes, continuously. I use a ring buffer of audio frames. Every 10ms (1 hop), a new frame is added and the oldest is dropped — so the spectrogram always covers the latest ~490ms. Inference runs every 10ms. To avoid false positives from a single frame, I require 3 consecutive detections above threshold before triggering the wake event. This adds 30ms latency but eliminates spurious triggers from noise or partial words.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">How does your system handle background noise, accents, or multiple speakers in the room?</div>
+    <div class="gotcha-q">Why use DCT as the last step of MFCC instead of just using the log-mel spectrogram directly?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Amazon (Alexa)</span><span class="company-chip">Google (Assistant)</span><span class="company-chip">Apple (Siri)</span><span class="company-chip">Synaptics</span><span class="company-chip">Sensory</span></div>
+</div>
+
+
+<!-- ═══ EMBEDDED & HDL ═══ -->
+
+<div class="proj-card" data-cat="embedded" data-keywords="uart serial protocol verilog baud rate start bit stop bit parity 8n1">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(249,115,22,.1)">📡</div>
+    <div class="pc-meta">
+      <div class="pc-title">UART Transceiver</div>
+      <div class="pc-tags"><span class="tag t-orange">Verilog HDL</span><span class="tag t-blue">Serial Protocol</span><span class="tag t-purple">8N1</span></div>
+    </div>
+    <span class="cat-badge cat-embedded">Embedded</span>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    I implemented a full UART transceiver in Verilog — 8 data bits, configurable parity, 1 stop bit — simulated in Vivado. The transmitter uses a shift register clocked at baud rate (CLKS_PER_BIT = CLK_FREQ / BAUD_RATE). The receiver samples at the midpoint of each bit to avoid edge metastability. I verified it against a logic analyzer simulation to confirm correct frame timing.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">Walk me through a UART frame. What are the start and stop bits for?</span><span class="q-diff diff-easy">Easy</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Idle line is HIGH (logic 1). A frame starts with a <strong>start bit</strong> (logic 0) — this falling edge wakes the receiver. Then 8 data bits LSB first, then optional parity, then 1+ <strong>stop bits</strong> (logic 1) to guarantee the line returns to idle before the next byte. The stop bit also gives the receiver time to process the byte. Without start bit: no way to know when a byte begins. Without stop bit: next start bit could be mistaken as a data bit.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">UART vs SPI vs I2C — when do you use each?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner"><strong>UART:</strong> 2-wire async, no clock, point-to-point. Use for debug consoles, GPS modules, Bluetooth modules. Simple but slow (115200 baud max typical).<br/><strong>SPI:</strong> 4-wire sync, full duplex, master/slave. Use for SD cards, displays, ADCs needing high speed (up to 80MHz). One CS pin per slave.<br/><strong>I2C:</strong> 2-wire sync, multi-device on same bus (address-based). Use for sensors (IMU, temp, OLED) where speed isn't critical (max ~3.4MHz). Only 2 wires but needs pull-ups.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">How does your Verilog receiver avoid sampling at the wrong edge of a bit?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">When the start bit is detected (falling edge), the receiver waits for 1.5 × CLKS_PER_BIT before sampling the first data bit — this puts the sample at the <strong>midpoint</strong> of the first data bit, away from the edges where transitions occur. For each subsequent bit, it waits exactly CLKS_PER_BIT more. This tolerates up to ±50% clock skew between TX and RX baud rate generators.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">What's the maximum UART baud rate on a 50MHz FPGA? What limits it?</div>
+    <div class="gotcha-q">How would you add flow control (RTS/CTS) to your design?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Qualcomm</span><span class="company-chip">Texas Instruments</span><span class="company-chip">NXP</span><span class="company-chip">STMicroelectronics</span></div>
+</div>
+
+
+<div class="proj-card" data-cat="embedded" data-keywords="pwm motor controller verilog duty cycle frequency arduino l298n h-bridge waveform">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(124,58,237,.15)">⚙️</div>
+    <div class="pc-meta">
+      <div class="pc-title">PWM Motor Controller</div>
+      <div class="pc-tags"><span class="tag t-orange">Verilog HDL</span><span class="tag t-orange">Arduino</span><span class="tag t-blue">Motor Control</span></div>
+    </div>
+    <span class="cat-badge cat-embedded">Embedded</span>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    I implemented PWM generation in Verilog using a counter/comparator approach: a free-running counter resets at PERIOD = CLK_FREQ / PWM_FREQ, and the output is HIGH while the counter is below the threshold (threshold = PERIOD × duty_cycle / 256). This is the same technique used in microcontroller timer peripherals. The demo shows real-time waveform, motor RPM proportional to duty cycle, and LED brightness dimming.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What PWM frequency should you use for a DC motor? For an LED? Why do they differ?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner"><strong>DC motor:</strong> 1kHz–20kHz. Lower = audible whine from motor coils. Higher = switching losses increase in the H-bridge MOSFETs. 5–20kHz is the sweet spot — above human hearing, below excessive switching loss.<br/><strong>LED:</strong> >50Hz to avoid flicker visible to the eye (persistence of vision). 1kHz is standard. Higher frequencies are fine since LEDs switch nearly instantaneously.<br/><strong>Servo motors:</strong> fixed 50Hz — the pulse width (1–2ms) encodes angle, not brightness.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What is dead time in an H-bridge and why is it needed?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">An H-bridge has high-side and low-side MOSFETs on each leg. If both turn on simultaneously even for nanoseconds, you get <strong>shoot-through</strong> — a direct short from VCC to GND, instantly destroying the transistors. Dead time is a short delay (50–500ns) inserted between turning off one switch and turning on the complementary switch, giving the off-transistor time to fully close before the other opens. In Verilog: insert a state machine delay in the gate drive signals.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">If your counter is 16-bit and clock is 50MHz, what's the lowest PWM frequency you can generate? Show the math.</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Texas Instruments</span><span class="company-chip">STMicroelectronics</span><span class="company-chip">Infineon</span><span class="company-chip">Renesas</span></div>
+</div>
+
+
+<div class="proj-card" data-cat="embedded" data-keywords="risc-v pipelined processor verilog 5-stage pipeline hazard detection forwarding branch prediction rv32i">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(249,115,22,.1)">🖥️</div>
+    <div class="pc-meta">
+      <div class="pc-title">RISC-V Pipelined Processor</div>
+      <div class="pc-tags"><span class="tag t-orange">Verilog HDL</span><span class="tag t-purple">RV32I</span><span class="tag t-blue">5-Stage Pipeline</span></div>
+    </div>
+    <span class="cat-badge cat-embedded">Embedded</span>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    I implemented a 5-stage pipelined RISC-V processor (RV32I ISA) in Verilog: Fetch, Decode, Execute, Memory, Writeback. The hazard unit detects RAW hazards and inserts data forwarding paths from EX/MEM stages back to the ALU inputs. Load-use hazards stall the pipeline for one cycle. Branch instructions flush the pipeline on misprediction. Verified with a custom assembly test suite in simulation.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What is a data hazard? How does forwarding solve it?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">A <strong>RAW (Read After Write)</strong> hazard: instruction B needs a value that instruction A is still computing. Example: <code>ADD x1, x2, x3</code> followed immediately by <code>SUB x4, x1, x5</code>. Without forwarding, B would read stale x1.<br/><strong>Forwarding</strong>: instead of waiting for A's result to be written to the register file and read back, wire the ALU output directly to the next instruction's ALU input. The hazard unit detects that B's source register matches A's destination register and enables the forward MUX. Eliminates the stall for EX-EX and MEM-EX hazards.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">Why can't you forward from a load instruction to the immediately following instruction?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">A <code>LW</code> (load word) instruction reads from memory in the MEM stage, but the next instruction needs that value in its EX stage — which happens simultaneously. You can't forward a value that hasn't been read yet. This is the <strong>load-use hazard</strong>. The only solution is to stall: insert a NOP bubble between them, delaying the dependent instruction by one cycle. The compiler can reorder instructions (load scheduling) to fill that slot with an independent instruction, avoiding the stall.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What is a control hazard and how does branch prediction help?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">When a branch is fetched, the CPU doesn't know the target address until the EX stage (2 cycles later). In those 2 cycles, it has fetched the wrong instructions. <strong>Static prediction</strong>: always predict not taken (flush on taken branch — 2-cycle penalty). <strong>Branch prediction:</strong> use a branch history table to predict taken/not-taken. If correct: no penalty. If wrong: flush 2 instructions (2 × 1 cycle = 2 cycle penalty). Modern CPUs predict 99%+ of branches correctly.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">What's the CPI (cycles per instruction) of your pipeline in the worst case? Best case?</div>
+    <div class="gotcha-q">How would you add a cache to your design? Where does it go in the pipeline?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">SiFive</span><span class="company-chip">Western Digital</span><span class="company-chip">Nvidia</span><span class="company-chip">Apple Silicon</span><span class="company-chip">Arm</span></div>
+</div>
+
+
+<div class="proj-card" data-cat="embedded" data-keywords="4-bit alu verilog arithmetic logic unit flags zero carry overflow negative vivado">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(124,58,237,.15)">🔢</div>
+    <div class="pc-meta">
+      <div class="pc-title">4-Bit ALU Simulator</div>
+      <div class="pc-tags"><span class="tag t-orange">Verilog HDL</span><span class="tag t-purple">ALU</span><span class="tag t-blue">CPU Flags</span></div>
+    </div>
+    <span class="cat-badge cat-embedded">Embedded</span>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    I implemented a 4-bit ALU in Verilog supporting 8 operations — ADD, SUB, AND, OR, XOR, NOT, SHL, SHR — with all four CPU status flags: Zero, Carry, Negative, and Overflow. The carry is implemented using a 4-bit ripple carry adder with carry propagation. Simulated in Vivado and tested with a comprehensive testbench covering all operation × operand combinations including edge cases like 7+1=overflow and 0-1=borrow.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What is the difference between signed overflow and unsigned carry?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner"><strong>Carry (unsigned):</strong> the result doesn't fit in N bits. In 4-bit: 15+1=16, which overflows unsigned range [0,15]. Carry flag = 1.<br/><strong>Overflow (signed):</strong> adding two same-sign numbers gives a different-sign result. In 4-bit 2's complement: 7+1=8 but 8 is -8 in 4-bit signed — this is overflow. Detection: <code>OVF = (a[3] == b[3]) && (result[3] != a[3])</code>. You can have carry without overflow (unsigned overflow but result is still valid signed) and overflow without carry.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">How does 2's complement subtraction work in hardware?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Instead of having a separate subtractor circuit, <code>A - B = A + (~B) + 1</code>. The 2's complement of B is bitwise-NOT(B) plus 1. In an adder circuit: invert B using XOR gates (controlled by a subtract signal), and force carry-in to 1. So one adder circuit handles both ADD and SUB by toggling the subtract control line — hardware is shared, area is halved.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">What's the gate delay (critical path) of a ripple carry adder vs carry lookahead adder for N bits?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Intel</span><span class="company-chip">AMD</span><span class="company-chip">Arm</span><span class="company-chip">Apple Silicon</span></div>
+</div>
+
+
+<!-- ═══ WEB & BACKEND ═══ -->
+
+<div class="proj-card" data-cat="web" data-keywords="crm saas react supabase postgresql jwt auth realtime multi-tenant row level security">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(59,130,246,.12)">🚀</div>
+    <div class="pc-meta">
+      <div class="pc-title">LeadFlow CRM SaaS</div>
+      <div class="pc-tags"><span class="tag t-blue">React</span><span class="tag t-green">Supabase</span><span class="tag t-purple">Multi-Tenant</span><span class="tag t-blue">RLS</span></div>
+    </div>
+    <span class="cat-badge cat-web">Web</span>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    LeadFlow is a multi-tenant CRM SaaS I built from scratch — React + Supabase backend. Multiple companies sign up and get completely isolated data through PostgreSQL Row-Level Security policies: every query is automatically filtered by org_id. It has a live pipeline with Supabase Realtime, email automation via SendGrid, analytics dashboard, and an AI lead generator that discovers prospects using Clearbit and GitHub APIs.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">How did you implement multi-tenancy? What is Row-Level Security?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Multi-tenancy means multiple customers share the same database but can never see each other's data. I used PostgreSQL Row-Level Security (RLS): <code>CREATE POLICY tenant_isolation ON leads USING (org_id = auth.jwt()->>'org_id')</code>. Every SQL query automatically gets a WHERE clause appended by the database engine — it's enforced at the DB level, not application code. Even if I have a bug in my React code that sends the wrong org_id, the database rejects the query. This is much safer than application-level filtering.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">How does Supabase Realtime work? What's happening under the hood?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Supabase Realtime uses PostgreSQL's logical replication (WAL — Write Ahead Log). When a row is inserted/updated/deleted, Postgres writes it to the WAL. Supabase's Realtime server reads the WAL via a replication slot and broadcasts changes over WebSockets to subscribed clients. On the client: <code>supabase.channel('leads').on('postgres_changes', {...}).subscribe()</code>. The client only receives changes that match the RLS policy — tenant isolation is preserved in real time too.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">How did you handle auth? What's the difference between JWT and session auth?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">I used Supabase Auth which issues <strong>JWTs (JSON Web Tokens)</strong>. A JWT is a stateless, self-contained token: <code>header.payload.signature</code>. The server doesn't store session state — it just verifies the signature with the secret key. The payload contains the user's ID and org_id, which RLS policies read directly.<br/><strong>vs Sessions:</strong> session auth stores a session ID in a DB and checks it on every request — stateful, requires DB lookup. JWTs are faster (no DB lookup) but can't be revoked before expiry. I use short-lived access tokens (1h) + refresh tokens to mitigate this.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">What happens if two tenants' orgs accidentally get assigned the same org_id? How do you prevent this?</div>
+    <div class="gotcha-q">Your Supabase database gets 10,000 concurrent connections. What breaks first?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Startups</span><span class="company-chip">Supabase</span><span class="company-chip">Vercel</span><span class="company-chip">Netlify</span><span class="company-chip">HubSpot</span></div>
+</div>
+
+
+<div class="proj-card" data-cat="web" data-keywords="rest api express node.js jwt crud bcrypt middleware authentication authorization">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(59,130,246,.12)">🔌</div>
+    <div class="pc-meta">
+      <div class="pc-title">REST API with JWT Auth</div>
+      <div class="pc-tags"><span class="tag t-blue">Node.js</span><span class="tag t-blue">Express</span><span class="tag t-green">JWT</span><span class="tag t-purple">CRUD</span></div>
+    </div>
+    <span class="cat-badge cat-web">Web</span>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    A full RESTful API built with Node.js and Express — users, posts, full CRUD, JWT authentication with refresh tokens. I structured it with route-level middleware: the auth middleware verifies the token and attaches req.user before the route handler runs. Passwords are hashed with bcrypt (cost factor 12). The interactive demo lets you call every endpoint live and see the actual JSON request/response.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What is the difference between authentication and authorization?</span><span class="q-diff diff-easy">Easy</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner"><strong>Authentication (AuthN):</strong> "Are you who you say you are?" — verifying identity. Login with email+password, Google OAuth, biometric. Result: a JWT or session token.<br/><strong>Authorization (AuthZ):</strong> "Are you allowed to do this?" — checking permissions. "Can this user delete this resource?" Role-based: admin can delete, user cannot. Resource-based: user can only delete their own posts.<br/><br/>Common mistake: checking authentication but not authorization. A logged-in user shouldn't be able to delete other users' posts — that's an authorization check.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">Why bcrypt for password hashing? Why not SHA256?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">SHA256 is designed to be fast — an attacker can compute billions of hashes per second on a GPU to crack passwords by brute force. <strong>bcrypt</strong> is intentionally slow (controlled by cost factor: cost=12 means 2¹² iterations, ~250ms on modern hardware). It also automatically salts the password, making rainbow table attacks impossible. Even if two users have the same password, their hashes are different.<br/><strong>Argon2</strong> is even better — won the Password Hashing Competition in 2015. I'd use Argon2id in production.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What are HTTP status codes 401 vs 403? When does each apply?</span><span class="q-diff diff-easy">Easy</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner"><strong>401 Unauthorized:</strong> "You haven't authenticated yet (or your token is invalid/expired)." Send a new login request to get a token. Confusingly named — it's really "unauthenticated."<br/><strong>403 Forbidden:</strong> "You're authenticated but you don't have permission." You're logged in, but you're trying to access someone else's resource or an admin-only endpoint. No amount of re-authentication will help — you're just not allowed.<br/><br/>Pattern: API key missing → 401. API key valid but user is not admin → 403.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">A JWT has been stolen. The user changes their password. The stolen JWT is still valid for 1 hour. How do you fix this?</div>
+    <div class="gotcha-q">What is CORS and why is it a security feature, not a bug?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Any startup</span><span class="company-chip">Stripe</span><span class="company-chip">Twilio</span><span class="company-chip">Auth0</span></div>
+</div>
+
+
+<!-- ═══ AI/ML ═══ -->
+
+<div class="proj-card" data-cat="ai" data-keywords="mnist cnn convolutional neural network python tensorflow keras digit recognition deep learning">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(34,197,94,.1)">🧠</div>
+    <div class="pc-meta">
+      <div class="pc-title">MNIST Digit Recognition</div>
+      <div class="pc-tags"><span class="tag t-green">Python</span><span class="tag t-blue">TensorFlow</span><span class="tag t-purple">CNN</span></div>
+    </div>
+    <span class="cat-badge cat-ai">AI/ML</span>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    A CNN trained on MNIST achieving 98%+ accuracy. The architecture — Conv2D(32) → MaxPool → Conv2D(64) → MaxPool → Flatten → Dense(128) → Dropout(0.5) → Softmax(10) — uses convolutional layers to learn spatial features (edges, curves) before the dense classifier. The key insight is why CNNs beat MLPs on images: weight sharing via kernels means the edge detector learned in one region is automatically reused everywhere.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">Why does a CNN work better than a fully connected network on images?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner"><strong>Translation invariance:</strong> a dog in the top-left and a dog in the bottom-right should both be "dog." CNNs share weights (same kernel slides over entire image), so a feature detector is position-agnostic. A fully connected network has a separate weight for every pixel — it would have to independently learn "dog in every position."<br/><strong>Local connectivity:</strong> nearby pixels are strongly correlated (edges, textures). Convolution captures this with a small receptive field. FCNs treat every pixel independently — no spatial structure exploited.<br/><strong>Parameter efficiency:</strong> 3×3×32 kernel = 288 parameters. FC from 28×28 to 256 = 200,704 parameters.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">What does dropout do, and why does 0.5 mean half the neurons, not half the weights?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">Dropout randomly sets neuron activations to zero during training (not the weights). With p=0.5, each neuron is zeroed out with 50% probability independently on each forward pass. This forces the network to not rely on any single neuron — it must learn redundant representations. Effect: acts like training an ensemble of 2^N different networks.<br/><strong>Important:</strong> during inference, dropout is disabled and outputs are scaled by (1-p) to keep the expected activation magnitude the same.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">Your model gets 99% on MNIST validation but fails badly on photos of handwritten digits from your phone. Why?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Any ML role</span><span class="company-chip">Google Brain</span><span class="company-chip">Meta AI</span></div>
+</div>
+
+
+<!-- ═══ ALGORITHMS ═══ -->
+
+<div class="proj-card" data-cat="algo" data-keywords="sorting visualizer bubble merge quick insertion sort algorithm complexity big-O python c++">
+  <div class="pc-header">
+    <div class="pc-icon" style="background:rgba(251,191,36,.1)">📊</div>
+    <div class="pc-meta">
+      <div class="pc-title">Sorting Algorithm Visualizer</div>
+      <div class="pc-tags"><span class="tag t-blue">JavaScript</span><span class="tag t-purple">Algorithms</span><span class="tag t-green">Python</span><span class="tag t-orange">C++</span></div>
+    </div>
+    <span class="cat-badge cat-algo">Algorithms</span>
+  </div>
+  <div class="pitch-box">
+    <div class="pitch-label">30-Second Pitch</div>
+    <button class="copy-btn" onclick="copyPitch(this)">Copy</button>
+    An animated visualizer covering four sorting algorithms with comparison/swap counters, adjustable speed, and full Python + C++ implementations. The key thing I can explain is: why Merge Sort is O(n log n) worst case but Quick Sort is O(n²) worst case — and yet Quick Sort is often faster in practice because of cache locality and smaller constant factors.
+  </div>
+  <div class="qa-section">
+    <div class="qa-header">💬 Interview Questions</div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">Why is Quick Sort usually faster than Merge Sort despite worse worst-case?</span><span class="q-diff diff-hard">Hard</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner"><strong>Cache locality:</strong> Quick Sort partitions in-place, keeping data in the same memory region. CPU cache stays warm. Merge Sort allocates auxiliary arrays — more cache misses.<br/><strong>No auxiliary memory:</strong> Merge Sort needs O(n) extra space for merging. Quick Sort is O(log n) stack space (recursion depth).<br/><strong>Constant factors:</strong> Quick Sort's inner loop is simple — just comparisons and swaps on adjacent memory. The constant factor in the O(n log n) is small.<br/><strong>Worst case mitigation:</strong> randomized pivot or median-of-3 reduces probability of O(n²) to near zero in practice.</div></div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q" onclick="toggleQA(this)"><span class="q-text">When would you use Insertion Sort over Merge Sort?</span><span class="q-diff diff-med">Medium</span><span class="qa-arrow">▼</span></div>
+      <div class="qa-a"><div class="qa-a-inner">For <strong>small arrays</strong> (n &lt; 10–20). Insertion Sort's constant factor is tiny — it's just index comparisons and shifts in a tight loop. For 10 elements, Merge Sort's O(n log n) = 33 ops but its overhead (function calls, memory allocation) costs more than Insertion Sort's 100 comparisons. This is why Python's Timsort and Java's Arrays.sort use Insertion Sort for small subarrays within their Merge Sort implementation.<br/><strong>Also use for nearly-sorted data:</strong> Insertion Sort is O(n) best case — each element is already close to its final position.</div></div>
+    </div>
+  </div>
+  <div class="gotcha-box">
+    <div class="gotcha-label">⚠ Gotcha Questions</div>
+    <div class="gotcha-q">Can you sort a linked list with Quick Sort? What's the problem?</div>
+    <div class="gotcha-q">What does "stable" mean for a sort, and why does it matter in practice?</div>
+  </div>
+  <div class="companies"><span class="company-label">Valued by:</span><span class="company-chip">Every tech company</span><span class="company-chip">FAANG</span><span class="company-chip">any SWE role</span></div>
+</div>
+
+</div><!-- /proj-grid -->
+</div><!-- /main -->
+
+
+<!-- QUICK REFERENCE CHEAT SHEET -->
+<div class="quick-ref">
+  <div class="qr-title">⚡ Quick Reference — Numbers to Know Cold</div>
+  <div class="qr-grid">
+    <div class="qr-card">
+      <h4>🤖 Edge AI Key Numbers</h4>
+      <ul>
+        <li>INT8 quantization: <strong>4× smaller, 2–4× faster</strong></li>
+        <li>DS-CNN vs CNN: <strong>~9× fewer MACs</strong> (3×3 kernel)</li>
+        <li>Gesture model: <strong>18KB, 3.2ms</strong> on Arduino</li>
+        <li>Keyword spotter: <strong>22KB, 8ms</strong> on STM32</li>
+        <li>Anomaly threshold: <strong>mean + 3σ</strong> of normal error</li>
+        <li>MFCC frames: <strong>25ms window, 10ms hop</strong></li>
+      </ul>
+    </div>
+    <div class="qr-card">
+      <h4>⚙️ Verilog / Digital Logic</h4>
+      <ul>
+        <li>UART: <code>CLKS_PER_BIT = CLK_FREQ / BAUD</code></li>
+        <li>UART sample point: <strong>1.5 bit-periods after start edge</strong></li>
+        <li>PWM: <code>output = (counter &lt; threshold)</code></li>
+        <li>Overflow detect: <code>(a[N] == b[N]) && (result[N] != a[N])</code></li>
+        <li>Subtraction: <code>A - B = A + ~B + 1</code> (2's complement)</li>
+        <li>Systolic PE: <code>acc += a × b</code> every cycle</li>
+      </ul>
+    </div>
+    <div class="qr-card">
+      <h4>🌐 Web / Backend</h4>
+      <ul>
+        <li>JWT: <strong>header.payload.signature</strong> — stateless</li>
+        <li>bcrypt cost=12: <strong>~250ms</strong> per hash (intentionally slow)</li>
+        <li>401 = <strong>Unauthenticated</strong>; 403 = <strong>Forbidden</strong></li>
+        <li>RLS: policy enforced at <strong>DB level</strong>, not app code</li>
+        <li>CORS: browser security, not server security</li>
+        <li>Supabase Realtime: <strong>PostgreSQL WAL</strong> → WebSocket</li>
+      </ul>
+    </div>
+    <div class="qr-card">
+      <h4>📊 Algorithms Big-O</h4>
+      <ul>
+        <li>Bubble / Insertion: <strong>O(n²)</strong> avg, <strong>O(n)</strong> best</li>
+        <li>Merge Sort: <strong>O(n log n)</strong> always, <strong>O(n)</strong> space</li>
+        <li>Quick Sort: <strong>O(n log n)</strong> avg, <strong>O(n²)</strong> worst</li>
+        <li>Binary Search: <strong>O(log n)</strong></li>
+        <li>Hash Table: <strong>O(1)</strong> avg lookup</li>
+        <li>Timsort uses Insertion Sort for n &lt; <strong>~16</strong></li>
+      </ul>
+    </div>
+    <div class="qr-card">
+      <h4>🧠 ML Concepts</h4>
+      <ul>
+        <li>Conv2D parameters: <strong>K²×C_in×C_out</strong></li>
+        <li>Depthwise sep: <strong>K²×C + C×F</strong> (9× cheaper at K=3)</li>
+        <li>Dropout: disable at <strong>inference</strong>, scale by (1-p)</li>
+        <li>Autoencoder anomaly: train on <strong>normal only</strong></li>
+        <li>Mel scale: <code>mel = 2595 × log₁₀(1 + f/700)</code></li>
+        <li>Post-training quant: needs <strong>representative dataset</strong></li>
+      </ul>
+    </div>
+    <div class="qr-card">
+      <h4>🎯 Behavioral — "Tell me about..."</h4>
+      <ul>
+        <li><strong>Challenge:</strong> load-use hazard in RISC-V pipeline</li>
+        <li><strong>Trade-off:</strong> false alarms vs missed faults in anomaly detector</li>
+        <li><strong>Trade-off:</strong> accuracy vs model size in TinyML</li>
+        <li><strong>Failure:</strong> RLS not applied → tenant data leak (caught in testing)</li>
+        <li><strong>Learned:</strong> FPGA timing closure after synthesis warnings</li>
+        <li><strong>Impact:</strong> 3.2ms inference enables real-time gesture UI</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.78rem;position:relative;z-index:1">
+  Muhammad Moiz Ahmad · <a href="https://moiz-ahmad-portfolio.vercel.app" style="color:var(--purple2)">moiz-ahmad-portfolio.vercel.app</a> · contact@atronm.com
+</div>
+
+<script>
+// ─── FILTER ───
+function filter(cat, btn) {
+  document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.proj-card').forEach(c=>{
+    c.classList.toggle('hidden', cat!=='all' && c.dataset.cat!==cat);
+  });
+}
+
+// ─── SEARCH ───
+function searchProjects() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.proj-card').forEach(c=>{
+    const haystack = (c.querySelector('.pc-title').textContent + ' ' + (c.dataset.keywords||'')).toLowerCase();
+    c.classList.toggle('hidden', q.length>0 && !haystack.includes(q));
+  });
+}
+
+// ─── Q&A TOGGLE ───
+function toggleQA(qEl) {
+  const item = qEl.parentElement;
+  const wasOpen = item.classList.contains('open');
+  item.classList.toggle('open', !wasOpen);
+}
+
+// ─── COPY PITCH ───
+function copyPitch(btn) {
+  const text = btn.parentElement.textContent.replace('Copy','').replace('30-Second Pitch','').trim();
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='Copied!'; btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);
+  });
+}
+
+// ─── TIMER ───
+let timerRunning = false, timerStart = 0, timerInterval = null;
+function toggleTimer() {
+  const el = document.getElementById('timer');
+  if (!timerRunning) {
+    timerStart = Date.now();
+    timerInterval = setInterval(()=>{
+      const s = Math.floor((Date.now()-timerStart)/1000);
+      el.textContent = `⏱ ${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+    },500);
+    timerRunning = true;
+    el.style.borderColor='rgba(34,197,94,.5)'; el.style.color='#4ade80';
+  } else {
+    clearInterval(timerInterval); timerRunning = false;
+    el.textContent='⏱ 00:00'; el.style.borderColor='rgba(124,58,237,.3)'; el.style.color='var(--purple2)';
+  }
+}
+</script>
+</body>
+</html>

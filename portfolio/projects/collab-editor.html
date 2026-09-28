@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Real-Time Collaborative Editor (CRDT) — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--bg3:#1a1a35;--purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--cyan:#06b6d4;--green:#22c55e;--red:#ef4444;--orange:#f97316;--text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#13132a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace,sans-serif;min-height:100vh;padding:2rem 1rem}
+.container{max-width:1080px;margin:0 auto}
+h1{text-align:center;font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:2rem;max-width:680px;margin-left:auto;margin-right:auto;line-height:1.6}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px;transition:.2s}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card-h{font-size:.88rem;color:var(--purple2);margin-bottom:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:hover,.btn.active{border-color:var(--purple2);color:var(--purple2)}
+.btn.go{background:rgba(124,58,237,.2);border-color:var(--purple);color:var(--purple2)}
+.btn.warn{background:rgba(249,115,22,.15);border-color:var(--orange);color:#fdba74}
+.btn.danger{background:rgba(239,68,68,.15);border-color:var(--red);color:#f87171}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1.5rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem;text-align:center}
+.m-val{font-size:1rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.m-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.15rem}
+
+.ctrl-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+
+.clients-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1rem}
+.client-box{background:var(--bg3);border:2px solid var(--border);border-radius:12px;padding:.9rem;transition:border-color .3s,box-shadow .3s}
+.client-box.synced{border-color:var(--green);box-shadow:0 0 12px rgba(34,197,94,.2)}
+.client-box.diverged{border-color:var(--orange)}
+.client-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.client-name{font-size:.78rem;font-weight:800;color:var(--purple2)}
+.client-hash{font-size:.62rem;font-family:monospace;padding:.15rem .5rem;border-radius:99px;background:rgba(148,163,184,.12);color:var(--muted)}
+.client-hash.match{background:rgba(34,197,94,.18);color:#4ade80}
+.client-hash.mismatch{background:rgba(239,68,68,.18);color:#f87171}
+.client-text{width:100%;min-height:96px;background:#020208;border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:.82rem;padding:.6rem;resize:vertical;outline:none;line-height:1.5}
+.client-text:focus{border-color:var(--purple)}
+.client-meta{display:flex;justify-content:space-between;margin-top:.4rem;font-size:.62rem;color:var(--muted)}
+.client-online{color:#4ade80}
+.client-offline{color:#f87171}
+
+.toggle-row{display:flex;align-items:center;gap:.5rem;font-size:.75rem;color:var(--muted);cursor:pointer;user-select:none}
+.toggle-row input{accent-color:var(--orange);width:16px;height:16px;cursor:pointer}
+
+.log{background:#020208;border:1px solid #0d0d1a;border-radius:8px;padding:.8rem 1rem;height:260px;overflow-y:auto;font-family:monospace;font-size:.71rem;line-height:1.8;color:#64748b}
+.log-purple{color:#a855f7}.log-blue{color:#60a5fa}.log-green{color:#4ade80}.log-orange{color:#fb923c}.log-red{color:#f87171}.log-white{color:#e2e8f0;font-weight:700}.log-cyan{color:#22d3ee}
+
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1;max-height:420px;overflow-y:auto}
+.kw{color:#a855f7}.type{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#fb923c}.fn{color:#60a5fa}
+@media(max-width:800px){.metrics{grid-template-columns:repeat(2,1fr)}.clients-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Distributed Systems · CRDTs · Real-Time Collaboration</span></div>
+  <h1>Real-Time Collaborative Editor</h1>
+  <p class="subtitle">A genuine Replicated Growable Array (RGA) CRDT — the same class of algorithm behind Google Docs / Figma-style multiplayer editing. Each client generates real operations with unique (site, counter) identifiers and tombstoned deletes; a deterministic merge order guarantees every replica converges to the identical text no matter what order operations arrive in, even after a simulated network partition.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="m-val" id="mOps">0</div><div class="m-label">Ops Generated</div></div>
+    <div class="metric"><div class="m-val" id="mDelivered">0</div><div class="m-label">Ops Delivered</div></div>
+    <div class="metric"><div class="m-val" id="mQueued">0</div><div class="m-label">Queued (Partitioned)</div></div>
+    <div class="metric"><div class="m-val" id="mConverged">—</div><div class="m-label">Convergence</div></div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="card">
+    <div class="card-h">Network Control</div>
+    <div class="ctrl-row">
+      <label class="toggle-row">
+        <input type="checkbox" id="partitionToggle" onchange="togglePartition()"/>
+        Simulate network partition (edits diverge locally, no sync)
+      </label>
+      <div style="flex:1"></div>
+      <button class="btn go" onclick="reconnectAndMerge()">Reconnect &amp; Merge</button>
+      <button class="btn warn" onclick="randomizeConcurrentEdits()">Randomize Concurrent Edits</button>
+      <button class="btn danger" onclick="resetAll()">Reset</button>
+    </div>
+    <div style="font-size:.72rem;color:var(--muted)">Type directly into any client's textbox below — each keystroke is turned into a real CRDT insert/delete op. Ops replicate to the other clients after a simulated ~150–450ms network delay, unless a partition is active.</div>
+  </div>
+
+  <!-- CLIENTS -->
+  <div class="card">
+    <div class="card-h">Clients (Independent Replicas)</div>
+    <div class="clients-row" id="clientsRow"></div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-h">CRDT Operation Log</div>
+    <div class="log" id="opLog">
+      <div><span class="log-blue">[system]</span> RGA CRDT initialized — 3 sites (A, B, C), deterministic tie-break on (counter, siteId)</div>
+      <div style="color:#374151">[idle] Waiting for edits...</div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-h">RGA CRDT Core (Actual Implementation Running Above)</div>
+<pre><span class="comment">// rga.js — Replicated Growable Array CRDT — Muhammad Moiz Ahmad</span>
+<span class="comment">// Each character is a node keyed by a globally unique id = (siteId, counter).</span>
+<span class="comment">// Nodes are never removed on delete — they're tombstoned — so every replica</span>
+<span class="comment">// keeps the same causal history and can always re-derive the same order.</span>
+
+<span class="kw">class</span> <span class="type">RGA</span> {
+  <span class="fn">constructor</span>(siteId) {
+    <span class="kw">this</span>.siteId = siteId;
+    <span class="kw">this</span>.counter = <span class="num">0</span>;
+    <span class="comment">// linked list of nodes: { id:{site,counter}, char, tombstone, leftOrigin }</span>
+    <span class="kw">this</span>.nodes = [];   <span class="comment">// kept in RGA-order at all times</span>
+  }
+
+  <span class="fn">nextId</span>() {
+    <span class="kw">this</span>.counter += <span class="num">1</span>;
+    <span class="kw">return</span> { site: <span class="kw">this</span>.siteId, counter: <span class="kw">this</span>.counter };
+  }
+
+  <span class="comment">// Deterministic total order used to place concurrent inserts at the same</span>
+  <span class="comment">// origin: higher counter wins, ties broken by siteId (lexicographic).</span>
+  <span class="fn">compareId</span>(a, b) {
+    <span class="kw">if</span> (a.counter !== b.counter) <span class="kw">return</span> b.counter - a.counter;
+    <span class="kw">return</span> a.site &lt; b.site ? -<span class="num">1</span> : a.site &gt; b.site ? <span class="num">1</span> : <span class="num">0</span>;
+  }
+
+  <span class="comment">// Insert a character locally after visible-position `afterIdx`.</span>
+  <span class="comment">// Produces an op that can be broadcast and replayed on any replica.</span>
+  <span class="fn">localInsert</span>(afterIdx, char) {
+    <span class="kw">const</span> leftOrigin = afterIdx &gt;= <span class="num">0</span> ? <span class="kw">this</span>.visibleNodeAt(afterIdx).id : <span class="kw">null</span>;
+    <span class="kw">const</span> id = <span class="kw">this</span>.nextId();
+    <span class="kw">const</span> node = { id, char, tombstone: <span class="kw">false</span>, leftOrigin };
+    <span class="kw">this</span>.integrate(node);
+    <span class="kw">return</span> { type: <span class="str">'insert'</span>, id, char, leftOrigin };
+  }
+
+  <span class="fn">localDelete</span>(idx) {
+    <span class="kw">const</span> node = <span class="kw">this</span>.visibleNodeAt(idx);
+    node.tombstone = <span class="kw">true</span>;
+    <span class="kw">return</span> { type: <span class="str">'delete'</span>, id: node.id };
+  }
+
+  <span class="comment">// Apply a remote op — insert or delete — idempotently and order-independently.</span>
+  <span class="fn">applyRemote</span>(op) {
+    <span class="kw">if</span> (op.type === <span class="str">'insert'</span>) {
+      <span class="kw">if</span> (<span class="kw">this</span>.nodes.some(n =&gt; n.id.site===op.id.site &amp;&amp; n.id.counter===op.id.counter)) <span class="kw">return</span>; <span class="comment">// dedupe</span>
+      <span class="kw">this</span>.integrate({ id: op.id, char: op.char, tombstone: <span class="kw">false</span>, leftOrigin: op.leftOrigin });
+    } <span class="kw">else</span> {
+      <span class="kw">const</span> n = <span class="kw">this</span>.nodes.find(n =&gt; n.id.site===op.id.site &amp;&amp; n.id.counter===op.id.counter);
+      <span class="kw">if</span> (n) n.tombstone = <span class="kw">true</span>;
+    }
+  }
+
+  <span class="comment">// Insert node into the backbone right after its origin, then skip past any</span>
+  <span class="comment">// existing right-siblings that should sort before it (RGA integration rule)</span>
+  <span class="comment">// — this is what makes concurrent inserts converge regardless of arrival order.</span>
+  <span class="fn">integrate</span>(node) {
+    <span class="kw">let</span> pos = node.leftOrigin === <span class="kw">null</span>
+      ? <span class="num">0</span>
+      : <span class="kw">this</span>.nodes.findIndex(n =&gt; n.id.site===node.leftOrigin.site &amp;&amp; n.id.counter===node.leftOrigin.counter) + <span class="num">1</span>;
+    <span class="kw">while</span> (pos &lt; <span class="kw">this</span>.nodes.length &amp;&amp; <span class="kw">this</span>.compareId(<span class="kw">this</span>.nodes[pos].id, node.id) &lt; <span class="num">0</span>) pos++;
+    <span class="kw">this</span>.nodes.splice(pos, <span class="num">0</span>, node);
+  }
+
+  <span class="fn">visibleNodeAt</span>(idx) {
+    <span class="kw">let</span> seen = -<span class="num">1</span>;
+    <span class="kw">for</span> (<span class="kw">const</span> n <span class="kw">of</span> <span class="kw">this</span>.nodes) { <span class="kw">if</span> (!n.tombstone) { seen++; <span class="kw">if</span> (seen === idx) <span class="kw">return</span> n; } }
+    <span class="kw">return</span> <span class="kw">null</span>;
+  }
+
+  <span class="fn">text</span>() {
+    <span class="kw">return</span> <span class="kw">this</span>.nodes.filter(n =&gt; !n.tombstone).map(n =&gt; n.char).join(<span class="str">''</span>);
+  }
+}</pre>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   REAL RGA CRDT IMPLEMENTATION
+   ============================================================ */
+class RGA {
+  constructor(siteId) {
+    this.siteId = siteId;
+    this.counter = 0;
+    this.nodes = []; // { id:{site,counter}, char, tombstone, leftOrigin }
+  }
+  nextId() { this.counter += 1; return { site: this.siteId, counter: this.counter }; }
+
+  // Deterministic total order for concurrent inserts sharing the same origin.
+  compareId(a, b) {
+    if (a.counter !== b.counter) return b.counter - a.counter;
+    return a.site < b.site ? -1 : a.site > b.site ? 1 : 0;
+  }
+
+  findIdx(id) {
+    return this.nodes.findIndex(n => n.id.site === id.site && n.id.counter === id.counter);
+  }
+
+  localInsert(afterIdx, char) {
+    const leftOrigin = afterIdx >= 0 ? this.visibleNodeAt(afterIdx).id : null;
+    const id = this.nextId();
+    const node = { id, char, tombstone: false, leftOrigin };
+    this.integrate(node);
+    return { type: 'insert', id, char, leftOrigin, site: this.siteId };
+  }
+
+  localDelete(idx) {
+    const node = this.visibleNodeAt(idx);
+    if (!node) return null;
+    node.tombstone = true;
+    return { type: 'delete', id: node.id, site: this.siteId };
+  }
+
+  applyRemote(op) {
+    if (op.type === 'insert') {
+      if (this.findIdx(op.id) !== -1) return false; // already applied (dedupe)
+      this.integrate({ id: op.id, char: op.char, tombstone: false, leftOrigin: op.leftOrigin });
+      return true;
+    } else {
+      const n = this.nodes[this.findIdx(op.id)];
+      if (n && !n.tombstone) { n.tombstone = true; return true; }
+      return false;
+    }
+  }
+
+  integrate(node) {
+    let pos = node.leftOrigin === null ? 0 : this.findIdx(node.leftOrigin) + 1;
+    if (pos < 0) pos = 0;
+    while (pos < this.nodes.length && this.compareId(this.nodes[pos].id, node.id) < 0) pos++;
+    this.nodes.splice(pos, 0, node);
+  }
+
+  visibleNodeAt(idx) {
+    let seen = -1;
+    for (const n of this.nodes) { if (!n.tombstone) { seen++; if (seen === idx) return n; } }
+    return null;
+  }
+
+  text() { return this.nodes.filter(n => !n.tombstone).map(n => n.char).join(''); }
+}
+
+/* ============================================================
+   MULTI-CLIENT SIMULATION LAYER
+   ============================================================ */
+const SITE_IDS = ['A', 'B', 'C'];
+const SITE_COLOR = { A: '168,85,247', B: '96,165,250', C: '74,222,128' };
+let replicas = {};       // siteId -> RGA instance
+let outbox = [];         // pending ops in flight { op, fromSite, toSite, deliverAt }
+let partitioned = false;
+let opsGenerated = 0, opsDelivered = 0;
+let deliveryTimer = null;
+let suppressInput = { A: false, B: false, C: false };
+
+function initReplicas() {
+  replicas = {};
+  SITE_IDS.forEach(s => {
+    const r = new RGA(s);
+    'Hello, collaborate here!'.split('').forEach((ch, i) => r.localInsert(i - 1, ch));
+    replicas[s] = r;
+  });
+  // give every site the same starting counters/history by replaying A's inserts into B & C
+  const baseOps = [];
+  let seenCounters = new Set();
+  replicas.A.nodes.forEach(n => baseOps.push({ type: 'insert', id: n.id, char: n.char, leftOrigin: n.leftOrigin }));
+  ['B', 'C'].forEach(s => {
+    replicas[s] = new RGA(s);
+    replicas[s].counter = replicas.A.counter;
+    baseOps.forEach(op => replicas[s].integrate({ id: op.id, char: op.char, tombstone: false, leftOrigin: op.leftOrigin }));
+  });
+}
+
+function log(html) {
+  const el = document.getElementById('opLog');
+  el.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
+  el.scrollTop = el.scrollHeight;
+  // cap log length
+  while (el.children.length > 400) el.removeChild(el.firstChild);
+}
+
+function colorSpan(site, txt) { return `<span style="color:rgb(${SITE_COLOR[site]})">${txt}</span>`; }
+
+function fmtOp(op) {
+  const idStr = `(${op.id.site}#${op.id.counter})`;
+  if (op.type === 'insert') {
+    const ch = op.char === ' ' ? '␠' : op.char === '\n' ? '\\n' : op.char;
+    return `<span class="log-green">INSERT</span> id=${idStr} char='${ch}' after=${op.leftOrigin ? `(${op.leftOrigin.site}#${op.leftOrigin.counter})` : 'null'}`;
+  }
+  return `<span class="log-red">DELETE</span> (tombstone) id=${idStr}`;
+}
+
+function updateMetrics() {
+  document.getElementById('mOps').textContent = opsGenerated;
+  document.getElementById('mDelivered').textContent = opsDelivered;
+  document.getElementById('mQueued').textContent = outbox.length;
+}
+
+/* ---- hashing for convergence check (simple deterministic string hash) ---- */
+function hashText(str) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
+  const combined = 4294967296 * (2097151 & h2) + (h1>>>0);
+  return combined.toString(16).padStart(11,'0').slice(0,8);
+}
+
+/* ---- rendering ---- */
+function renderClients() {
+  const row = document.getElementById('clientsRow');
+  const texts = SITE_IDS.map(s => replicas[s].text());
+  const hashes = texts.map(hashText);
+  const allMatch = hashes.every(h => h === hashes[0]) && !partitioned;
+
+  row.innerHTML = SITE_IDS.map((s, i) => {
+    const boxClass = partitioned ? 'diverged' : (allMatch ? 'synced' : '');
+    const hashClass = partitioned ? '' : (allMatch ? 'match' : 'mismatch');
+    return `
+    <div class="client-box ${boxClass}" id="client-${s}">
+      <div class="client-head">
+        <span class="client-name">Client ${s}</span>
+        <span class="client-hash ${hashClass}" id="hash-${s}">#${hashes[i]}</span>
+      </div>
+      <textarea class="client-text" id="text-${s}" spellcheck="false">${texts[i]}</textarea>
+      <div class="client-meta">
+        <span class="${partitioned ? 'client-offline' : 'client-online'}">${partitioned ? '⚠ offline (partitioned)' : '● online'}</span>
+        <span>${texts[i].length} chars · ${replicas[s].nodes.length} nodes</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  SITE_IDS.forEach(s => {
+    const ta = document.getElementById(`text-${s}`);
+    ta.addEventListener('beforeinput', (e) => handleBeforeInput(s, e));
+  });
+
+  document.getElementById('mConverged').textContent = partitioned ? 'diverged' : (allMatch ? 'YES ✓' : 'NO');
+  document.getElementById('mConverged').style.color = partitioned ? '#fb923c' : (allMatch ? '#4ade80' : '#f87171');
+}
+
+/* ---- turning real textarea edits into CRDT ops ---- */
+function handleBeforeInput(site, e) {
+  if (suppressInput[site]) return;
+  const ta = e.target;
+  const selStart = ta.selectionStart, selEnd = ta.selectionEnd;
+  const r = replicas[site];
+
+  if (e.inputType && e.inputType.startsWith('delete')) {
+    e.preventDefault();
+    let from = selStart, to = selEnd;
+    if (from === to) {
+      if (e.inputType === 'deleteContentBackward') { from = Math.max(0, from - 1); }
+      else { to = Math.min(ta.value.length, to + 1); }
+    }
+    if (from === to) return;
+    const ops = [];
+    for (let idx = to - 1; idx >= from; idx--) {
+      const op = r.localDelete(idx);
+      if (op) ops.push(op);
+    }
+    ops.forEach(op => { opsGenerated++; log(`${colorSpan(site,'['+site+']')} ${fmtOp(op)} <span style="color:#475569">(local)</span>`); broadcast(site, op); });
+    finishLocalEdit(site, from);
+    return;
+  }
+
+  if (e.inputType && e.inputType.startsWith('insert')) {
+    e.preventDefault();
+    const insertedText = e.data != null ? e.data : (e.inputType === 'insertLineBreak' ? '\n' : '');
+    if (!insertedText) return;
+    // if there was a selection, delete it first
+    if (selStart !== selEnd) {
+      const ops = [];
+      for (let idx = selEnd - 1; idx >= selStart; idx--) {
+        const op = r.localDelete(idx);
+        if (op) ops.push(op);
+      }
+      ops.forEach(op => { opsGenerated++; log(`${colorSpan(site,'['+site+']')} ${fmtOp(op)} <span style="color:#475569">(local)</span>`); broadcast(site, op); });
+    }
+    let pos = selStart - 1;
+    for (const ch of insertedText) {
+      const op = r.localInsert(pos, ch);
+      pos++;
+      opsGenerated++;
+      log(`${colorSpan(site,'['+site+']')} ${fmtOp(op)} <span style="color:#475569">(local)</span>`);
+      broadcast(site, op);
+    }
+    finishLocalEdit(site, pos + 1);
+    return;
+  }
+}
+
+function finishLocalEdit(site, caretVisibleIdx) {
+  updateMetrics();
+  renderClientTextOnly(site, caretVisibleIdx);
+  renderClients(); // re-render all for hash/convergence status (keeps caret via re-focus below)
+  const ta = document.getElementById(`text-${site}`);
+  if (ta) { ta.focus(); const c = Math.max(0, Math.min(ta.value.length, caretVisibleIdx)); ta.setSelectionRange(c, c); }
+}
+
+function renderClientTextOnly(site, caretIdx) {
+  const ta = document.getElementById(`text-${site}`);
+  if (ta) ta.value = replicas[site].text();
+}
+
+/* ---- network simulation: broadcast op from one site to the others ---- */
+function broadcast(fromSite, op) {
+  SITE_IDS.filter(s => s !== fromSite).forEach(toSite => {
+    const delay = 150 + Math.random() * 300;
+    outbox.push({ op, fromSite, toSite, deliverAt: Date.now() + delay });
+  });
+  updateMetrics();
+}
+
+function processOutbox() {
+  const now = Date.now();
+  if (partitioned) { updateMetrics(); return; } // hold everything while partitioned
+  const ready = outbox.filter(m => m.deliverAt <= now);
+  if (ready.length === 0) return;
+  outbox = outbox.filter(m => m.deliverAt > now);
+  ready.forEach(m => {
+    const applied = replicas[m.toSite].applyRemote(m.op);
+    if (applied) {
+      opsDelivered++;
+      log(`${colorSpan(m.toSite,'['+m.toSite+']')} received from ${colorSpan(m.fromSite,m.fromSite)} → ${fmtOp(m.op)} <span style="color:#475569">(remote, ${(150).toFixed(0)}-450ms delay)</span>`);
+      suppressInput[m.toSite] = true;
+      renderClientTextOnly(m.toSite);
+      suppressInput[m.toSite] = false;
+    }
+  });
+  updateMetrics();
+  refreshHashesOnly();
+}
+
+function refreshHashesOnly() {
+  const texts = SITE_IDS.map(s => replicas[s].text());
+  const hashes = texts.map(hashText);
+  const allMatch = hashes.every(h => h === hashes[0]) && !partitioned;
+  SITE_IDS.forEach((s, i) => {
+    const el = document.getElementById(`hash-${s}`);
+    if (el) { el.textContent = `#${hashes[i]}`; el.className = 'client-hash ' + (partitioned ? '' : (allMatch ? 'match' : 'mismatch')); }
+    const box = document.getElementById(`client-${s}`);
+    if (box) box.className = 'client-box ' + (partitioned ? 'diverged' : (allMatch ? 'synced' : ''));
+    const meta = document.querySelectorAll(`#client-${s} .client-meta span:last-child`)[0];
+    if (meta) meta.textContent = `${texts[i].length} chars · ${replicas[s].nodes.length} nodes`;
+  });
+  document.getElementById('mConverged').textContent = partitioned ? 'diverged' : (allMatch ? 'YES ✓' : 'NO');
+  document.getElementById('mConverged').style.color = partitioned ? '#fb923c' : (allMatch ? '#4ade80' : '#f87171');
+}
+
+/* ---- controls ---- */
+function togglePartition() {
+  partitioned = document.getElementById('partitionToggle').checked;
+  if (partitioned) {
+    log(`<span class="log-orange">[network]</span> ⚡ Partition simulated — clients are now isolated. Local edits will queue instead of syncing.`);
+  } else {
+    log(`<span class="log-blue">[network]</span> Partition toggle cleared (use "Reconnect &amp; Merge" to flush the queue).`);
+  }
+  refreshHashesOnly();
+}
+
+function reconnectAndMerge() {
+  if (partitioned) {
+    document.getElementById('partitionToggle').checked = false;
+    partitioned = false;
+  }
+  log(`<span class="log-cyan">[network]</span> ⚡ Reconnecting — flushing ${outbox.length} queued op(s) and merging all replicas...`);
+  // deliver everything immediately, in causal-safe order (inserts naturally converge via integrate())
+  const queued = outbox.slice().sort((a,b)=>a.deliverAt-b.deliverAt);
+  outbox = [];
+  queued.forEach(m => {
+    const applied = replicas[m.toSite].applyRemote(m.op);
+    if (applied) {
+      opsDelivered++;
+      log(`${colorSpan(m.toSite,'['+m.toSite+']')} merge ← ${colorSpan(m.fromSite,m.fromSite)} ${fmtOp(m.op)}`);
+    }
+  });
+  SITE_IDS.forEach(s => { suppressInput[s]=true; renderClientTextOnly(s); suppressInput[s]=false; });
+  updateMetrics();
+  refreshHashesOnly();
+  const texts = SITE_IDS.map(s => replicas[s].text());
+  const allMatch = texts.every(t => t === texts[0]);
+  log(allMatch
+    ? `<span class="log-green">[merge]</span> ✓ All replicas converged to the identical string (hash ${hashText(texts[0])}) — eventual consistency proven.`
+    : `<span class="log-red">[merge]</span> ✗ Replicas still differ — this should not happen with a correct RGA; check op log above.`);
+}
+
+function randomizeConcurrentEdits() {
+  const words = ['CRDT', 'sync', 'merge', 'live', 'edit', 'node', 'peer', 'data', 'text', 'demo'];
+  SITE_IDS.forEach(site => {
+    const r = replicas[site];
+    const action = Math.random();
+    const len = r.text().length;
+    if (action < 0.65 || len < 3) {
+      // concurrent insert at a random (possibly same) position across sites
+      const word = words[Math.floor(Math.random()*words.length)];
+      const pos = Math.floor(Math.random() * (len + 1)) - 1;
+      let p = pos;
+      for (const ch of (' ' + word)) {
+        const op = r.localInsert(p, ch);
+        p++;
+        opsGenerated++;
+        log(`${colorSpan(site,'['+site+']')} ${fmtOp(op)} <span style="color:#475569">(concurrent, auto)</span>`);
+        broadcast(site, op);
+      }
+    } else {
+      // concurrent delete of a random small range
+      const delLen = Math.min(len, 1 + Math.floor(Math.random()*3));
+      const start = Math.floor(Math.random() * Math.max(1, len - delLen + 1));
+      for (let idx = start + delLen - 1; idx >= start; idx--) {
+        const op = r.localDelete(idx);
+        if (op) {
+          opsGenerated++;
+          log(`${colorSpan(site,'['+site+']')} ${fmtOp(op)} <span style="color:#475569">(concurrent, auto)</span>`);
+          broadcast(site, op);
+        }
+      }
+    }
+  });
+  SITE_IDS.forEach(s => { suppressInput[s]=true; renderClientTextOnly(s); suppressInput[s]=false; });
+  updateMetrics();
+  refreshHashesOnly();
+  log(`<span class="log-cyan">[system]</span> Fired simultaneous conflicting edits from A, B, and C — watch them converge as ops deliver over the network.`);
+}
+
+function resetAll() {
+  outbox = [];
+  opsGenerated = 0; opsDelivered = 0;
+  partitioned = false;
+  document.getElementById('partitionToggle').checked = false;
+  initReplicas();
+  document.getElementById('opLog').innerHTML = `
+    <div><span class="log-blue">[system]</span> RGA CRDT initialized — 3 sites (A, B, C), deterministic tie-break on (counter, siteId)</div>
+    <div style="color:#374151">[idle] Waiting for edits...</div>`;
+  updateMetrics();
+  renderClients();
+}
+
+/* ---- boot ---- */
+initReplicas();
+renderClients();
+updateMetrics();
+deliveryTimer = setInterval(processOutbox, 120);
+</script>
+</body>
+</html>

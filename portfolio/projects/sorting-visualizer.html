@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sorting Visualizer — Moiz Ahmad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080810;--bg2:#0e0e1e;--bg3:#13132a;--bg4:#1a1a35;
+  --purple:#7c3aed;--purple2:#a855f7;--blue:#3b82f6;--cyan:#06b6d4;
+  --green:#22c55e;--red:#ef4444;--orange:#f97316;--yellow:#eab308;
+  --text:#f1f5f9;--muted:#94a3b8;--border:#1e1e40;--card:#0f0f22
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;padding:1.5rem 1rem}
+.container{max-width:1100px;margin:0 auto}
+h1{text-align:center;font-size:2rem;margin-bottom:.25rem;background:linear-gradient(135deg,var(--purple2),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:1.5rem}
+.back-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--muted);text-decoration:none;font-size:.83rem;margin-bottom:1.2rem;padding:.4rem .8rem;border:1px solid var(--border);border-radius:8px;transition:.2s}
+.back-link:hover{border-color:var(--purple);color:var(--text)}
+.badge{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);padding:.2rem .7rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-bottom:1.2rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.4rem;margin-bottom:1.2rem}
+.card-title{font-size:.8rem;color:var(--purple2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem}
+
+/* ALGO BUTTONS */
+.algo-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--muted);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap}
+.btn.active,.btn:hover:not(:disabled){background:rgba(124,58,237,.2);border-color:var(--purple2);color:var(--purple2)}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.go{background:rgba(34,197,94,.13);border-color:var(--green);color:#4ade80}
+.btn.go:hover:not(:disabled){background:rgba(34,197,94,.25)}
+.btn.stop{background:rgba(239,68,68,.13);border-color:var(--red);color:#f87171}
+.btn.stop:hover:not(:disabled){background:rgba(239,68,68,.25)}
+.btn.step{background:rgba(59,130,246,.13);border-color:var(--blue);color:#93c5fd}
+.btn.step:hover:not(:disabled){background:rgba(59,130,246,.25)}
+
+/* CONTROLS ROW */
+.ctrl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.7rem;margin-bottom:1rem}
+.ctrl-item{display:flex;flex-direction:column;gap:.3rem}
+.ctrl-item label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+input[type=range]{width:100%;accent-color:var(--purple2);cursor:pointer;height:4px}
+input[type=text],input[type=number]{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.42rem .7rem;font-size:.8rem;width:100%;transition:.2s}
+input[type=text]:focus,input[type=number]:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.2)}
+.range-val{font-size:.75rem;color:var(--purple2);font-weight:700;text-align:right;margin-top:-.1rem}
+
+/* CUSTOM INPUT AREA */
+.custom-input-row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.8rem}
+.custom-input-row input{flex:1;min-width:200px}
+.input-hint{font-size:.65rem;color:var(--muted);margin-top:.25rem}
+
+/* VIZ */
+#vizWrap{height:280px;display:flex;align-items:flex-end;gap:2px;padding:.6rem .6rem 0;background:#020208;border-radius:12px;overflow:hidden;position:relative}
+.bar{flex:1;border-radius:3px 3px 0 0;transition:height .06s ease;min-width:3px;position:relative;cursor:default}
+.bar-val{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--muted);white-space:nowrap;display:none}
+#vizWrap.show-vals .bar-val{display:block}
+#vizMsg{position:absolute;top:.5rem;right:.7rem;font-size:.7rem;color:var(--muted);font-family:monospace;letter-spacing:.03em}
+
+/* SORTED SWEEP */
+@keyframes donePulse{0%,100%{opacity:1}50%{opacity:.4}}
+.bar.done{animation:donePulse .5s ease 1}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:.6rem;margin-top:.8rem}
+.stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.55rem .8rem;text-align:center}
+.stat-val{font-size:1.05rem;font-weight:800;font-family:monospace;color:var(--purple2)}
+.stat-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:.1rem}
+
+/* PROGRESS */
+#progressBar{height:3px;background:linear-gradient(90deg,var(--purple2),var(--cyan));border-radius:2px;width:0%;transition:width .15s;margin-top:.6rem}
+
+/* THEME SWATCHES */
+.theme-row{display:flex;gap:.4rem;margin-bottom:.5rem;flex-wrap:wrap}
+.swatch{width:22px;height:22px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:.15s}
+.swatch.active{border-color:white;transform:scale(1.15)}
+
+/* COMPLEXITY TABLE */
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+th{background:var(--bg3);color:var(--muted);padding:.5rem .7rem;text-align:left;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+td{padding:.42rem .7rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.c-best{color:#4ade80}.c-avg{color:#fbbf24}.c-worst{color:#ef4444}
+tr.highlight-row td{background:rgba(124,58,237,.1);color:var(--purple2)}
+
+/* CODE */
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.1rem;font-size:.72rem;overflow-x:auto;line-height:1.65;color:#cbd5e1;max-height:320px;overflow-y:auto}
+.kw{color:#a855f7}.fn{color:#60a5fa}.num{color:#4ade80}.comment{color:#475569}.str{color:#f97316}
+.tabs{display:flex;gap:.4rem;margin-bottom:.8rem;flex-wrap:wrap}
+.tab{padding:.32rem .85rem;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:.73rem;font-weight:700;cursor:pointer;transition:.15s}
+.tab.active{background:rgba(124,58,237,.15);border-color:var(--purple);color:var(--purple2)}
+
+/* SOUND VIZ */
+#soundViz{display:flex;align-items:flex-end;gap:2px;height:40px;overflow:hidden}
+.sv-bar{width:3px;border-radius:2px 2px 0 0;transition:height .08s ease;background:linear-gradient(0deg,var(--purple),var(--cyan))}
+
+/* HISTORY */
+#histList{font-size:.73rem;color:var(--muted);max-height:160px;overflow-y:auto}
+.hist-row{display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.hist-row:last-child{border:none}
+.hist-algo{color:var(--purple2);font-weight:700}
+.hist-winner{color:#4ade80}
+
+/* TOOLTIP */
+.tooltip{position:relative;cursor:help}
+.tooltip:hover::after{content:attr(data-tip);position:absolute;top:-30px;left:50%;transform:translateX(-50%);background:#1e1e40;border:1px solid var(--border);color:var(--muted);padding:.2rem .6rem;border-radius:6px;font-size:.65rem;white-space:nowrap;z-index:10}
+
+@media(max-width:600px){
+  h1{font-size:1.4rem}
+  #vizWrap{height:180px}
+  .algo-row .btn{font-size:.7rem;padding:.38rem .7rem}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <div style="text-align:center"><span class="badge">Algorithms · DSA · Python · C++ · Web Audio</span></div>
+  <h1>Sorting Algorithm Visualizer</h1>
+  <p class="subtitle">7 algorithms · custom input · real-time sound · step mode · race mode</p>
+
+  <!-- ALGO SELECT -->
+  <div class="card">
+    <div class="card-title">Algorithm</div>
+    <div class="algo-row">
+      <button class="btn active" id="btn-bubble"    onclick="setAlgo('bubble',this)">Bubble</button>
+      <button class="btn"        id="btn-insertion" onclick="setAlgo('insertion',this)">Insertion</button>
+      <button class="btn"        id="btn-selection" onclick="setAlgo('selection',this)">Selection</button>
+      <button class="btn"        id="btn-merge"     onclick="setAlgo('merge',this)">Merge</button>
+      <button class="btn"        id="btn-quick"     onclick="setAlgo('quick',this)">Quick</button>
+      <button class="btn"        id="btn-heap"      onclick="setAlgo('heap',this)">Heap</button>
+      <button class="btn"        id="btn-shell"     onclick="setAlgo('shell',this)">Shell</button>
+    </div>
+
+    <!-- CUSTOM INPUT -->
+    <div class="card-title" style="margin-bottom:.5rem">Custom Input</div>
+    <div class="custom-input-row">
+      <input type="text" id="customInput" placeholder="e.g. 42, 7, 15, 3, 88, 21 (leave empty for random)"/>
+      <button class="btn" onclick="applyCustom()">Apply</button>
+      <button class="btn" onclick="reset()">Random</button>
+    </div>
+    <div class="input-hint">Comma-separated numbers (1–999). Max 100 values.</div>
+
+    <!-- CONTROLS -->
+    <div class="ctrl-grid" style="margin-top:.9rem">
+      <div class="ctrl-item">
+        <label>Array Size <span class="range-val" id="sizeVal">50</span></label>
+        <input type="range" id="sizeSlider" min="5" max="100" value="50" oninput="sizeVal.textContent=this.value" onchange="reset()"/>
+      </div>
+      <div class="ctrl-item">
+        <label>Speed <span class="range-val" id="speedLabel">Normal</span></label>
+        <input type="range" id="speedSlider" min="1" max="5" value="3" oninput="updateSpeedLabel()"/>
+      </div>
+      <div class="ctrl-item">
+        <label>Sound Volume <span class="range-val" id="volVal">60%</span></label>
+        <input type="range" id="volSlider" min="0" max="100" value="60" oninput="volVal.textContent=this.value+'%'"/>
+      </div>
+      <div class="ctrl-item">
+        <label>Array Pattern</label>
+        <select id="patternSel" onchange="reset()">
+          <option value="random">Random</option>
+          <option value="nearlySorted">Nearly Sorted</option>
+          <option value="reversed">Reversed</option>
+          <option value="fewUnique">Few Unique</option>
+          <option value="sorted">Already Sorted</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- COLOR THEMES -->
+    <div class="card-title" style="margin-bottom:.4rem">Color Theme</div>
+    <div class="theme-row">
+      <div class="swatch active" data-theme="purple" style="background:linear-gradient(#7c3aed,#3b82f6)" onclick="setTheme('purple',this)" title="Purple-Blue"></div>
+      <div class="swatch" data-theme="fire" style="background:linear-gradient(#ef4444,#f97316)" onclick="setTheme('fire',this)" title="Fire"></div>
+      <div class="swatch" data-theme="ocean" style="background:linear-gradient(#06b6d4,#22c55e)" onclick="setTheme('ocean',this)" title="Ocean"></div>
+      <div class="swatch" data-theme="gold" style="background:linear-gradient(#eab308,#f97316)" onclick="setTheme('gold',this)" title="Gold"></div>
+      <div class="swatch" data-theme="mono" style="background:linear-gradient(#94a3b8,#475569)" onclick="setTheme('mono',this)" title="Mono"></div>
+      <div class="swatch" data-theme="neon" style="background:linear-gradient(#a855f7,#06b6d4)" onclick="setTheme('neon',this)" title="Neon"></div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem;align-items:center">
+      <button class="btn go"   id="goBtn"   onclick="startSort()">▶ Sort</button>
+      <button class="btn step" id="stepBtn" onclick="doStep()">⏭ Step</button>
+      <button class="btn stop" id="stopBtn" onclick="stopSort()" disabled>■ Stop</button>
+      <button class="btn"      onclick="reset()">⟳ Shuffle</button>
+      <button class="btn"      id="raceBtn" onclick="startRace()" style="background:rgba(234,179,8,.1);border-color:#eab308;color:#fde047">⚡ Race All</button>
+      <label style="display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--muted);cursor:pointer;margin-left:auto">
+        <input type="checkbox" id="showVals" onchange="vizWrap.classList.toggle('show-vals',this.checked)" style="accent-color:var(--purple2)"/> Show Values
+      </label>
+      <label style="display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--muted);cursor:pointer">
+        <input type="checkbox" id="soundOn" checked style="accent-color:var(--purple2)"/> Sound
+      </label>
+    </div>
+  </div>
+
+  <!-- VIZ + STATS -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem">
+      <div class="card-title" style="margin-bottom:0">Visualization</div>
+      <div id="soundViz" style="width:120px"></div>
+    </div>
+    <div id="vizWrap"><span id="vizMsg">Ready</span></div>
+    <div id="progressBar"></div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-val" id="statComp">0</div><div class="stat-label">Comparisons</div></div>
+      <div class="stat-box"><div class="stat-val" id="statSwap">0</div><div class="stat-label">Swaps</div></div>
+      <div class="stat-box"><div class="stat-val" id="statAccess">0</div><div class="stat-label">Array Reads</div></div>
+      <div class="stat-box"><div class="stat-val" id="statTime">—</div><div class="stat-label">Time</div></div>
+      <div class="stat-box"><div class="stat-val" id="statStatus">Ready</div><div class="stat-label">Status</div></div>
+    </div>
+  </div>
+
+  <!-- RACE RESULTS -->
+  <div class="card" id="raceCard" style="display:none">
+    <div class="card-title">Race Results — All Algorithms</div>
+    <div id="raceResults"></div>
+  </div>
+
+  <!-- RUN HISTORY -->
+  <div class="card">
+    <div class="card-title">Run History</div>
+    <div id="histList"><div style="color:var(--muted);font-size:.75rem">No runs yet.</div></div>
+  </div>
+
+  <!-- COMPLEXITY TABLE -->
+  <div class="card">
+    <div class="card-title">Time &amp; Space Complexity</div>
+    <div style="overflow-x:auto">
+    <table id="compTable">
+      <tr><th>Algorithm</th><th>Best</th><th>Average</th><th>Worst</th><th>Space</th><th>Stable</th><th>Notes</th></tr>
+      <tr data-algo="bubble">   <td>Bubble Sort</td>   <td class="c-best">O(n)</td>       <td class="c-avg">O(n²)</td>      <td class="c-worst">O(n²)</td>      <td>O(1)</td>      <td>✓</td><td style="color:var(--muted);font-size:.7rem">Early exit on sorted</td></tr>
+      <tr data-algo="insertion"><td>Insertion Sort</td> <td class="c-best">O(n)</td>       <td class="c-avg">O(n²)</td>      <td class="c-worst">O(n²)</td>      <td>O(1)</td>      <td>✓</td><td style="color:var(--muted);font-size:.7rem">Best for small/nearly sorted</td></tr>
+      <tr data-algo="selection"><td>Selection Sort</td> <td class="c-best">O(n²)</td>      <td class="c-avg">O(n²)</td>      <td class="c-worst">O(n²)</td>      <td>O(1)</td>      <td>✗</td><td style="color:var(--muted);font-size:.7rem">Min swaps (n-1)</td></tr>
+      <tr data-algo="merge">   <td>Merge Sort</td>    <td class="c-best">O(n log n)</td> <td class="c-avg">O(n log n)</td> <td class="c-worst">O(n log n)</td> <td>O(n)</td>      <td>✓</td><td style="color:var(--muted);font-size:.7rem">Guaranteed, extra space</td></tr>
+      <tr data-algo="quick">   <td>Quick Sort</td>    <td class="c-best">O(n log n)</td> <td class="c-avg">O(n log n)</td> <td class="c-worst">O(n²)</td>      <td>O(log n)</td>  <td>✗</td><td style="color:var(--muted);font-size:.7rem">Fast in practice</td></tr>
+      <tr data-algo="heap">    <td>Heap Sort</td>     <td class="c-best">O(n log n)</td> <td class="c-avg">O(n log n)</td> <td class="c-worst">O(n log n)</td> <td>O(1)</td>      <td>✗</td><td style="color:var(--muted);font-size:.7rem">In-place, not cache-friendly</td></tr>
+      <tr data-algo="shell">   <td>Shell Sort</td>    <td class="c-best">O(n log n)</td> <td class="c-avg">O(n^1.5)</td>   <td class="c-worst">O(n²)</td>      <td>O(1)</td>      <td>✗</td><td style="color:var(--muted);font-size:.7rem">Gap sequence dependent</td></tr>
+    </table>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="card">
+    <div class="card-title">Implementation</div>
+    <div class="tabs">
+      <div class="tab active" onclick="showCode('python',this)">Python</div>
+      <div class="tab"        onclick="showCode('cpp',this)">C++</div>
+      <div class="tab"        onclick="showCode('js',this)">JavaScript</div>
+    </div>
+    <div id="codeBlock"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+let arr = [], algo = 'bubble', sorting = false, paused = false;
+let comps = 0, swaps = 0, accesses = 0, startTime = 0;
+let stepQueue = [], stepResolve = null;
+let stepMode = false;
+let colorTheme = { normal:'linear-gradient(180deg,#7c3aed,#3b82f6)', cmp:'#ef4444', swap:'#f97316', pivot:'#eab308', sorted:'#22c55e' };
+const themes = {
+  purple: { normal:'linear-gradient(180deg,#7c3aed,#3b82f6)', cmp:'#ef4444', swap:'#f97316', pivot:'#eab308', sorted:'#22c55e' },
+  fire:   { normal:'linear-gradient(180deg,#ef4444,#f97316)', cmp:'#fbbf24', swap:'#a855f7', pivot:'#06b6d4', sorted:'#22c55e' },
+  ocean:  { normal:'linear-gradient(180deg,#0369a1,#06b6d4)', cmp:'#a855f7', swap:'#22c55e', pivot:'#f97316', sorted:'#4ade80' },
+  gold:   { normal:'linear-gradient(180deg,#d97706,#eab308)', cmp:'#ef4444', swap:'#a855f7', pivot:'#06b6d4', sorted:'#22c55e' },
+  mono:   { normal:'linear-gradient(180deg,#475569,#94a3b8)', cmp:'#f1f5f9', swap:'#64748b', pivot:'#cbd5e1', sorted:'#22c55e' },
+  neon:   { normal:'linear-gradient(180deg,#a855f7,#06b6d4)', cmp:'#ef4444', swap:'#fbbf24', pivot:'#f97316', sorted:'#4ade80' }
+};
+const SPEED_MAP = [120, 60, 25, 8, 1]; // index 0-4 → ms delay
+function DELAY(){ return SPEED_MAP[parseInt(document.getElementById('speedSlider').value)-1]; }
+
+/* ============================================================
+   WEB AUDIO
+   ============================================================ */
+let audioCtx = null;
+function getAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+
+function beep(freq, type='sine', dur=0.08, vol=null){
+  if(!document.getElementById('soundOn').checked) return;
+  vol = vol ?? (parseInt(document.getElementById('volSlider').value)/100) * 0.25;
+  try{
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    osc.start(); osc.stop(ctx.currentTime + dur);
+    // animate sound viz
+    animSoundBar(freq);
+  } catch(e){}
+}
+
+function playCompare(idx, max){ beep(200 + (arr[idx]/max)*600, 'sine', 0.05); }
+function playSwap(idx, max){    beep(150 + (arr[idx]/max)*700, 'triangle', 0.1); }
+function playDone(){
+  const max = Math.max(...arr);
+  arr.forEach((v,i) => setTimeout(()=> beep(200+(v/max)*800,'sine',0.12,0.15), i*12));
+}
+
+const svBars = [];
+function buildSoundViz(){
+  const sv = document.getElementById('soundViz'); sv.innerHTML='';
+  for(let i=0;i<20;i++){
+    const b=document.createElement('div'); b.className='sv-bar'; b.style.height='4px'; sv.appendChild(b); svBars.push(b);
+  }
+}
+function animSoundBar(freq){
+  const idx = Math.floor(((freq-150)/800)*svBars.length);
+  const b = svBars[Math.max(0,Math.min(svBars.length-1,idx))];
+  if(!b) return;
+  const h = 10 + Math.random()*28;
+  b.style.height = h+'px';
+  setTimeout(()=>{ b.style.height='4px'; }, 120);
+}
+
+/* ============================================================
+   ARRAY GENERATION
+   ============================================================ */
+function genArray(n){
+  const pattern = document.getElementById('patternSel').value;
+  let a = Array.from({length:n},(_,i)=>Math.floor((i/n)*95)+5);
+  if(pattern==='random') a = a.map(()=>Math.floor(Math.random()*95)+5);
+  else if(pattern==='reversed') a.reverse();
+  else if(pattern==='nearlySorted') { a.sort((x,y)=>x-y); for(let k=0;k<Math.max(3,n/10);k++){ const i=Math.floor(Math.random()*n),j=Math.floor(Math.random()*n); [a[i],a[j]]=[a[j],a[i]]; }}
+  else if(pattern==='fewUnique') a = a.map(()=>[10,25,50,75,90][Math.floor(Math.random()*5)]);
+  else if(pattern==='sorted') a.sort((x,y)=>x-y);
+  return a;
+}
+
+function applyCustom(){
+  const raw = document.getElementById('customInput').value.trim();
+  if(!raw){ reset(); return; }
+  const nums = raw.split(/[,\s]+/).map(Number).filter(n=>!isNaN(n)&&n>0&&n<=999).slice(0,100);
+  if(nums.length < 2){ alert('Enter at least 2 valid numbers (1–999)'); return; }
+  arr = nums;
+  comps=0; swaps=0; accesses=0;
+  updateStats(); renderBars([]);
+  document.getElementById('vizMsg').textContent = `Custom array — ${arr.length} elements`;
+}
+
+function reset(){
+  if(sorting){ stopSort(); return; }
+  const n = parseInt(document.getElementById('sizeSlider').value);
+  arr = genArray(n);
+  comps=0; swaps=0; accesses=0;
+  updateStats(); renderBars([]);
+  document.getElementById('vizMsg').textContent = `${arr.length} elements · ${document.getElementById('patternSel').options[document.getElementById('patternSel').selectedIndex].text}`;
+  document.getElementById('progressBar').style.width='0%';
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function renderBars(highlights){
+  const w = document.getElementById('vizWrap');
+  const msg = document.getElementById('vizMsg');
+  w.innerHTML=''; w.appendChild(msg);
+  const max = Math.max(...arr);
+  arr.forEach((v,i)=>{
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = (v/max*93)+'%';
+    const hl = highlights.find(h=>h.idx===i);
+    bar.style.background = hl ? hl.color : colorTheme.normal;
+    if(hl?.glow) bar.style.boxShadow = `0 0 8px ${hl.color}`;
+    const vl = document.createElement('span'); vl.className='bar-val'; vl.textContent=v;
+    bar.appendChild(vl);
+    w.appendChild(bar);
+  });
+}
+
+function updateStats(){
+  document.getElementById('statComp').textContent   = comps;
+  document.getElementById('statSwap').textContent   = swaps;
+  document.getElementById('statAccess').textContent = accesses;
+  document.getElementById('statTime').textContent   = startTime ? (Date.now()-startTime)+'ms' : '—';
+  document.getElementById('progressBar').style.width = Math.min((comps/(arr.length*arr.length))*100,95)+'%';
+}
+function setStatus(s){ document.getElementById('statStatus').textContent = s; }
+
+/* ============================================================
+   SLEEP / STEP
+   ============================================================ */
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+async function tick(highlights){
+  renderBars(highlights);
+  updateStats();
+  if(stepMode){
+    await new Promise(r=>{ stepResolve=r; });
+    stepResolve=null;
+  } else {
+    await sleep(DELAY());
+  }
+}
+
+/* ============================================================
+   ALGO CONTROL
+   ============================================================ */
+function setAlgo(a, btn){
+  algo = a;
+  document.querySelectorAll('[id^=btn-]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#compTable tr[data-algo]').forEach(r=>r.classList.remove('highlight-row'));
+  document.querySelector(`#compTable tr[data-algo="${a}"]`)?.classList.add('highlight-row');
+  showCode(codeLang, document.querySelector('.tab.active'));
+}
+function setTheme(name, el){
+  colorTheme = themes[name];
+  document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  renderBars([]);
+}
+function updateSpeedLabel(){
+  const labels=['Very Slow','Slow','Normal','Fast','Turbo'];
+  document.getElementById('speedLabel').textContent = labels[parseInt(document.getElementById('speedSlider').value)-1];
+}
+
+function disableUI(on){
+  ['goBtn','raceBtn'].forEach(id=>document.getElementById(id).disabled=on);
+  document.getElementById('stopBtn').disabled=!on;
+  document.getElementById('stepBtn').disabled=!on||!stepMode;
+  document.querySelectorAll('[id^=btn-]').forEach(b=>b.disabled=on);
+}
+
+function stopSort(){
+  sorting=false;
+  if(stepResolve){ stepResolve(); stepResolve=null; }
+  disableUI(false);
+  setStatus('Stopped');
+}
+
+async function startSort(){
+  if(sorting) return;
+  stepMode=false;
+  await runAlgo();
+}
+
+async function doStep(){
+  if(!sorting){
+    stepMode=true;
+    document.getElementById('stepBtn').disabled=false;
+    runAlgo();
+    return;
+  }
+  if(stepResolve){ stepResolve(); }
+}
+
+async function runAlgo(){
+  sorting=true; comps=0; swaps=0; accesses=0; startTime=Date.now();
+  disableUI(true);
+  setStatus('Sorting…');
+  const a = algo;
+  if(a==='bubble')    await bubbleSort();
+  else if(a==='insertion') await insertionSort();
+  else if(a==='selection') await selectionSort();
+  else if(a==='merge')     await mergeSortViz(0,arr.length-1);
+  else if(a==='quick')     await quickSortViz(0,arr.length-1);
+  else if(a==='heap')      await heapSort();
+  else if(a==='shell')     await shellSort();
+  if(sorting){
+    renderBars(arr.map((_,i)=>({idx:i,color:colorTheme.sorted})));
+    document.getElementById('progressBar').style.width='100%';
+    const elapsed = Date.now()-startTime;
+    document.getElementById('statTime').textContent = elapsed+'ms';
+    setStatus('Done ✓');
+    playDone();
+    addHistory(a, comps, swaps, elapsed, arr.length);
+  }
+  sorting=false; stepMode=false;
+  disableUI(false);
+}
+
+/* ============================================================
+   SORTING ALGORITHMS
+   ============================================================ */
+async function bubbleSort(){
+  const n=arr.length;
+  for(let i=0;i<n-1;i++){
+    let swapped=false;
+    for(let j=0;j<n-i-1;j++){
+      comps++; accesses+=2;
+      playCompare(j, Math.max(...arr));
+      await tick([{idx:j,color:colorTheme.cmp,glow:true},{idx:j+1,color:colorTheme.swap}]);
+      if(!sorting) return;
+      if(arr[j]>arr[j+1]){ [arr[j],arr[j+1]]=[arr[j+1],arr[j]]; swaps++; accesses+=2; swapped=true; playSwap(j,Math.max(...arr)); }
+    }
+    if(!swapped) break;
+  }
+}
+
+async function insertionSort(){
+  for(let i=1;i<arr.length;i++){
+    let key=arr[i], j=i-1; accesses++;
+    await tick([{idx:i,color:colorTheme.cmp,glow:true}]);
+    if(!sorting) return;
+    while(j>=0&&arr[j]>key){
+      comps++; accesses+=2;
+      arr[j+1]=arr[j]; swaps++; j--;
+      playSwap(j+1,Math.max(...arr));
+      await tick([{idx:j+1,color:colorTheme.swap},{idx:i,color:colorTheme.cmp}]);
+      if(!sorting) return;
+    }
+    arr[j+1]=key; accesses++;
+  }
+}
+
+async function selectionSort(){
+  const n=arr.length;
+  for(let i=0;i<n-1;i++){
+    let minIdx=i;
+    for(let j=i+1;j<n;j++){
+      comps++; accesses+=2;
+      playCompare(j,Math.max(...arr));
+      await tick([{idx:minIdx,color:colorTheme.pivot},{idx:j,color:colorTheme.cmp}]);
+      if(!sorting) return;
+      if(arr[j]<arr[minIdx]) minIdx=j;
+    }
+    if(minIdx!==i){ [arr[i],arr[minIdx]]=[arr[minIdx],arr[i]]; swaps++; accesses+=2; playSwap(i,Math.max(...arr)); }
+  }
+}
+
+async function mergeSortViz(l,r){
+  if(l>=r||!sorting) return;
+  const m=Math.floor((l+r)/2);
+  await mergeSortViz(l,m);
+  await mergeSortViz(m+1,r);
+  await mergeViz(l,m,r);
+}
+async function mergeViz(l,m,r){
+  const L=arr.slice(l,m+1), R=arr.slice(m+1,r+1);
+  let i=0,j=0,k=l;
+  while(i<L.length&&j<R.length){
+    comps++; accesses+=2;
+    playCompare(k,Math.max(...arr));
+    await tick([{idx:k,color:colorTheme.swap,glow:true},{idx:l+i,color:colorTheme.cmp},{idx:m+1+j,color:colorTheme.pivot}]);
+    if(!sorting) return;
+    arr[k++]=(L[i]<=R[j])?L[i++]:R[j++]; swaps++; accesses++;
+  }
+  while(i<L.length){ arr[k++]=L[i++]; swaps++; accesses++; }
+  while(j<R.length){ arr[k++]=R[j++]; swaps++; accesses++; }
+}
+
+async function quickSortViz(low,high){
+  if(low>=high||!sorting) return;
+  let pivot=arr[high], i=low-1;
+  accesses++;
+  for(let j=low;j<high;j++){
+    comps++; accesses++;
+    playCompare(j,Math.max(...arr));
+    await tick([{idx:j,color:colorTheme.cmp},{idx:high,color:colorTheme.pivot,glow:true}]);
+    if(!sorting) return;
+    if(arr[j]<=pivot){ i++; [arr[i],arr[j]]=[arr[j],arr[i]]; swaps++; accesses+=2; playSwap(i,Math.max(...arr)); }
+  }
+  [arr[i+1],arr[high]]=[arr[high],arr[i+1]]; swaps++; accesses+=2;
+  const pi=i+1;
+  await quickSortViz(low,pi-1);
+  await quickSortViz(pi+1,high);
+}
+
+async function heapSort(){
+  const n=arr.length;
+  async function heapify(n,i){
+    let largest=i, l=2*i+1, r=2*i+2;
+    comps++; accesses+=2;
+    if(l<n&&arr[l]>arr[largest]) largest=l;
+    comps++; accesses+=2;
+    if(r<n&&arr[r]>arr[largest]) largest=r;
+    if(largest!==i){
+      [arr[i],arr[largest]]=[arr[largest],arr[i]]; swaps++; accesses+=2;
+      playSwap(i,Math.max(...arr));
+      await tick([{idx:i,color:colorTheme.swap,glow:true},{idx:largest,color:colorTheme.cmp},{idx:n-1,color:'#475569'}]);
+      if(!sorting) return;
+      await heapify(n,largest);
+    }
+  }
+  for(let i=Math.floor(n/2)-1;i>=0;i--) await heapify(n,i);
+  for(let i=n-1;i>0;i--){
+    [arr[0],arr[i]]=[arr[i],arr[0]]; swaps++; accesses+=2;
+    playSwap(0,Math.max(...arr));
+    await tick([{idx:0,color:colorTheme.pivot,glow:true},{idx:i,color:colorTheme.sorted}]);
+    if(!sorting) return;
+    await heapify(i,0);
+  }
+}
+
+async function shellSort(){
+  const n=arr.length;
+  let gap=Math.floor(n/2);
+  while(gap>0&&sorting){
+    for(let i=gap;i<n;i++){
+      let temp=arr[i], j=i; accesses++;
+      while(j>=gap&&arr[j-gap]>temp){
+        comps++; accesses++;
+        arr[j]=arr[j-gap]; swaps++; j-=gap;
+        playSwap(j,Math.max(...arr));
+        await tick([{idx:j,color:colorTheme.swap,glow:true},{idx:j+gap,color:colorTheme.cmp},{idx:i,color:colorTheme.pivot}]);
+        if(!sorting) return;
+      }
+      arr[j]=temp; accesses++;
+    }
+    gap=Math.floor(gap/2);
+  }
+}
+
+/* ============================================================
+   RACE MODE — run all algos on same array, measure time
+   ============================================================ */
+async function startRace(){
+  if(sorting) return;
+  const baseArr = arr.slice();
+  const algos = ['bubble','insertion','selection','merge','quick','heap','shell'];
+  const results = [];
+  document.getElementById('raceCard').style.display='block';
+  document.getElementById('raceResults').innerHTML='<div style="color:var(--muted);font-size:.78rem">Racing…</div>';
+  for(const a of algos){
+    arr = baseArr.slice();
+    const t0 = performance.now();
+    await raceSortSync(a, arr);
+    const elapsed = (performance.now()-t0).toFixed(2);
+    results.push({algo:a, ms: parseFloat(elapsed)});
+  }
+  arr = baseArr.slice(); renderBars([]);
+  results.sort((a,b)=>a.ms-b.ms);
+  const fastest = results[0].ms;
+  let html = '<table style="width:100%;font-size:.78rem;border-collapse:collapse">';
+  html += '<tr><th style="text-align:left;color:var(--muted);padding:.4rem .5rem;font-size:.65rem;text-transform:uppercase">Rank</th><th style="text-align:left;color:var(--muted);padding:.4rem .5rem;font-size:.65rem;text-transform:uppercase">Algorithm</th><th style="text-align:right;color:var(--muted);padding:.4rem .5rem;font-size:.65rem;text-transform:uppercase">Time</th><th style="text-align:right;color:var(--muted);padding:.4rem .5rem;font-size:.65rem;text-transform:uppercase">vs Fastest</th></tr>';
+  results.forEach((r,rank)=>{
+    const ratio = (r.ms/fastest).toFixed(1);
+    const medal = rank===0?'🥇':rank===1?'🥈':rank===2?'🥉':'';
+    const color = rank===0?'#4ade80':rank<=2?'#fbbf24':'var(--muted)';
+    html += `<tr><td style="padding:.35rem .5rem;color:${color}">${medal} #${rank+1}</td><td style="padding:.35rem .5rem;color:${color};font-weight:700;text-transform:capitalize">${r.algo}</td><td style="padding:.35rem .5rem;text-align:right;font-family:monospace;color:${color}">${r.ms}ms</td><td style="padding:.35rem .5rem;text-align:right;color:var(--muted)">${ratio}×</td></tr>`;
+  });
+  html += '</table>';
+  document.getElementById('raceResults').innerHTML=html;
+}
+
+function raceSortSync(a, arr){
+  return new Promise(resolve=>{
+    const run = () => {
+      if(a==='bubble') syncBubble(arr);
+      else if(a==='insertion') syncInsertion(arr);
+      else if(a==='selection') syncSelection(arr);
+      else if(a==='merge') syncMerge(arr,0,arr.length-1);
+      else if(a==='quick') syncQuick(arr,0,arr.length-1);
+      else if(a==='heap') syncHeap(arr);
+      else if(a==='shell') syncShell(arr);
+      resolve();
+    };
+    setTimeout(run, 0);
+  });
+}
+function syncBubble(a){ const n=a.length; for(let i=0;i<n-1;i++) for(let j=0;j<n-i-1;j++) if(a[j]>a[j+1])[a[j],a[j+1]]=[a[j+1],a[j]]; }
+function syncInsertion(a){ for(let i=1;i<a.length;i++){let k=a[i],j=i-1;while(j>=0&&a[j]>k){a[j+1]=a[j];j--;}a[j+1]=k;} }
+function syncSelection(a){ const n=a.length; for(let i=0;i<n-1;i++){let m=i;for(let j=i+1;j<n;j++)if(a[j]<a[m])m=j;[a[i],a[m]]=[a[m],a[i]];} }
+function syncMerge(a,l,r){ if(l>=r)return; const m=Math.floor((l+r)/2); syncMerge(a,l,m); syncMerge(a,m+1,r); const L=a.slice(l,m+1),R=a.slice(m+1,r+1);let i=0,j=0,k=l;while(i<L.length&&j<R.length)a[k++]=(L[i]<=R[j])?L[i++]:R[j++];while(i<L.length)a[k++]=L[i++];while(j<R.length)a[k++]=R[j++]; }
+function syncQuick(a,lo,hi){ if(lo>=hi)return;let p=a[hi],i=lo-1;for(let j=lo;j<hi;j++)if(a[j]<=p)[a[++i],a[j]]=[a[j],a[i]];[a[i+1],a[hi]]=[a[hi],a[i+1]];const pi=i+1;syncQuick(a,lo,pi-1);syncQuick(a,pi+1,hi); }
+function syncHeap(a){ const n=a.length; function h(n,i){let l=2*i+1,r=2*i+2,m=i;if(l<n&&a[l]>a[m])m=l;if(r<n&&a[r]>a[m])m=r;if(m!==i){[a[i],a[m]]=[a[m],a[i]];h(n,m);}} for(let i=Math.floor(n/2)-1;i>=0;i--)h(n,i);for(let i=n-1;i>0;i--){[a[0],a[i]]=[a[i],a[0]];h(i,0);} }
+function syncShell(a){ let g=Math.floor(a.length/2);while(g>0){for(let i=g;i<a.length;i++){let t=a[i],j=i;while(j>=g&&a[j-g]>t){a[j]=a[j-g];j-=g;}a[j]=t;}g=Math.floor(g/2);} }
+
+/* ============================================================
+   HISTORY
+   ============================================================ */
+const history = [];
+function addHistory(a, c, s, ms, n){
+  history.unshift({algo:a,comps:c,swaps:s,ms,n});
+  if(history.length>8) history.pop();
+  const el = document.getElementById('histList');
+  el.innerHTML = history.map((h,i)=>`
+    <div class="hist-row">
+      <span class="hist-algo${i===0?' hist-winner':''}" style="text-transform:capitalize">${h.algo}</span>
+      <span style="color:var(--muted)">${h.n} items</span>
+      <span style="color:var(--muted)">${h.comps.toLocaleString()} cmp</span>
+      <span style="color:var(--muted)">${h.swaps.toLocaleString()} swp</span>
+      <span style="color:${i===0?'#4ade80':'var(--muted)'}">${h.ms}ms</span>
+    </div>`).join('');
+}
+
+/* ============================================================
+   CODE DISPLAY
+   ============================================================ */
+let codeLang = 'python';
+function showCode(lang, tab){
+  codeLang = lang;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  const code = CODES[algo]?.[lang] ?? `<span class="comment">// ${lang} implementation not shown</span>`;
+  document.getElementById('codeBlock').innerHTML = `<pre>${code}</pre>`;
+}
+
+const CODES = {
+  bubble:{
+    python:`<span class="comment"># Bubble Sort — O(n²) avg, O(n) best with early exit</span>
+<span class="kw">def</span> <span class="fn">bubble_sort</span>(arr):
+    n = <span class="fn">len</span>(arr)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+        swapped = <span class="kw">False</span>
+        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(<span class="num">0</span>, n-i-<span class="num">1</span>):
+            <span class="kw">if</span> arr[j] > arr[j+<span class="num">1</span>]:
+                arr[j], arr[j+<span class="num">1</span>] = arr[j+<span class="num">1</span>], arr[j]
+                swapped = <span class="kw">True</span>
+        <span class="kw">if not</span> swapped:
+            <span class="kw">break</span>  <span class="comment"># already sorted</span>
+    <span class="kw">return</span> arr`,
+    cpp:`<span class="comment">// Bubble Sort — O(n²) avg</span>
+<span class="kw">void</span> <span class="fn">bubbleSort</span>(<span class="kw">int</span> arr[], <span class="kw">int</span> n) {
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < n-<span class="num">1</span>; i++) {
+        <span class="kw">bool</span> swapped = <span class="kw">false</span>;
+        <span class="kw">for</span> (<span class="kw">int</span> j = <span class="num">0</span>; j < n-i-<span class="num">1</span>; j++) {
+            <span class="kw">if</span> (arr[j] > arr[j+<span class="num">1</span>]) {
+                std::<span class="fn">swap</span>(arr[j], arr[j+<span class="num">1</span>]);
+                swapped = <span class="kw">true</span>;
+            }
+        }
+        <span class="kw">if</span> (!swapped) <span class="kw">break</span>;
+    }
+}`,
+    js:`<span class="comment">// Bubble Sort</span>
+<span class="kw">function</span> <span class="fn">bubbleSort</span>(arr) {
+  <span class="kw">const</span> n = arr.length;
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i < n-<span class="num">1</span>; i++) {
+    <span class="kw">let</span> swapped = <span class="kw">false</span>;
+    <span class="kw">for</span> (<span class="kw">let</span> j = <span class="num">0</span>; j < n-i-<span class="num">1</span>; j++) {
+      <span class="kw">if</span> (arr[j] > arr[j+<span class="num">1</span>]) {
+        [arr[j], arr[j+<span class="num">1</span>]] = [arr[j+<span class="num">1</span>], arr[j]];
+        swapped = <span class="kw">true</span>;
+      }
+    }
+    <span class="kw">if</span> (!swapped) <span class="kw">break</span>;
+  }
+  <span class="kw">return</span> arr;
+}`
+  },
+  insertion:{
+    python:`<span class="comment"># Insertion Sort — O(n) best, O(n²) worst</span>
+<span class="kw">def</span> <span class="fn">insertion_sort</span>(arr):
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="fn">len</span>(arr)):
+        key = arr[i]
+        j = i - <span class="num">1</span>
+        <span class="kw">while</span> j >= <span class="num">0</span> <span class="kw">and</span> arr[j] > key:
+            arr[j+<span class="num">1</span>] = arr[j]
+            j -= <span class="num">1</span>
+        arr[j+<span class="num">1</span>] = key
+    <span class="kw">return</span> arr`,
+    cpp:`<span class="comment">// Insertion Sort</span>
+<span class="kw">void</span> <span class="fn">insertionSort</span>(<span class="kw">int</span> arr[], <span class="kw">int</span> n) {
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">1</span>; i < n; i++) {
+        <span class="kw">int</span> key = arr[i], j = i-<span class="num">1</span>;
+        <span class="kw">while</span> (j >= <span class="num">0</span> && arr[j] > key) {
+            arr[j+<span class="num">1</span>] = arr[j]; j--;
+        }
+        arr[j+<span class="num">1</span>] = key;
+    }
+}`,
+    js:`<span class="comment">// Insertion Sort</span>
+<span class="kw">function</span> <span class="fn">insertionSort</span>(arr) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">1</span>; i < arr.length; i++) {
+    <span class="kw">const</span> key = arr[i];
+    <span class="kw">let</span> j = i - <span class="num">1</span>;
+    <span class="kw">while</span> (j >= <span class="num">0</span> && arr[j] > key) { arr[j+<span class="num">1</span>] = arr[j]; j--; }
+    arr[j+<span class="num">1</span>] = key;
+  }
+  <span class="kw">return</span> arr;
+}`
+  },
+  selection:{
+    python:`<span class="comment"># Selection Sort — always O(n²), minimum swaps</span>
+<span class="kw">def</span> <span class="fn">selection_sort</span>(arr):
+    n = <span class="fn">len</span>(arr)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n-<span class="num">1</span>):
+        min_idx = i
+        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(i+<span class="num">1</span>, n):
+            <span class="kw">if</span> arr[j] < arr[min_idx]:
+                min_idx = j
+        arr[i], arr[min_idx] = arr[min_idx], arr[i]
+    <span class="kw">return</span> arr`,
+    cpp:`<span class="comment">// Selection Sort</span>
+<span class="kw">void</span> <span class="fn">selectionSort</span>(<span class="kw">int</span> arr[], <span class="kw">int</span> n) {
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < n-<span class="num">1</span>; i++) {
+        <span class="kw">int</span> minIdx = i;
+        <span class="kw">for</span> (<span class="kw">int</span> j = i+<span class="num">1</span>; j < n; j++)
+            <span class="kw">if</span> (arr[j] < arr[minIdx]) minIdx = j;
+        std::<span class="fn">swap</span>(arr[i], arr[minIdx]);
+    }
+}`,
+    js:`<span class="comment">// Selection Sort</span>
+<span class="kw">function</span> <span class="fn">selectionSort</span>(arr) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i < arr.length-<span class="num">1</span>; i++) {
+    <span class="kw">let</span> min = i;
+    <span class="kw">for</span> (<span class="kw">let</span> j = i+<span class="num">1</span>; j < arr.length; j++)
+      <span class="kw">if</span> (arr[j] < arr[min]) min = j;
+    [arr[i], arr[min]] = [arr[min], arr[i]];
+  }
+  <span class="kw">return</span> arr;
+}`
+  },
+  merge:{
+    python:`<span class="comment"># Merge Sort — O(n log n) guaranteed</span>
+<span class="kw">def</span> <span class="fn">merge_sort</span>(arr):
+    <span class="kw">if</span> <span class="fn">len</span>(arr) <= <span class="num">1</span>: <span class="kw">return</span> arr
+    mid = <span class="fn">len</span>(arr) // <span class="num">2</span>
+    L = <span class="fn">merge_sort</span>(arr[:mid])
+    R = <span class="fn">merge_sort</span>(arr[mid:])
+    i = j = k = <span class="num">0</span>
+    <span class="kw">while</span> i < <span class="fn">len</span>(L) <span class="kw">and</span> j < <span class="fn">len</span>(R):
+        <span class="kw">if</span> L[i] <= R[j]: arr[k] = L[i]; i += <span class="num">1</span>
+        <span class="kw">else</span>:            arr[k] = R[j]; j += <span class="num">1</span>
+        k += <span class="num">1</span>
+    arr[k:] = L[i:] + R[j:]
+    <span class="kw">return</span> arr`,
+    cpp:`<span class="comment">// Merge Sort</span>
+<span class="kw">void</span> <span class="fn">merge</span>(<span class="kw">int</span> a[], <span class="kw">int</span> l, <span class="kw">int</span> m, <span class="kw">int</span> r) {
+    std::vector&lt;<span class="kw">int</span>&gt; L(a+l,a+m+<span class="num">1</span>), R(a+m+<span class="num">1</span>,a+r+<span class="num">1</span>);
+    <span class="kw">int</span> i=<span class="num">0</span>,j=<span class="num">0</span>,k=l;
+    <span class="kw">while</span>(i&lt;L.size()&&j&lt;R.size()) a[k++]=(L[i]&lt;=R[j])?L[i++]:R[j++];
+    <span class="kw">while</span>(i&lt;L.size()) a[k++]=L[i++];
+    <span class="kw">while</span>(j&lt;R.size()) a[k++]=R[j++];
+}
+<span class="kw">void</span> <span class="fn">mergeSort</span>(<span class="kw">int</span> a[], <span class="kw">int</span> l, <span class="kw">int</span> r) {
+    <span class="kw">if</span>(l&lt;r){ <span class="kw">int</span> m=(l+r)/<span class="num">2</span>; <span class="fn">mergeSort</span>(a,l,m); <span class="fn">mergeSort</span>(a,m+<span class="num">1</span>,r); <span class="fn">merge</span>(a,l,m,r); }
+}`,
+    js:`<span class="comment">// Merge Sort</span>
+<span class="kw">function</span> <span class="fn">mergeSort</span>(arr) {
+  <span class="kw">if</span> (arr.length <= <span class="num">1</span>) <span class="kw">return</span> arr;
+  <span class="kw">const</span> m = arr.length >> <span class="num">1</span>;
+  <span class="kw">const</span> L = <span class="fn">mergeSort</span>(arr.slice(<span class="num">0</span>, m));
+  <span class="kw">const</span> R = <span class="fn">mergeSort</span>(arr.slice(m));
+  <span class="kw">let</span> i=<span class="num">0</span>, j=<span class="num">0</span>, k=<span class="num">0</span>;
+  <span class="kw">while</span> (i&lt;L.length && j&lt;R.length) arr[k++] = L[i]&lt;=R[j] ? L[i++] : R[j++];
+  <span class="kw">while</span> (i&lt;L.length) arr[k++]=L[i++];
+  <span class="kw">while</span> (j&lt;R.length) arr[k++]=R[j++];
+  <span class="kw">return</span> arr;
+}`
+  },
+  quick:{
+    python:`<span class="comment"># Quick Sort — O(n log n) avg, O(n²) worst</span>
+<span class="kw">def</span> <span class="fn">quick_sort</span>(arr, lo=<span class="num">0</span>, hi=<span class="kw">None</span>):
+    <span class="kw">if</span> hi <span class="kw">is None</span>: hi = <span class="fn">len</span>(arr)-<span class="num">1</span>
+    <span class="kw">if</span> lo < hi:
+        pi = <span class="fn">partition</span>(arr, lo, hi)
+        <span class="fn">quick_sort</span>(arr, lo, pi-<span class="num">1</span>)
+        <span class="fn">quick_sort</span>(arr, pi+<span class="num">1</span>, hi)
+
+<span class="kw">def</span> <span class="fn">partition</span>(arr, lo, hi):
+    pivot, i = arr[hi], lo-<span class="num">1</span>
+    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(lo, hi):
+        <span class="kw">if</span> arr[j] <= pivot:
+            i += <span class="num">1</span>; arr[i], arr[j] = arr[j], arr[i]
+    arr[i+<span class="num">1</span>], arr[hi] = arr[hi], arr[i+<span class="num">1</span>]
+    <span class="kw">return</span> i+<span class="num">1</span>`,
+    cpp:`<span class="comment">// Quick Sort</span>
+<span class="kw">int</span> <span class="fn">partition</span>(<span class="kw">int</span> a[], <span class="kw">int</span> lo, <span class="kw">int</span> hi) {
+    <span class="kw">int</span> p=a[hi], i=lo-<span class="num">1</span>;
+    <span class="kw">for</span>(<span class="kw">int</span> j=lo;j&lt;hi;j++)
+        <span class="kw">if</span>(a[j]&lt;=p) std::<span class="fn">swap</span>(a[++i],a[j]);
+    std::<span class="fn">swap</span>(a[i+<span class="num">1</span>],a[hi]);
+    <span class="kw">return</span> i+<span class="num">1</span>;
+}
+<span class="kw">void</span> <span class="fn">quickSort</span>(<span class="kw">int</span> a[], <span class="kw">int</span> lo, <span class="kw">int</span> hi) {
+    <span class="kw">if</span>(lo&lt;hi){ <span class="kw">int</span> pi=<span class="fn">partition</span>(a,lo,hi); <span class="fn">quickSort</span>(a,lo,pi-<span class="num">1</span>); <span class="fn">quickSort</span>(a,pi+<span class="num">1</span>,hi); }
+}`,
+    js:`<span class="comment">// Quick Sort</span>
+<span class="kw">function</span> <span class="fn">quickSort</span>(arr, lo=<span class="num">0</span>, hi=arr.length-<span class="num">1</span>) {
+  <span class="kw">if</span> (lo >= hi) <span class="kw">return</span>;
+  <span class="kw">let</span> p=arr[hi], i=lo-<span class="num">1</span>;
+  <span class="kw">for</span>(<span class="kw">let</span> j=lo;j&lt;hi;j++)
+    <span class="kw">if</span>(arr[j]&lt;=p) [arr[++i],arr[j]]=[arr[j],arr[i]];
+  [arr[i+<span class="num">1</span>],arr[hi]]=[arr[hi],arr[i+<span class="num">1</span>]];
+  <span class="kw">const</span> pi=i+<span class="num">1</span>;
+  <span class="fn">quickSort</span>(arr,lo,pi-<span class="num">1</span>); <span class="fn">quickSort</span>(arr,pi+<span class="num">1</span>,hi);
+}`
+  },
+  heap:{
+    python:`<span class="comment"># Heap Sort — O(n log n) always, O(1) space</span>
+<span class="kw">def</span> <span class="fn">heapify</span>(arr, n, i):
+    largest = i
+    l, r = <span class="num">2</span>*i+<span class="num">1</span>, <span class="num">2</span>*i+<span class="num">2</span>
+    <span class="kw">if</span> l < n <span class="kw">and</span> arr[l] > arr[largest]: largest = l
+    <span class="kw">if</span> r < n <span class="kw">and</span> arr[r] > arr[largest]: largest = r
+    <span class="kw">if</span> largest != i:
+        arr[i], arr[largest] = arr[largest], arr[i]
+        <span class="fn">heapify</span>(arr, n, largest)
+
+<span class="kw">def</span> <span class="fn">heap_sort</span>(arr):
+    n = <span class="fn">len</span>(arr)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n//<span class="num">2</span>-<span class="num">1</span>, -<span class="num">1</span>, -<span class="num">1</span>): <span class="fn">heapify</span>(arr, n, i)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n-<span class="num">1</span>, <span class="num">0</span>, -<span class="num">1</span>):
+        arr[<span class="num">0</span>], arr[i] = arr[i], arr[<span class="num">0</span>]
+        <span class="fn">heapify</span>(arr, i, <span class="num">0</span>)`,
+    cpp:`<span class="comment">// Heap Sort</span>
+<span class="kw">void</span> <span class="fn">heapify</span>(<span class="kw">int</span> a[], <span class="kw">int</span> n, <span class="kw">int</span> i) {
+    <span class="kw">int</span> m=i, l=<span class="num">2</span>*i+<span class="num">1</span>, r=<span class="num">2</span>*i+<span class="num">2</span>;
+    <span class="kw">if</span>(l&lt;n&&a[l]>a[m]) m=l;
+    <span class="kw">if</span>(r&lt;n&&a[r]>a[m]) m=r;
+    <span class="kw">if</span>(m!=i){ std::<span class="fn">swap</span>(a[i],a[m]); <span class="fn">heapify</span>(a,n,m); }
+}
+<span class="kw">void</span> <span class="fn">heapSort</span>(<span class="kw">int</span> a[], <span class="kw">int</span> n) {
+    <span class="kw">for</span>(<span class="kw">int</span> i=n/<span class="num">2</span>-<span class="num">1</span>;i>=<span class="num">0</span>;i--) <span class="fn">heapify</span>(a,n,i);
+    <span class="kw">for</span>(<span class="kw">int</span> i=n-<span class="num">1</span>;i><span class="num">0</span>;i--){ std::<span class="fn">swap</span>(a[<span class="num">0</span>],a[i]); <span class="fn">heapify</span>(a,i,<span class="num">0</span>); }
+}`,
+    js:`<span class="comment">// Heap Sort</span>
+<span class="kw">function</span> <span class="fn">heapSort</span>(arr) {
+  <span class="kw">const</span> n = arr.length;
+  <span class="kw">const</span> <span class="fn">heapify</span> = (n, i) => {
+    <span class="kw">let</span> m=i, l=<span class="num">2</span>*i+<span class="num">1</span>, r=<span class="num">2</span>*i+<span class="num">2</span>;
+    <span class="kw">if</span>(l&lt;n&&arr[l]>arr[m]) m=l;
+    <span class="kw">if</span>(r&lt;n&&arr[r]>arr[m]) m=r;
+    <span class="kw">if</span>(m!==i){ [arr[i],arr[m]]=[arr[m],arr[i]]; <span class="fn">heapify</span>(n,m); }
+  };
+  <span class="kw">for</span>(<span class="kw">let</span> i=Math.<span class="fn">floor</span>(n/<span class="num">2</span>)-<span class="num">1</span>;i>=<span class="num">0</span>;i--) <span class="fn">heapify</span>(n,i);
+  <span class="kw">for</span>(<span class="kw">let</span> i=n-<span class="num">1</span>;i><span class="num">0</span>;i--){ [arr[<span class="num">0</span>],arr[i]]=[arr[i],arr[<span class="num">0</span>]]; <span class="fn">heapify</span>(i,<span class="num">0</span>); }
+  <span class="kw">return</span> arr;
+}`
+  },
+  shell:{
+    python:`<span class="comment"># Shell Sort — gap-sequence based, O(n^1.5) avg</span>
+<span class="kw">def</span> <span class="fn">shell_sort</span>(arr):
+    n, gap = <span class="fn">len</span>(arr), <span class="fn">len</span>(arr)//<span class="num">2</span>
+    <span class="kw">while</span> gap > <span class="num">0</span>:
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(gap, n):
+            temp, j = arr[i], i
+            <span class="kw">while</span> j >= gap <span class="kw">and</span> arr[j-gap] > temp:
+                arr[j] = arr[j-gap]; j -= gap
+            arr[j] = temp
+        gap //= <span class="num">2</span>
+    <span class="kw">return</span> arr`,
+    cpp:`<span class="comment">// Shell Sort</span>
+<span class="kw">void</span> <span class="fn">shellSort</span>(<span class="kw">int</span> a[], <span class="kw">int</span> n) {
+    <span class="kw">for</span>(<span class="kw">int</span> g=n/<span class="num">2</span>;g><span class="num">0</span>;g/=<span class="num">2</span>)
+        <span class="kw">for</span>(<span class="kw">int</span> i=g;i&lt;n;i++){
+            <span class="kw">int</span> t=a[i],j=i;
+            <span class="kw">while</span>(j>=g&&a[j-g]>t){a[j]=a[j-g];j-=g;}
+            a[j]=t;
+        }
+}`,
+    js:`<span class="comment">// Shell Sort</span>
+<span class="kw">function</span> <span class="fn">shellSort</span>(arr) {
+  <span class="kw">let</span> gap = arr.length >> <span class="num">1</span>;
+  <span class="kw">while</span> (gap > <span class="num">0</span>) {
+    <span class="kw">for</span> (<span class="kw">let</span> i=gap; i&lt;arr.length; i++) {
+      <span class="kw">let</span> t=arr[i], j=i;
+      <span class="kw">while</span> (j>=gap && arr[j-gap]>t) { arr[j]=arr[j-gap]; j-=gap; }
+      arr[j]=t;
+    }
+    gap >>= <span class="num">1</span>;
+  }
+  <span class="kw">return</span> arr;
+}`
+  }
+};
+
+/* ============================================================
+   INIT
+   ============================================================ */
+buildSoundViz();
+setAlgo('bubble', document.getElementById('btn-bubble'));
+reset();
+showCode('python', document.querySelector('.tab.active'));
+updateSpeedLabel();
+</script>
+</body>
+</html>
