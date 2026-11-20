@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Multi-Agent Warehouse Robots — Moiz Ahmad</title>
+<meta name="description" content="Autonomous warehouse robots that bid for tasks in an auction and plan collision-free routes with space-time A*. Compare strategies with a built-in benchmark."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.log{font-family:ui-monospace,Consolas,monospace;font-size:.74rem;line-height:1.55;max-height:210px}
+.log div{padding:.18rem 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.log b{color:var(--b)}.log .w{color:var(--good)}.log .x{color:var(--bad)}
+table.bm{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.7rem}
+.bm th{font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right;padding:.4rem .5rem;border-bottom:1px solid var(--line2)}
+.bm th:first-child,.bm td:first-child{text-align:left}
+.bm td{padding:.5rem;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;font-family:ui-monospace,Consolas,monospace}
+.bm td:first-child{font-family:inherit;font-weight:600}
+.bm .best{color:var(--good);font-weight:800}.bm .bad{color:var(--bad);font-weight:800}
+.bmwrap{overflow-x:auto}
+select{width:auto;min-width:0}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Multi-agent systems · Planning · Coordination</span>
+    <h1>Multi-Agent Warehouse Robots</h1>
+    <p class="lead">Orders keep arriving. Each idle robot bids on tasks, the best bid wins, and every robot plans a path through space and time so nobody crashes. Click any open floor cell to drop in a pickup yourself.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Warehouse floor <b id="tickLab">tick 0</b></div>
+      <canvas id="cv" class="cv" style="aspect-ratio:22/13"></canvas>
+      <div class="legend"><span><i style="background:var(--c1)"></i>pickup waiting</span><span><i style="background:var(--good)"></i>drop-off station</span><span>dashed line = planned route</span><span>small square on a robot = carrying</span></div>
+      <div class="row" style="margin-top:.8rem"><button class="btn primary" id="play">Pause</button><button class="btn" id="reset">Reset</button><button class="btn" id="burst">+5 orders</button></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-h">Controls</div>
+        <div class="ctl"><label>Robots <output id="nO">4</output></label><input id="nR" type="range" min="2" max="6" value="4"/></div>
+        <div class="ctl"><label>Order arrival rate <output id="rO">12</output></label><input id="rate" type="range" min="2" max="30" value="12"/></div>
+        <div class="ctl"><label>Simulation speed <output id="sO">3×</output></label><input id="spd" type="range" min="1" max="8" value="3"/></div>
+        <div class="ctl"><label>Task assignment</label><select id="assign"><option value="auction">Auction: lowest path-cost bid wins</option><option value="random">Random idle robot</option></select></div>
+        <div class="ctl"><label>Collision handling</label><select id="coll"><option value="res">Space-time A* + reservation table</option><option value="none">None: shortest path, ignore others</option></select></div>
+      </div>
+      <div class="card">
+        <div class="card-h">Live metrics</div>
+        <div class="metrics">
+          <div class="metric"><div class="m-val" id="mDone">0</div><div class="m-lab">Delivered</div></div>
+          <div class="metric"><div class="m-val" id="mQ">0</div><div class="m-lab">Waiting</div></div>
+          <div class="metric"><div class="m-val" id="mAvg">–</div><div class="m-lab">Avg ticks</div></div>
+          <div class="metric"><div class="m-val" id="mCon">0</div><div class="m-lab">Collisions</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:1.1rem">
+    <div class="card"><div class="card-h">Deliveries over time</div><canvas id="chart" class="cv short"></canvas></div>
+    <div class="card"><div class="card-h">Robot negotiation log <b>contract-net protocol</b></div><div class="log scroll" id="log"></div></div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem">
+    <div class="card-h">Benchmark <b>same orders, same seed, 800 ticks</b></div>
+    <div class="row"><button class="btn primary" id="bench">Run 4-way comparison</button><span class="small" id="bmStat">Uses your robot count and arrival rate. Takes a few seconds.</span></div>
+    <div class="bmwrap"><table class="bm" id="bm" hidden><thead><tr><th>Strategy</th><th>Delivered</th><th>Avg ticks / order</th><th>Distance</th><th>Collisions</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li><b>Auction (contract-net):</b> when orders are waiting, every idle robot bids its real shortest-path cost (BFS to the pickup, then to the drop-off). The lowest bid across all robot and order pairs wins. The log shows the actual bids.</li>
+      <li><b>Cooperative space-time A*:</b> robots plan one after another. Each planned route is written into a reservation table (cell, time) and (swap, time). Later robots search a 3D space (x, y, time) that includes waiting, so they step aside or wait instead of colliding. Idle robots park and count as obstacles.</li>
+      <li><b>Collisions</b> are counted as two robots in one cell, or two robots swapping cells in one tick. With reservations the count is zero or close to it (in my test runs, 0 to 3 per 800 ticks, against 90 to 300 without). It is not guaranteed zero: planning is greedy and cooperative, not optimal, and it does not detect deadlock. Without collision handling robots look faster only because they drive straight through each other.</li>
+      <li>Nothing is scripted: the benchmark reruns the full simulation for each strategy from the same random seed. Results vary with robot count and arrival rate, so try a few settings.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const W = 22, H = 13, N = W * H, id = (x, y) => y * W + x;
+const SHELF = new Set(); [2, 3, 7, 8].forEach(y => { for (let x = 2; x <= 19; x++) if (![6, 11, 16].includes(x)) SHELF.add(id(x, y)); });
+const free = (x, y) => x >= 0 && y >= 0 && x < W && y < H && !SHELF.has(id(x, y));
+const STATIONS = [[0, 4], [0, 5], [0, 6]], BAYS = [[2, 12], [4, 12], [6, 12], [8, 12], [10, 12], [12, 12]];
+const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const PICKS = []; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (free(x, y) && !STATIONS.some(s => s[0] === x && s[1] === y) && y < 12 && x > 0 && DIRS.some(([dx, dy]) => SHELF.has(id(x + dx, y + dy)))) PICKS.push([x, y]);
+const bfsCache = new Map();
+function bfs(gx, gy) {
+  const key = id(gx, gy); if (bfsCache.has(key)) return bfsCache.get(key);
+  const d = new Int16Array(N).fill(-1), q = [key]; d[key] = 0;
+  for (let i = 0; i < q.length; i++) { const c = q[i], cx = c % W, cy = (c / W) | 0; for (const [dx, dy] of DIRS) { const nx = cx + dx, ny = cy + dy; if (free(nx, ny) && d[id(nx, ny)] < 0) { d[id(nx, ny)] = d[c] + 1; q.push(id(nx, ny)); } } }
+  bfsCache.set(key, d); return d;
+}
+function mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+class Heap { constructor() { this.a = []; } push(n) { const a = this.a; a.push(n); let i = a.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (a[p].f <= a[i].f) break; [a[p], a[i]] = [a[i], a[p]]; i = p; } } pop() { const a = this.a, top = a[0], last = a.pop(); if (a.length) { a[0] = last; let i = 0; for (;;) { let l = 2 * i + 1, r = l + 1, m = i; if (l < a.length && a[l].f < a[m].f) m = l; if (r < a.length && a[r].f < a[m].f) m = r; if (m === i) break; [a[m], a[i]] = [a[i], a[m]]; i = m; } } return top; } get size() { return this.a.length; } }
+
+function createSim(cfg, seed) {
+  const rnd = mulberry(seed);
+  const S = { tick: 0, robots: [], tasks: [], done: 0, cycleSum: 0, conflicts: 0, dist: 0, series: [0], log: [], nextTask: 1, vres: new Map(), eres: new Map(), cfg };
+  const say = (html) => { S.log.push(html); if (S.log.length > 60) S.log.shift(); };
+  for (let i = 0; i < cfg.robots; i++) { const [x, y] = BAYS[i]; S.robots.push({ id: i + 1, x, y, px: x, py: y, path: [], goal: null, task: null, carrying: false, keys: [], hue: (i * 57 + 262) % 360 }); }
+  const rk = (x, y, t) => x + ',' + y + ',' + t, ek = (a, b, c, d, t) => a + ',' + b + ',' + c + ',' + d + ',' + t;
+  function addTask(pickup) { const drop = STATIONS[Math.floor(rnd() * STATIONS.length)]; const t = { id: S.nextTask++, pickup, drop, born: S.tick, robot: null }; S.tasks.push(t); say(`<b>#${t.id}</b> new order at (${pickup[0]},${pickup[1]})`); return t; }
+  function clearRes(r) { r.keys.forEach(k => { S.vres.delete(k); S.eres.delete(k); }); r.keys = []; }
+  function plan(r) {
+    const [gx, gy] = r.goal; if (r.x === gx && r.y === gy) return true;
+    const d = bfs(gx, gy);
+    if (cfg.coll === 'none') { let x = r.x, y = r.y; const p = []; while (x !== gx || y !== gy) { let best = null; for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy; if (free(nx, ny) && d[id(nx, ny)] >= 0 && d[id(nx, ny)] < d[id(x, y)]) { best = [nx, ny]; break; } } if (!best) return false; [x, y] = best; p.push({ x, y }); } r.path = p; return true; }
+    const parked = new Set(S.robots.filter(o => o !== r && o.path.length === 0).map(o => id(o.x, o.y)));
+    if (parked.has(id(gx, gy))) return false;
+    const t0 = S.tick, LIM = 70, seen = new Set(), heap = new Heap();
+    heap.push({ x: r.x, y: r.y, t: 0, f: d[id(r.x, r.y)], par: null });
+    const free2 = (x, y, t, fx, fy) => { const v = S.vres.get(rk(x, y, t0 + t)); if (v !== undefined && v !== r.id) return false; const e = S.eres.get(ek(x, y, fx, fy, t0 + t - 1)); return e === undefined || e === r.id; };
+    let goalNode = null;
+    while (heap.size) {
+      const n = heap.pop(), key = (n.t * H + n.y) * W + n.x; if (seen.has(key)) continue; seen.add(key);
+      if (n.x === gx && n.y === gy) { let ok = true; for (let k = 1; k <= 3; k++) { const v = S.vres.get(rk(gx, gy, t0 + n.t + k)); if (v !== undefined && v !== r.id) { ok = false; break; } } if (ok) { goalNode = n; break; } }
+      if (n.t >= LIM) continue;
+      for (const [dx, dy] of [[0, 0], ...DIRS]) { const nx = n.x + dx, ny = n.y + dy; if (!free(nx, ny) || (d[id(nx, ny)] < 0) || (parked.has(id(nx, ny)) && (dx || dy))) continue; if (!free2(nx, ny, n.t + 1, n.x, n.y)) continue; heap.push({ x: nx, y: ny, t: n.t + 1, f: n.t + 1 + d[id(nx, ny)] + (dx || dy ? 0 : 0.01), par: n }); }
+    }
+    if (!goalNode) return false;
+    const p = []; for (let n = goalNode; n.par; n = n.par) p.push({ x: n.x, y: n.y }); p.reverse();
+    clearRes(r); let px = r.x, py = r.y;
+    p.forEach((c, i) => { const t = t0 + i + 1, k = rk(c.x, c.y, t), e = ek(px, py, c.x, c.y, t - 1); S.vres.set(k, r.id); S.eres.set(e, r.id); r.keys.push(k, e); px = c.x; py = c.y; });
+    for (let k = 1; k <= 10; k++) { const kk = rk(px, py, t0 + p.length + k); S.vres.set(kk, r.id); r.keys.push(kk); }
+    r.path = p; return true;
+  }
+  function assign() {
+    const avail = S.robots.filter(r => !r.task), pend = S.tasks.filter(t => !t.robot);
+    while (avail.length && pend.length) {
+      let pick = null;
+      if (cfg.assign === 'random') { const t = pend[0], r = avail[Math.floor(rnd() * avail.length)]; pick = { t, r, bids: null }; }
+      else { let best = Infinity, bids = null; for (const t of pend) { const dp = bfs(t.pickup[0], t.pickup[1]), dd = bfs(t.drop[0], t.drop[1]); const b = avail.map(r => ({ r, c: dp[id(r.x, r.y)] + dd[id(t.pickup[0], t.pickup[1])] })); const m = b.reduce((a, c) => (c.c < a.c ? c : a)); if (m.c < best) { best = m.c; pick = { t, r: m.r, bids: b }; } } }
+      const { t, r, bids } = pick; t.robot = r; r.task = t; r.carrying = false; r.goal = t.pickup; r.path = []; clearRes(r);
+      say(bids ? `<b>#${t.id}</b> bids ${bids.map(b => `R${b.r.id}=${b.c}`).join(' ')} → <span class="w">R${r.id} wins</span>` : `<b>#${t.id}</b> random → <span class="w">R${r.id}</span>`);
+      avail.splice(avail.indexOf(r), 1); pend.splice(pend.indexOf(t), 1);
+    }
+  }
+  function step() {
+    S.tick++;
+    if (rnd() < cfg.rate / 100) addTask(PICKS[Math.floor(rnd() * PICKS.length)]);
+    for (const r of S.robots) { r.px = r.x; r.py = r.y; }
+    for (const r of S.robots) {
+      if (r.goal && r.path.length === 0 && r.x === r.goal[0] && r.y === r.goal[1]) {
+        if (r.task && !r.carrying) { r.carrying = true; r.goal = r.task.drop; }
+        else if (r.task) { S.done++; S.cycleSum += S.tick - r.task.born; say(`<b>#${r.task.id}</b> <span class="w">delivered by R${r.id}</span> in ${S.tick - r.task.born} ticks`); S.tasks.splice(S.tasks.indexOf(r.task), 1); r.task = null; r.carrying = false; r.goal = null; }
+        else r.goal = null;
+      }
+    }
+    assign();
+    for (const r of S.robots) { if (!r.task && !r.goal && !BAYS.some(b => b[0] === r.x && b[1] === r.y)) { const bay = BAYS[r.id - 1]; if (!(S.robots.some(o => o !== r && o.x === bay[0] && o.y === bay[1]))) r.goal = bay; } }
+    for (const r of S.robots) if (r.goal && r.path.length === 0 && (r.x !== r.goal[0] || r.y !== r.goal[1])) { plan(r); }
+    for (const r of S.robots) { if (r.path.length) { const n = r.path.shift(); if (n.x !== r.x || n.y !== r.y) S.dist++; r.x = n.x; r.y = n.y; } }
+    for (let i = 0; i < S.robots.length; i++) for (let j = i + 1; j < S.robots.length; j++) { const a = S.robots[i], b = S.robots[j]; if (a.x === b.x && a.y === b.y) { S.conflicts++; say(`<span class="x">collision R${a.id}×R${b.id} at (${a.x},${a.y})</span>`); } else if (a.x === b.px && a.y === b.py && b.x === a.px && b.y === a.py && (a.x !== a.px || a.y !== a.py)) { S.conflicts++; say(`<span class="x">swap collision R${a.id}×R${b.id}</span>`); } }
+    S.series.push(S.done);
+    if (S.tick % 40 === 0) { const lim = S.tick - 5; for (const m of [S.vres, S.eres]) for (const k of m.keys()) if (+k.slice(k.lastIndexOf(',') + 1) < lim) m.delete(k); }
+  }
+  return { S, step, addTask };
+}
+
+/* ---------- UI ---------- */
+const cfgNow = () => ({ robots: +$('#nR').value, rate: +$('#rate').value, assign: $('#assign').value, coll: $('#coll').value });
+let sim = createSim(cfgNow(), 7), playing = true, last = performance.now(), acc = 0;
+function reset() { sim = createSim(cfgNow(), (Math.random() * 1e6) | 0); acc = 0; $('#log').innerHTML = ''; logN = 0; }
+let logN = 0;
+const cv = $('#cv'), chart = $('#chart');
+function draw(now) {
+  const ctx = cv.getContext('2d'), w = cv._w, h = cv._h; if (!w) return;
+  const cs = w / W, S = sim.S, tickMs = 520 / +$('#spd').value, p = Math.min(1, acc / tickMs);
+  const line = AI.css('--line2'), muted = AI.css('--muted'), good = AI.css('--good'), amber = AI.css('--c1'), txt = AI.css('--text');
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = line; ctx.globalAlpha = .35; ctx.lineWidth = 1; for (let x = 0; x <= W; x++) { ctx.beginPath(); ctx.moveTo(x * cs, 0); ctx.lineTo(x * cs, h); ctx.stroke(); } for (let y = 0; y <= H; y++) { ctx.beginPath(); ctx.moveTo(0, y * cs); ctx.lineTo(w, y * cs); ctx.stroke(); } ctx.globalAlpha = 1;
+  SHELF.forEach(c => { const x = c % W, y = (c / W) | 0; ctx.fillStyle = AI.css('--line2'); ctx.beginPath(); ctx.roundRect(x * cs + 2, y * cs + 2, cs - 4, cs - 4, 5); ctx.fill(); ctx.strokeStyle = muted; ctx.globalAlpha = .35; ctx.strokeRect(x * cs + cs * .3, y * cs + cs * .3, cs * .4, cs * .4); ctx.globalAlpha = 1; });
+  BAYS.slice(0, S.robots.length).forEach(([x, y]) => { ctx.strokeStyle = muted; ctx.globalAlpha = .5; ctx.setLineDash([3, 3]); ctx.strokeRect(x * cs + 3, y * cs + 3, cs - 6, cs - 6); ctx.setLineDash([]); ctx.globalAlpha = 1; });
+  STATIONS.forEach(([x, y]) => { ctx.fillStyle = good; ctx.globalAlpha = .28; ctx.fillRect(x * cs + 1, y * cs + 1, cs - 2, cs - 2); ctx.globalAlpha = 1; ctx.fillStyle = good; ctx.font = `700 ${cs * .3}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('OUT', x * cs + cs / 2, y * cs + cs * .62); });
+  S.tasks.forEach(t => { if (t.robot && t.robot.carrying) return; const [x, y] = t.pickup; ctx.fillStyle = amber; ctx.beginPath(); ctx.roundRect(x * cs + cs * .27, y * cs + cs * .27, cs * .46, cs * .46, 4); ctx.fill(); ctx.fillStyle = '#000'; ctx.globalAlpha = .65; ctx.font = `700 ${cs * .28}px system-ui`; ctx.textAlign = 'center'; ctx.fillText(t.id, x * cs + cs / 2, y * cs + cs * .62); ctx.globalAlpha = 1; });
+  S.robots.forEach(r => { if (!r.path.length) return; ctx.strokeStyle = `hsl(${r.hue},80%,62%)`; ctx.globalAlpha = .75; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo((r.x + .5) * cs, (r.y + .5) * cs); r.path.forEach(c => ctx.lineTo((c.x + .5) * cs, (c.y + .5) * cs)); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; });
+  S.robots.forEach(r => {
+    const x = (r.px + (r.x - r.px) * p + .5) * cs, y = (r.py + (r.y - r.py) * p + .5) * cs;
+    ctx.fillStyle = `hsl(${r.hue},75%,58%)`; ctx.shadowColor = `hsla(${r.hue},80%,60%,.6)`; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(x, y, cs * .36, 0, 6.3); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff'; ctx.font = `800 ${cs * .34}px system-ui`; ctx.textAlign = 'center'; ctx.fillText(r.id, x, y + cs * .12);
+    if (r.carrying) { ctx.fillStyle = amber; ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.fillRect(x + cs * .12, y - cs * .42, cs * .26, cs * .26); ctx.strokeRect(x + cs * .12, y - cs * .42, cs * .26, cs * .26); }
+  });
+}
+function hud() {
+  const S = sim.S; $('#tickLab').textContent = 'tick ' + S.tick; $('#mDone').textContent = S.done; $('#mQ').textContent = S.tasks.filter(t => !t.robot).length; $('#mAvg').textContent = S.done ? (S.cycleSum / S.done).toFixed(1) : '–'; $('#mCon').textContent = S.conflicts;
+  $('#mCon').style.color = S.conflicts ? 'var(--bad)' : 'var(--good)';
+  AI.lineChart(chart, [{ data: S.series, color: AI.css('--good') }], { min: 0, xlabel: 'ticks →', empty: 'robots warming up…' });
+  const lg = $('#log'); if (S.log.length !== logN || lg.childElementCount === 0) { lg.innerHTML = S.log.slice().reverse().map(l => `<div>${l}</div>`).join(''); logN = S.log.length; }
+}
+function frame(now) {
+  const dt = Math.min(100, now - last); last = now;
+  if (playing) { acc += dt; const tickMs = 520 / +$('#spd').value; let n = 0; while (acc >= tickMs && n < 6) { acc -= tickMs; sim.step(); n++; } if (n) hud(); }
+  draw(now); requestAnimationFrame(frame);
+}
+AI.fit(cv, () => {}); AI.fit(chart, hud); AI.onTheme(hud);
+requestAnimationFrame(frame);
+const live = () => { Object.assign(sim.S.cfg, cfgNow(), { robots: sim.S.robots.length }); };
+$('#assign').onchange = live; $('#coll').onchange = live; $('#rate').oninput = e => { $('#rO').textContent = e.target.value; live(); };
+$('#spd').oninput = e => ($('#sO').textContent = e.target.value + '×');
+$('#nR').oninput = e => { $('#nO').textContent = e.target.value; reset(); hud(); };
+$('#reset').onclick = () => { reset(); hud(); };
+$('#play').onclick = e => { playing = !playing; e.target.textContent = playing ? 'Pause' : 'Play'; };
+$('#burst').onclick = () => { for (let i = 0; i < 5; i++) sim.addTask(PICKS[Math.floor(Math.random() * PICKS.length)]); hud(); };
+cv.addEventListener('click', e => { const b = cv.getBoundingClientRect(), x = Math.floor(((e.clientX - b.left) / b.width) * W), y = Math.floor(((e.clientY - b.top) / b.height) * H); if (free(x, y) && !STATIONS.some(s => s[0] === x && s[1] === y) && y < 12 && !sim.S.tasks.some(t => t.pickup[0] === x && t.pickup[1] === y)) { sim.addTask([x, y]); hud(); } });
+$('#bench').onclick = async () => {
+  const base = cfgNow(), combos = [['Auction + reservations', 'auction', 'res'], ['Random + reservations', 'random', 'res'], ['Auction, no collision handling', 'auction', 'none'], ['Random, no collision handling', 'random', 'none']], rows = [];
+  $('#bench').disabled = true;
+  for (const [name, a, c] of combos) { $('#bmStat').textContent = 'Running: ' + name + '…'; await new Promise(r => setTimeout(r, 30)); const s = createSim({ ...base, assign: a, coll: c }, 7); for (let i = 0; i < 800; i++) s.step(); rows.push({ name, done: s.S.done, avg: s.S.done ? s.S.cycleSum / s.S.done : Infinity, dist: s.S.dist, con: s.S.conflicts }); }
+  const bd = Math.max(...rows.map(r => r.done)), ba = Math.min(...rows.map(r => r.avg));
+  $('#bm').hidden = false; $('#bm tbody').innerHTML = rows.map(r => `<tr><td>${r.name}</td><td class="${r.done === bd ? 'best' : ''}">${r.done}</td><td class="${r.avg === ba ? 'best' : ''}">${isFinite(r.avg) ? r.avg.toFixed(1) : '–'}</td><td>${r.dist}</td><td class="${r.con ? 'bad' : 'best'}">${r.con}</td></tr>`).join('');
+  $('#bmStat').textContent = `Done. ${base.robots} robots, arrival rate ${base.rate}, seed 7, 800 ticks.`; $('#bench').disabled = false;
+};
+window.__wh = { createSim, cfgNow };
+</script>
+</body>
+</html>

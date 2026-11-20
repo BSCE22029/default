@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ReAct Tool-Using Agent — Moiz Ahmad</title>
+<meta name="description" content="A working Thought → Action → Observation agent loop with a tool registry, memory, self-correction and honest refusal. Watch every step of the trace."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.trace{display:flex;flex-direction:column;gap:.5rem;max-height:560px;overflow:auto;padding-right:.3rem}
+.trace::-webkit-scrollbar{width:8px}.trace::-webkit-scrollbar-thumb{background:var(--line2);border-radius:99px}
+.step{display:grid;grid-template-columns:92px minmax(0,1fr);gap:.7rem;align-items:start;padding:.6rem .7rem;border:1px solid var(--line);border-radius:14px;background:var(--bg2);animation:pop .28s ease both}
+:root[data-theme="light"] .step{background:#fff}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.badge{font-size:.62rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:.25rem .5rem;border-radius:8px;text-align:center;line-height:1.2}
+.s-thought .badge{background:color-mix(in srgb,var(--a) 18%,transparent);color:var(--a)}
+.s-action .badge{background:color-mix(in srgb,var(--b) 18%,transparent);color:var(--b)}
+.s-obs .badge{background:color-mix(in srgb,var(--c1) 18%,transparent);color:var(--c1)}
+.s-obs.err .badge{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.s-answer{border-color:color-mix(in srgb,var(--good) 55%,transparent)}
+.s-answer .badge{background:color-mix(in srgb,var(--good) 20%,transparent);color:var(--good)}
+.s-body{font-size:.86rem;min-width:0;overflow-wrap:anywhere}
+.s-body code{background:var(--canvas);border:1px solid var(--line);border-radius:7px;padding:.1rem .4rem}
+.s-answer .s-body{font-size:.95rem;font-weight:600;line-height:1.55}
+.tool{display:flex;justify-content:space-between;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--line);font-size:.8rem}
+.tool:last-child{border:0}.tool b{font-family:ui-monospace,Consolas,monospace;color:var(--b)}
+.tool .n{font-variant-numeric:tabular-nums;font-weight:800;color:var(--text)}
+.mem{display:flex;justify-content:space-between;gap:.6rem;font-family:ui-monospace,Consolas,monospace;font-size:.78rem;padding:.25rem 0;border-bottom:1px dashed var(--line)}
+details summary{cursor:pointer;font-size:.8rem;color:var(--muted);font-weight:600}
+.kb{font-size:.76rem;color:var(--muted);margin-top:.5rem;columns:1;max-height:220px;overflow:auto}
+.kb div{padding:.15rem 0;border-bottom:1px solid var(--line)}
+@media(max-width:560px){.step{grid-template-columns:1fr;gap:.35rem}.badge{justify-self:start;padding:.2rem .6rem}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Agentic AI · ReAct pattern · Tool use</span>
+    <h1>ReAct Tool-Using Agent</h1>
+    <p class="lead">An agent does not just answer: it loops. It reasons about what it needs, calls a tool, reads the result, and decides the next step. Ask a question and watch every Thought, Action and Observation.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Ask the agent <b id="status">idle</b></div>
+      <div class="row" style="flex-wrap:nowrap"><input id="q" type="text" placeholder="e.g. How tall is Mount Everest in feet?" autocomplete="off"/><button class="btn primary" id="run">Run</button></div>
+      <div class="row" style="margin-top:.6rem">
+        <button class="btn" id="step">Step</button><button class="btn" id="reset">Reset memory</button>
+        <label class="small" style="display:flex;gap:.5rem;align-items:center;margin-left:auto">Speed <input id="spd" type="range" min="1" max="6" value="3" style="width:90px"/></label>
+      </div>
+      <div class="legend" style="margin-top:.8rem" id="ex"></div>
+      <div class="card-h" style="margin-top:1rem">Agent trace</div>
+      <div class="trace" id="trace"><div class="small" id="empty">Pick an example or type a question. Try a multi-step one: the agent has to look something up <em>and</em> then convert or calculate with it.</div></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-h">Run metrics</div>
+        <div class="metrics">
+          <div class="metric"><div class="m-val" id="mSteps">0</div><div class="m-lab">Steps</div></div>
+          <div class="metric"><div class="m-val" id="mCalls">0</div><div class="m-lab">Tool calls</div></div>
+          <div class="metric"><div class="m-val" id="mRetry">0</div><div class="m-lab">Retries</div></div>
+          <div class="metric"><div class="m-val" id="mErr">0</div><div class="m-lab">Errors</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-h">Tool registry</div><div id="tools"></div></div>
+      <div class="card"><div class="card-h">Working memory</div><div id="mem"><span class="small">empty: results are stored here so a follow-up like “multiply that by 3” works.</span></div></div>
+      <div class="card"><details><summary>Knowledge base the search tool can see (<span id="kbn"></span> facts)</summary><div class="kb" id="kb"></div></details></div>
+    </div>
+  </div>
+
+  <section class="note">
+    <b>What's real here, and what is not</b>
+    <ul>
+      <li><b>Real:</b> the agent loop (a JavaScript generator that yields Thought, Action and Observation events), a tool registry with four tools (<code>search</code>, <code>calculator</code>, <code>convert</code>, <code>memory</code>), a safe expression parser written by hand (no <code>eval</code>), a TF-IDF fact search, spell-correction retry when confidence is low, error handling, and a stop condition.</li>
+      <li><b>Not an LLM:</b> the “reasoning” that decides which tool to call is a deterministic rule-based planner I wrote, standing in for the model. In a production agent a language model would emit the Thought and Action; the loop, tools, memory and error handling around it would look the same. So it only understands questions its parser can read, and it says so instead of guessing.</li>
+      <li>The knowledge base is 38 hand-entered facts with approximate figures (populations, heights). Ask about something outside it, like <i>the population of Atlantis</i>, and the agent refuses rather than inventing an answer.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser, no AI API</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = n => (typeof n === 'number' ? (Math.abs(n) >= 1e15 || (Math.abs(n) < 1e-4 && n !== 0) ? n.toExponential(3) : (+n.toFixed(4)).toLocaleString('en-US', { maximumFractionDigits: 4 })) : n);
+
+/* ---------- knowledge base ---------- */
+const KB = [
+  ['Mount Everest is 8,849 m tall, the highest mountain above sea level.', 'mount everest height tall high elevation', 8849, 'm'],
+  ['K2 is 8,611 m tall, the second highest mountain on Earth.', 'k2 height tall high elevation mountain', 8611, 'm'],
+  ['The Burj Khalifa in Dubai is 828 m tall.', 'burj khalifa dubai height tall skyscraper', 828, 'm'],
+  ['The Eiffel Tower is about 330 m tall including its antennas.', 'eiffel tower paris height tall', 330, 'm'],
+  ['The Statue of Liberty is about 93 m tall from ground to torch.', 'statue liberty height tall new york', 93, 'm'],
+  ['The Nile is about 6,650 km long.', 'nile river length long', 6650, 'km'],
+  ['The Amazon River is about 6,400 km long.', 'amazon river length long', 6400, 'km'],
+  ['The Great Wall of China is about 21,196 km long in total.', 'great wall china length long', 21196, 'km'],
+  ['The Moon is about 384,400 km from Earth on average.', 'earth moon distance far', 384400, 'km'],
+  ['The circumference of the Earth is about 40,075 km.', 'earth circumference equator around', 40075, 'km'],
+  ['The deepest point of the ocean, the Mariana Trench, is about 10,935 m deep.', 'mariana trench ocean depth deep deepest', 10935, 'm'],
+  ['Japan has a population of about 124 million people.', 'japan population people inhabitants', 124000000, 'people'],
+  ['Canada has a population of about 40 million people.', 'canada population people inhabitants', 40000000, 'people'],
+  ['Pakistan has a population of about 240 million people.', 'pakistan population people inhabitants', 240000000, 'people'],
+  ['Germany has a population of about 84 million people.', 'germany population people inhabitants', 84000000, 'people'],
+  ['Egypt has a population of about 112 million people.', 'egypt population people inhabitants', 112000000, 'people'],
+  ['Brazil has a population of about 213 million people.', 'brazil population people inhabitants', 213000000, 'people'],
+  ['Lahore has a population of about 13 million people.', 'lahore city population people inhabitants', 13000000, 'people'],
+  ['Water boils at 100 °C at sea level.', 'water boiling point boils temperature', 100, 'C'],
+  ['Water freezes at 0 °C at sea level.', 'water freezing point freezes temperature', 0, 'C'],
+  ['Normal human body temperature is about 37 °C.', 'human body temperature normal', 37, 'C'],
+  ['Absolute zero is -273.15 °C.', 'absolute zero temperature coldest', -273.15, 'C'],
+  ['The speed of light in a vacuum is 299,792 km per second.', 'speed light vacuum fast', 299792, 'km/s'],
+  ['The speed of sound in air is about 343 m per second.', 'speed sound air fast', 343, 'm/s'],
+  ['The capital of Pakistan is Islamabad.', 'pakistan capital city islamabad', null, null],
+  ['The capital of Japan is Tokyo.', 'japan capital city tokyo', null, null],
+  ['The capital of Canada is Ottawa.', 'canada capital city ottawa', null, null],
+  ['The capital of France is Paris.', 'france capital city paris', null, null],
+  ['The capital of Germany is Berlin.', 'germany capital city berlin', null, null],
+  ['Python was created by Guido van Rossum and first released in 1991.', 'python programming language created creator invented founder guido rossum', null, null],
+  ['JavaScript was created by Brendan Eich in 1995 in about ten days.', 'javascript programming language created creator invented founder brendan eich', null, null],
+  ['The Transformer architecture was introduced in the 2017 paper “Attention Is All You Need”.', 'transformer architecture introduced paper attention deep learning', null, null],
+  ['GPT stands for Generative Pre-trained Transformer.', 'gpt stands acronym generative pretrained transformer meaning', null, null],
+  ['BERT was released by Google in 2018 and reads text in both directions.', 'bert google released language model bidirectional', null, null],
+  ['Backpropagation computes gradients of a loss with respect to weights using the chain rule.', 'backpropagation gradient chain rule neural network training', null, null],
+  ['ReAct is an agent pattern that interleaves reasoning steps with tool calls.', 'react agent pattern reasoning acting tool loop', null, null],
+  ['Moiz Ahmad is a software developer based in Lahore, Pakistan.', 'moiz ahmad developer lahore pakistan portfolio author', null, null],
+  ['The Python standard library module for random numbers is called random.', 'python random module library numbers', null, null],
+].map((a, i) => ({ id: i, t: a[0], kw: a[1], v: a[2], u: a[3] }));
+
+/* ---------- search (TF-IDF coverage) ---------- */
+const STOP = new Set('a an the of in on at to is are was were what whats how who when where which does do did for and or by from with that this it its be as many much about tell me give find'.split(' '));
+const tok = s => s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t && !STOP.has(t)).map(t => (t.length > 3 && t.endsWith('s') && !t.endsWith('ss') ? t.slice(0, -1) : t));
+const DOCS = KB.map(f => new Set(tok(f.kw + ' ' + f.t)));
+const DF = new Map(); DOCS.forEach(d => d.forEach(t => DF.set(t, (DF.get(t) || 0) + 1)));
+const idf = t => Math.log(1 + KB.length / (1 + (DF.get(t) || 0)));
+const lev = (a, b) => { const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j; for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; };
+function search(query) {
+  const q = tok(query); if (!q.length) return { conf: 0, fact: null, unknown: [] };
+  const total = q.reduce((a, t) => a + idf(t), 0); let best = null, bs = 0;
+  DOCS.forEach((d, i) => { const s = q.reduce((a, t) => a + (d.has(t) ? idf(t) : 0), 0) / total; if (s > bs + 1e-9) { bs = s; best = i; } });
+  return { conf: bs, fact: best == null ? null : KB[best], unknown: q.filter(t => !DF.has(t)) };
+}
+const spell = words => words.map(w => { if (w.length < 4) return null; let bw = null, bd = 3; DF.forEach((_, v) => { const d = lev(w, v); if (d < bd && v.length >= 4) { bd = d; bw = v; } }); return bw && bd <= 2 ? [w, bw] : null; }).filter(Boolean);
+
+/* ---------- units, calculator ---------- */
+const UNITS = {};
+[['length', 'm', 1, 'm meter meters metre metres'], ['length', 'km', 1000, 'km kilometer kilometers kilometre kilometres'], ['length', 'cm', 0.01, 'cm centimeter centimeters'], ['length', 'ft', 0.3048, 'ft foot feet'], ['length', 'in', 0.0254, 'in inch inches'], ['length', 'mi', 1609.344, 'mi mile miles'],
+ ['mass', 'kg', 1, 'kg kilogram kilograms kilo kilos'], ['mass', 'g', 0.001, 'g gram grams'], ['mass', 'lb', 0.45359237, 'lb lbs pound pounds'],
+ ['temp', 'C', 1, 'c celsius centigrade'], ['temp', 'F', 1, 'f fahrenheit'], ['temp', 'K', 1, 'k kelvin']].forEach(([dim, name, f, al]) => al.split(' ').forEach(a => (UNITS[a] = { dim, name, f })));
+const unit = s => UNITS[(s || '').toLowerCase().replace('°', '')];
+function convert(v, from, to) {
+  const a = unit(from), b = unit(to); if (!a) throw new Error(`unknown unit “${from}”`); if (!b) throw new Error(`unknown unit “${to}”`);
+  if (a.dim !== b.dim) throw new Error(`cannot convert ${a.dim} (${a.name}) to ${b.dim} (${b.name})`);
+  if (a.dim === 'temp') { const k = a.name === 'C' ? v + 273.15 : a.name === 'F' ? (v - 32) * 5 / 9 + 273.15 : v; return b.name === 'C' ? k - 273.15 : b.name === 'F' ? (k - 273.15) * 9 / 5 + 32 : k; }
+  return (v * a.f) / b.f;
+}
+function calc(src) {
+  const s = src.replace(/\s+/g, ''); let i = 0;
+  const peek = () => s[i], num = () => { const m = /^\d*\.?\d+(e[+-]?\d+)?/i.exec(s.slice(i)); if (!m) throw new Error('could not read the expression near “' + s.slice(i, i + 6) + '”'); i += m[0].length; return parseFloat(m[0]); };
+  const prim = () => { if (s.startsWith('sqrt(', i)) { i += 5; const v = expr(); if (peek() !== ')') throw new Error('missing )'); i++; if (v < 0) throw new Error('square root of a negative number'); return Math.sqrt(v); } if (peek() === '(') { i++; const v = expr(); if (peek() !== ')') throw new Error('missing )'); i++; return v; } return num(); };
+  const unary = () => (peek() === '-' ? (i++, -unary()) : peek() === '+' ? (i++, unary()) : prim());
+  const pow = () => { const b = unary(); if (peek() === '^') { i++; return Math.pow(b, pow()); } return b; };
+  const term = () => { let v = pow(); while (peek() === '*' || peek() === '/') { const o = s[i++], r = pow(); if (o === '/' && r === 0) throw new Error('division by zero'); v = o === '*' ? v * r : v / r; } return v; };
+  const expr = () => { let v = term(); while (peek() === '+' || peek() === '-') { const o = s[i++], r = term(); v = o === '+' ? v + r : v - r; } return v; };
+  const v = expr(); if (i < s.length) throw new Error('unexpected “' + s.slice(i, i + 6) + '”'); if (!isFinite(v)) throw new Error('result is not finite'); return v;
+}
+
+/* ---------- tool registry ---------- */
+const mem = new Map();
+const TOOLS = {
+  search: { desc: 'Look up a fact in the knowledge base', calls: 0, run: ({ query }) => { const r = search(query); return r.fact ? { ok: true, ...r, text: `“${r.fact.t}”  (confidence ${(r.conf * 100).toFixed(0)}%)` } : { ok: false, ...r, text: 'no matching fact' }; } },
+  calculator: { desc: 'Evaluate a math expression (hand-written parser)', calls: 0, run: ({ expression }) => { const v = calc(expression); return { ok: true, value: v, text: `${expression} = ${fmt(v)}` }; } },
+  convert: { desc: 'Convert between length, mass and temperature units', calls: 0, run: ({ value, from, to }) => { const v = convert(value, from, to); return { ok: true, value: v, text: `${fmt(value)} ${from} = ${fmt(v)} ${to}` }; } },
+  memory: { desc: 'Store and recall results between steps', calls: 0, run: ({ op, key, value }) => { if (op === 'write') { mem.set(key, value); drawMem(); return { ok: true, text: `stored ${key} = ${fmt(value)}` }; } if (!mem.has(key)) throw new Error('memory is empty, nothing to refer back to'); return { ok: true, value: mem.get(key), text: `${key} = ${fmt(mem.get(key))}` }; } },
+};
+
+/* ---------- planner (rule based stand-in for the LLM) ---------- */
+const UALT = Object.keys(UNITS).sort((a, b) => b.length - a.length).join('|');
+const REF = /\b(that|the result|the answer|previous result|previous answer)\b/g;
+function normMath(raw) {
+  let s = raw.toLowerCase().replace(/[?!]/g, '').replace(/[$,](?=\d)|(?<=\d),(?=\d{3})/g, '').trim();
+  s = s.replace(/^(what is|what's|whats|calculate|compute|work out|how much is|find)\s+/, '').replace(/^the\s+/, '').replace(/^(sum|product) of /, '');
+  s = s.replace(REF, '@last');
+  s = s.replace(/(\d[\d.]*)\s*(%|percent)\s*of\s*(.+)/, '(($1/100)*($3))');
+  s = s.replace(/square root of\s+(@last|[\d.]+)/g, 'sqrt($1)').replace(/(@last|[\d.]+)\s+squared/g, '($1)^2');
+  s = s.replace(/multiply\s+(.+?)\s+by\s+(.+)/, '($1)*($2)').replace(/divide\s+(.+?)\s+by\s+(.+)/, '($1)/($2)').replace(/add\s+(.+?)\s+to\s+(.+)/, '($2)+($1)').replace(/subtract\s+(.+?)\s+from\s+(.+)/, '($2)-($1)');
+  s = s.replace(/divided by|over/g, '/').replace(/multiplied by|times/g, '*').replace(/\bplus\b/g, '+').replace(/\bminus\b/g, '-').replace(/to the power of/g, '^').replace(/(?<=[\d)])\s*x\s*(?=[\d(])/g, '*');
+  return /\d/.test(s) && /^[\d.\s+\-*/^()@lastsqrt]+$/.test(s) && !/[a-z]/.test(s.replace(/@last|sqrt/g, '')) ? s : null;
+}
+function classify(c) {
+  const cv = new RegExp(`^(?:convert\\s+)?(-?\\d[\\d,]*\\.?\\d*)\\s*°?\\s*(${UALT})\\s+(?:to|in|into)\\s+°?(${UALT})$`, 'i').exec(c.replace(/[?.!]+$/, '').trim());
+  if (cv && unit(cv[2]) && unit(cv[3])) return { kind: 'convert', value: parseFloat(cv[1].replace(/,/g, '')), from: cv[2], to: cv[3] };
+  const m = normMath(c); if (m) return { kind: 'math', expr: m };
+  const b = /^(?:what is |what's |how much is |calculate |compute )?(?:the )?(.+?)\s+(divided by|over|times|multiplied by|plus|minus|\+|\*|\/)\s+(?:the )?(.+?)[?.!]*$/i.exec(c.trim());
+  if (b) return { kind: 'binary', left: b[1], op: { 'divided by': '/', over: '/', times: '*', 'multiplied by': '*', plus: '+', minus: '-' }[b[2].toLowerCase()] || b[2], right: b[3] };
+  const t = new RegExp(`^(.*?)\\s+(?:in|into|to)\\s+(${UALT})[?.!]*$`, 'i').exec(c.trim());
+  if (t && unit(t[2])) return { kind: 'lookup', q: t[1], to: t[2] };
+  return { kind: 'lookup', q: c.trim().replace(/[?.!]+$/, '') };
+}
+const splitQ = q => q.split(/\?+|;|\.(?=\s|$)|\s+and then\s+|\bthen\b|\s+and\s+(?=(?:what|how|who|when|which|convert|multiply|divide|add|subtract|calculate|compute|find)\b)/i).map(s => s.trim()).filter(s => s.length > 1);
+
+/* ---------- the agent loop (generator) ---------- */
+const T = text => ({ t: 'thought', text }), F = text => ({ t: 'answer', text });
+function* call(name, input) {
+  yield { t: 'action', name, input };
+  let r; TOOLS[name].calls++;
+  try { r = TOOLS[name].run(input); } catch (e) { r = { ok: false, error: true, text: 'Error: ' + e.message }; }
+  yield { t: 'obs', ok: r.ok !== false, error: !!r.error, text: r.text };
+  return r;
+}
+function* lookup(phrase) {
+  yield T(`I need a fact for “${phrase}”. I'll search the knowledge base.`);
+  let r = yield* call('search', { query: phrase });
+  if (r.conf < 0.75) {
+    const fixes = spell(r.unknown);
+    if (fixes.length) {
+      yield { t: 'retry' };
+      yield T(`Confidence is only ${(r.conf * 100).toFixed(0)}% and ${fixes.map(f => `“${f[0]}”`).join(', ')} matches nothing. It may be a typo for ${fixes.map(f => `“${f[1]}”`).join(', ')}. Retrying with the corrected query.`);
+      let q2 = phrase; fixes.forEach(([a, b]) => (q2 = q2.replace(new RegExp(a, 'i'), b)));
+      r = yield* call('search', { query: q2 });
+    }
+  }
+  if (r.conf < 0.75) {
+    yield T(`I could not find a reliable fact (best confidence ${(r.conf * 100).toFixed(0)}%, unmatched: ${r.unknown.length ? r.unknown.map(u => `“${u}”`).join(', ') : 'none'}). I will not guess.`);
+    return null;
+  }
+  yield T(`Good match. This fact answers “${phrase}”.`);
+  return r.fact;
+}
+function* agent(question) {
+  const clauses = splitQ(question), plans = clauses.map(classify);
+  if (!clauses.length) { yield F('Please type a question.'); return; }
+  yield T(`Goal: “${question}”. I split it into ${clauses.length} sub-task${clauses.length > 1 ? 's' : ''}: ` + plans.map((p, i) => `${i + 1}) ${{ convert: 'convert units', math: 'calculate', binary: 'look up both sides, then calculate', lookup: p.to ? 'look up a fact, then convert it to ' + p.to : 'look up a fact' }[p.kind]}`).join('; ') + '.');
+  const answers = [];
+  for (let i = 0; i < plans.length; i++) {
+    const p = plans[i], tag = plans.length > 1 ? `(${i + 1}/${plans.length}) ` : '';
+    if (plans.length > 1) yield T(`${tag}Working on “${clauses[i]}”.`);
+    if (p.kind === 'convert') {
+      yield T(`This is a unit conversion: ${p.value} ${p.from} to ${p.to}.`);
+      const r = yield* call('convert', { value: p.value, from: p.from, to: p.to });
+      if (r.ok === false) { yield T('The converter rejected that. I cannot answer this part.'); answers.push(`Could not convert (${r.text.replace('Error: ', '')}).`); continue; }
+      yield* call('memory', { op: 'write', key: 'last', value: r.value }); answers.push(`${fmt(p.value)} ${p.from} = ${fmt(r.value)} ${p.to}.`);
+    } else if (p.kind === 'math') {
+      let ex = p.expr;
+      if (ex.includes('@last')) {
+        yield T('The question refers to an earlier result (“that”). I need to recall it from memory.');
+        const r = yield* call('memory', { op: 'read', key: 'last' });
+        if (r.ok === false) { yield T('Nothing is stored, so there is nothing to refer to. I will ask for a clearer question.'); answers.push('There is no earlier result to refer to.'); continue; }
+        ex = ex.replace(/@last/g, '(' + r.value + ')');
+      } else yield T(`This is arithmetic, so I'll use the calculator rather than do it in my head.`);
+      const r = yield* call('calculator', { expression: ex });
+      if (r.ok === false) { yield T(`The calculator reported an error (${r.text.replace('Error: ', '')}). That has no numeric answer, so I will say so instead of inventing one.`); answers.push(`Cannot compute: ${r.text.replace('Error: ', '')}.`); continue; }
+      yield* call('memory', { op: 'write', key: 'last', value: r.value }); answers.push(`${clauses[i].replace(/^(what is|what's|calculate|compute|how much is)\s+/i, '').replace(/[?.!]+$/, '')} = ${fmt(r.value)}.`);
+    } else if (p.kind === 'binary') {
+      const sides = [];
+      for (const s of [p.left, p.right]) {
+        if (/^[\d.,]+$/.test(s.trim())) { sides.push({ v: parseFloat(s.replace(/,/g, '')), u: null, name: s }); continue; }
+        if (REF.test(s)) { REF.lastIndex = 0; const r = yield* call('memory', { op: 'read', key: 'last' }); if (r.ok === false) { answers.push('There is no earlier result to refer to.'); sides.length = 0; break; } sides.push({ v: r.value, u: null, name: 'that' }); continue; }
+        const f = yield* lookup(s); if (!f || f.v == null) { if (f) yield T('That fact has no number I can calculate with.'); sides.length = 0; break; }
+        sides.push({ v: f.v, u: f.u, name: s.replace(/^the /i, '') });
+      }
+      if (sides.length < 2) { if (!answers.length || !/refer/.test(answers[answers.length - 1])) answers.push(`I could not complete “${clauses[i]}” because a needed fact was missing.`); continue; }
+      yield T(`Both values are known (${fmt(sides[0].v)} and ${fmt(sides[1].v)}). Now I'll combine them with the calculator.`);
+      const r = yield* call('calculator', { expression: `${sides[0].v} ${p.op} ${sides[1].v}` });
+      if (r.ok === false) { answers.push(`Cannot compute: ${r.text.replace('Error: ', '')}.`); continue; }
+      yield* call('memory', { op: 'write', key: 'last', value: r.value });
+      const u = sides[0].u && sides[0].u === sides[1].u ? (p.op === '/' ? 'a ratio, no unit' : p.op === '*' ? sides[0].u + '²' : sides[0].u) : sides[0].u && p.op !== '/' && p.op !== '*' ? sides[0].u : '';
+      answers.push(`${p.left} ${{ '/': 'divided by', '*': 'times', '+': 'plus', '-': 'minus' }[p.op]} ${p.right} = ${fmt(r.value)}${u ? ' (' + u + ')' : ''}.`);
+    } else {
+      const f = yield* lookup(p.q);
+      if (!f) { answers.push(`I don't have a reliable fact for “${p.q}”, so I won't guess.`); continue; }
+      if (p.to) {
+        if (f.v == null || !unit(f.u)) { yield T(`The fact has no numeric value in a convertible unit, so I can only report it as text.`); answers.push(f.t); continue; }
+        yield T(`The fact is stored in ${f.u}, but you asked for ${p.to}. I'll convert ${fmt(f.v)} ${f.u} → ${p.to}.`);
+        const r = yield* call('convert', { value: f.v, from: f.u, to: p.to });
+        if (r.ok === false) { yield T('The converter rejected that conversion.'); answers.push(`${f.t} (but: ${r.text.replace('Error: ', '')}).`); continue; }
+        yield* call('memory', { op: 'write', key: 'last', value: r.value }); answers.push(`${f.t.replace(/\.$/, '')}, which is ${fmt(r.value)} ${p.to}.`);
+      } else { if (f.v != null) yield* call('memory', { op: 'write', key: 'last', value: f.v }); answers.push(f.t); }
+    }
+  }
+  yield T('All sub-tasks are finished, so I can stop and answer.');
+  yield F(answers.join(' '));
+}
+
+/* ---------- UI ---------- */
+const EXAMPLES = ['How tall is Mount Everest in feet?', 'What is the population of Japan divided by the population of Canada?', 'What is 15% of 240 and multiply that by 3?', 'Who created Python and what is the capital of Japan?', 'How tall is Mount Everst in miles?', 'What is the population of Atlantis?', 'What is 10 divided by 0?', 'Convert 100 F to C', 'Burj Khalifa height divided by Eiffel Tower height'];
+$('#ex').innerHTML = EXAMPLES.map(e => `<button class="chip" data-q="${esc(e)}">${esc(e)}</button>`).join('');
+$('#tools').innerHTML = Object.keys(TOOLS).map(k => `<div class="tool"><div><b>${k}()</b><div class="small">${TOOLS[k].desc}</div></div><span class="n" id="tc-${k}">0</span></div>`).join('');
+$('#kbn').textContent = KB.length; $('#kb').innerHTML = KB.map(f => `<div>${esc(f.t)}</div>`).join('');
+let it = null, timer = null, stats, running = false;
+const resetStats = () => (stats = { steps: 0, calls: 0, retry: 0, err: 0 });
+function drawStats() { $('#mSteps').textContent = stats.steps; $('#mCalls').textContent = stats.calls; $('#mRetry').textContent = stats.retry; $('#mErr').textContent = stats.err; Object.keys(TOOLS).forEach(k => ($('#tc-' + k).textContent = TOOLS[k].calls)); }
+function drawMem() { $('#mem').innerHTML = mem.size ? [...mem].map(([k, v]) => `<div class="mem"><span>${esc(k)}</span><span>${esc(fmt(v))}</span></div>`).join('') : '<span class="small">empty: results are stored here so a follow-up like “multiply that by 3” works.</span>'; }
+function add(ev) {
+  const tr = $('#trace'); const e = $('#empty'); if (e) e.remove();
+  if (ev.t === 'retry') { stats.retry++; return; }
+  const d = document.createElement('div');
+  if (ev.t === 'thought') { d.className = 'step s-thought'; d.innerHTML = `<span class="badge">Thought</span><div class="s-body">${esc(ev.text)}</div>`; }
+  else if (ev.t === 'action') { stats.calls++; d.className = 'step s-action'; d.innerHTML = `<span class="badge">Action</span><div class="s-body"><code>${ev.name}(${esc(JSON.stringify(ev.input))})</code></div>`; }
+  else if (ev.t === 'obs') { if (ev.error) stats.err++; d.className = 'step s-obs' + (ev.ok ? '' : ' err'); d.innerHTML = `<span class="badge">${ev.error ? 'Error' : ev.ok ? 'Observation' : 'No result'}</span><div class="s-body">${esc(ev.text)}</div>`; }
+  else { d.className = 'step s-answer'; d.innerHTML = `<span class="badge">Answer</span><div class="s-body">${esc(ev.text)}</div>`; }
+  if (ev.t !== 'action') stats.steps++; else stats.steps++;
+  tr.appendChild(d); tr.scrollTop = tr.scrollHeight; drawStats(); drawMem();
+}
+function advance() {
+  if (!it) return false;
+  const n = it.next();
+  if (n.done) { finish(); return false; }
+  add(n.value); if (n.value.t === 'answer') { finish(); return false; } return true;
+}
+function finish() { clearInterval(timer); timer = null; running = false; it = null; $('#status').textContent = 'finished'; $('#run').textContent = 'Run'; }
+function start(q) {
+  q = q.trim(); if (!q) return; clearInterval(timer); resetStats(); $('#trace').innerHTML = ''; it = agent(q); $('#status').textContent = 'thinking…'; drawStats(); return true;
+}
+function run() {
+  if (running) { clearInterval(timer); timer = null; running = false; $('#run').textContent = 'Resume'; $('#status').textContent = 'paused'; return; }
+  if (!it && !start($('#q').value)) return;
+  running = true; $('#run').textContent = 'Pause'; const ms = () => [1400, 1000, 650, 400, 220, 90][+$('#spd').value - 1];
+  const tick = () => { if (!advance()) return; timer = setTimeout(tick, ms()); }; clearInterval(timer); timer = setTimeout(tick, 120);
+}
+$('#run').addEventListener('click', run);
+$('#step').addEventListener('click', () => { clearTimeout(timer); running = false; $('#run').textContent = 'Resume'; if (!it && !start($('#q').value)) return; $('#status').textContent = 'stepping'; advance(); });
+$('#reset').addEventListener('click', () => { mem.clear(); drawMem(); });
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(timer); it = null; running = false; run(); } });
+$('#ex').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (!b) return; $('#q').value = b.dataset.q; clearTimeout(timer); it = null; running = false; run(); });
+resetStats(); drawStats();
+window.__agent = { agent, classify, splitQ, calc, search, mem, TOOLS };
+</script>
+</body>
+</html>
