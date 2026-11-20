@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Decision Tree &amp; Overfitting Lab — Moiz Ahmad</title>
+<meta name="description" content="Grow a decision tree (CART, Gini impurity) from scratch and watch the decision regions, the rules, and overfitting as depth increases."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Machine Learning · CART · Bias vs Variance</span>
+    <h1>Decision Tree &amp; Overfitting Lab</h1>
+    <p class="lead">A decision tree asks yes/no questions about the data. Raise the depth and watch the regions fit the training points more tightly while accuracy on held-out data first rises, then falls. That gap is overfitting.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Decision regions <b id="shape"></b></div>
+      <canvas id="cv" class="cv sq"></canvas>
+      <div class="legend"><span><i style="background:var(--c1)"></i>Class 1</span><span><i style="background:var(--c0)"></i>Class 0</span><span>● training points</span><span>○ test points (held out)</span></div>
+    </div>
+    <div class="card">
+      <div class="card-h">Controls</div>
+      <div class="ctl"><label>Dataset</label><div class="seg" id="dsSeg"></div></div>
+      <div class="ctl"><label>Max depth <output id="dO">3</output></label><input id="depth" type="range" min="1" max="10" value="3"/></div>
+      <div class="ctl"><label>Min samples per leaf <output id="lO">1</output></label><input id="leaf" type="range" min="1" max="12" value="1"/></div>
+      <div class="ctl"><label>Label noise <output id="nO">0.15</output></label><input id="noise" type="range" min="0" max="0.4" step="0.05" value="0.15"/></div>
+      <div class="row"><button class="btn" id="new">New random data</button></div>
+      <div class="metrics" style="margin-top:1rem">
+        <div class="metric"><div class="m-val" id="mDep">–</div><div class="m-lab">Depth used</div></div>
+        <div class="metric"><div class="m-val" id="mLeaf">–</div><div class="m-lab">Leaves</div></div>
+        <div class="metric"><div class="m-val" id="mTr">–</div><div class="m-lab">Train acc</div></div>
+        <div class="metric"><div class="m-val" id="mTe">–</div><div class="m-lab">Test acc</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:1.1rem">
+    <div class="card">
+      <div class="card-h">Accuracy vs depth <b>the overfitting curve</b></div>
+      <canvas id="curve" class="cv short"></canvas>
+      <div class="small" style="margin-top:.5rem" id="curveNote"></div>
+    </div>
+    <div class="card">
+      <div class="card-h">The learned rules</div>
+      <pre class="code scroll" id="rules" style="max-height:230px"></pre>
+    </div>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li>The tree is grown with CART: at every node it tries every possible threshold on both features, scores each split by weighted Gini impurity, and keeps the best one. Growth stops at the maximum depth, at pure nodes, or when a split would leave fewer samples than the minimum per leaf.</li>
+      <li>Data is split 65/35 into train and test. "Label noise" flips some training labels, which is what makes deep trees memorise mistakes. The curve is recomputed for every depth from 1 to 10 each time.</li>
+      <li>Pruning ideas are visible in the controls: a larger minimum leaf size acts like a brake and often improves test accuracy on noisy data.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const S = { ds: 'moons' };
+let train = [], test = [], tree = null;
+const NAMES = { moons: 'Moons', circles: 'Circles', xor: 'XOR', spiral: 'Spiral', gauss: 'Blobs' };
+$('#dsSeg').innerHTML = Object.keys(NAMES).map(k => `<button class="chip${k === S.ds ? ' on' : ''}" data-ds="${k}">${NAMES[k]}</button>`).join('');
+
+function makeData() {
+  const noise = +$('#noise').value, base = AI.shuffle(AI.datasets[S.ds](260, S.ds === 'gauss' ? 0.12 : 0.1)), k = Math.round(base.length * 0.65);
+  train = base.slice(0, k).map(p => ({ ...p, l: Math.random() < noise ? 1 - p.l : p.l }));
+  test = base.slice(k);
+}
+const gini = (a, b) => { const n = a + b; if (!n) return 0; const p = b / n; return 2 * p * (1 - p); };
+function build(idx, depth, maxD, minLeaf) {
+  const n = idx.length; let c1 = 0; idx.forEach(i => c1 += train[i].l); const c0 = n - c1;
+  const node = { n, c0, c1, pred: c1 >= c0 ? 1 : 0, depth };
+  if (depth >= maxD || !c0 || !c1 || n < 2 * minLeaf) return node;
+  let best = { g: gini(c0, c1) - 1e-12 };
+  for (const f of ['x', 'y']) {
+    const s = idx.slice().sort((a, b) => train[a][f] - train[b][f]); let l0 = 0, l1 = 0;
+    for (let k = 0; k < n - 1; k++) {
+      train[s[k]].l ? l1++ : l0++;
+      const v = train[s[k]][f], w = train[s[k + 1]][f]; if (v === w) continue;
+      const nl = k + 1, nr = n - nl; if (nl < minLeaf || nr < minLeaf) continue;
+      const g = (nl * gini(l0, l1) + nr * gini(c0 - l0, c1 - l1)) / n;
+      if (g < best.g) best = { g, f, t: (v + w) / 2 };
+    }
+  }
+  if (!best.f) return node;
+  node.f = best.f; node.t = best.t;
+  node.lo = build(idx.filter(i => train[i][best.f] <= best.t), depth + 1, maxD, minLeaf);
+  node.hi = build(idx.filter(i => train[i][best.f] > best.t), depth + 1, maxD, minLeaf);
+  return node;
+}
+const grow = (maxD, minLeaf) => build(train.map((_, i) => i), 0, maxD, minLeaf);
+const predict = (t, p) => { while (t.f) t = p[t.f] <= t.t ? t.lo : t.hi; return t.pred; };
+const acc = (t, set) => set.filter(p => predict(t, p) === p.l).length / set.length;
+const depthOf = t => (t.f ? 1 + Math.max(depthOf(t.lo), depthOf(t.hi)) : 0), leaves = t => (t.f ? leaves(t.lo) + leaves(t.hi) : 1);
+
+const cv = $('#cv'), off = document.createElement('canvas'), N = 90; off.width = off.height = N;
+function draw() {
+  const ctx = cv.getContext('2d'), W = cv._w, H = cv._h; if (!tree || !W) return;
+  const A = AI.hex2rgb(AI.css('--c1')), B = AI.hex2rgb(AI.css('--c0')), octx = off.getContext('2d'), img = octx.createImageData(N, N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const x = -1.25 + (2.5 * (i + .5)) / N, y = 1.25 - (2.5 * (j + .5)) / N, c = predict(tree, { x, y }) ? A : B, o = (j * N + i) * 4; img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 105; }
+  octx.putImageData(img, 0, 0); ctx.clearRect(0, 0, W, H); ctx.imageSmoothingEnabled = false; ctx.drawImage(off, 0, 0, W, H);
+  const px = x => ((x + 1.25) / 2.5) * W, py = y => ((1.25 - y) / 2.5) * H, c1 = AI.css('--c1'), c0 = AI.css('--c0');
+  train.forEach(p => { ctx.beginPath(); ctx.arc(px(p.x), py(p.y), 4, 0, 6.3); ctx.fillStyle = p.l ? c1 : c0; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.stroke(); });
+  test.forEach(p => { ctx.beginPath(); ctx.arc(px(p.x), py(p.y), 4, 0, 6.3); ctx.lineWidth = 2; ctx.strokeStyle = p.l ? c1 : c0; ctx.stroke(); });
+}
+function rules(t, ind = '', out = []) {
+  if (out.length > 70) return out;
+  if (!t.f) { out.push(`${ind}→ class ${t.pred}  (${t.c0} / ${t.c1})`); return out; }
+  out.push(`${ind}if ${t.f} ≤ ${t.t.toFixed(2)}:`); rules(t.lo, ind + '  ', out);
+  out.push(`${ind}else:`); rules(t.hi, ind + '  ', out); return out;
+}
+function curve() {
+  const minLeaf = +$('#leaf').value, tr = [], te = [];
+  for (let d = 1; d <= 10; d++) { const t = grow(d, minLeaf); tr.push(acc(t, train)); te.push(acc(t, test)); }
+  AI.lineChart($('#curve'), [{ data: tr, color: AI.css('--a'), label: 'train' }, { data: te, color: AI.css('--c1'), label: 'test' }], { min: 0.4, max: 1, pct: true, xlabel: 'depth 1 → 10' });
+  const bestD = te.indexOf(Math.max(...te)) + 1;
+  $('#curveNote').textContent = `Test accuracy peaks at depth ${bestD} (${(te[bestD - 1] * 100).toFixed(0)}%). Train accuracy at depth 10 is ${(tr[9] * 100).toFixed(0)}%${tr[9] - te[9] > .08 ? ': a clear gap, so the deepest tree is memorising noise.' : '.'}`;
+}
+function refresh() {
+  tree = grow(+$('#depth').value, +$('#leaf').value);
+  $('#mDep').textContent = depthOf(tree); $('#mLeaf').textContent = leaves(tree);
+  $('#mTr').textContent = Math.round(acc(tree, train) * 100) + '%'; $('#mTe').textContent = Math.round(acc(tree, test) * 100) + '%';
+  $('#shape').textContent = `${train.length} train · ${test.length} test`;
+  $('#rules').textContent = rules(tree).join('\n') + (rules(tree).length > 70 ? '\n… (truncated)' : '');
+  draw(); curve();
+}
+$('#dsSeg').addEventListener('click', e => { const b = e.target.closest('[data-ds]'); if (!b) return; S.ds = b.dataset.ds; AI.$$('#dsSeg .chip').forEach(c => c.classList.toggle('on', c === b)); makeData(); refresh(); });
+$('#depth').addEventListener('input', e => { $('#dO').textContent = e.target.value; refresh(); });
+$('#leaf').addEventListener('input', e => { $('#lO').textContent = e.target.value; refresh(); });
+$('#noise').addEventListener('input', e => { $('#nO').textContent = (+e.target.value).toFixed(2); makeData(); refresh(); });
+$('#new').addEventListener('click', () => { makeData(); refresh(); });
+AI.fit(cv, draw); AI.fit($('#curve'), curve); AI.onTheme(() => { draw(); curve(); });
+makeData(); refresh();
+</script>
+</body>
+</html>

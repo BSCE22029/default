@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Q-Learning Gridworld — Moiz Ahmad</title>
+<meta name="description" content="Watch a reinforcement-learning agent learn a policy with Q-learning. Edit walls and traps, tune hyper-parameters, and see the value map form."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Reinforcement Learning · Q-Learning</span>
+    <h1>Q-Learning Gridworld</h1>
+    <p class="lead">An agent starts knowing nothing, wanders, gets rewarded for reaching the goal and punished for falling into traps. Watch the value map and arrows emerge from pure trial and error.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Environment &amp; learned policy <b id="status">untrained</b></div>
+      <canvas id="cv" class="cv" style="aspect-ratio:10/7;cursor:pointer"></canvas>
+      <div class="legend"><span><i style="background:var(--good)"></i>High value</span><span><i style="background:var(--bad)"></i>Low value</span><span>Arrows = best action found so far</span><span>Click or drag to edit the map</span></div>
+      <div class="row" style="margin-top:.8rem" id="tools"></div>
+    </div>
+    <div class="card">
+      <div class="card-h">Training</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:.6rem">
+        <div class="ctl"><label>Learning rate α</label><select id="alpha"><option>0.05</option><option>0.1</option><option selected>0.3</option><option>0.6</option></select></div>
+        <div class="ctl"><label>Discount γ</label><select id="gamma"><option>0.8</option><option>0.9</option><option selected>0.95</option><option>0.99</option></select></div>
+      </div>
+      <div class="ctl"><label>Exploration ε (decays) <output id="epsO">1.00</output></label><div class="bar"><i id="epsBar" style="width:100%"></i></div></div>
+      <div class="ctl"><label class="lab"><span>Slippery floor: 20% of moves go in a random direction</span></label><div class="seg"><button class="chip" id="slip">Off</button></div></div>
+      <div class="ctl"><label>Speed <output id="speedO">20 episodes / frame</output></label><input id="speed" type="range" min="1" max="100" value="20"/></div>
+      <div class="row">
+        <button class="btn primary" id="play">▶ Train</button>
+        <button class="btn" id="demo">Run greedy agent</button>
+        <button class="btn" id="reset">Reset</button>
+      </div>
+      <div class="metrics" style="margin-top:1rem">
+        <div class="metric"><div class="m-val" id="mEp">0</div><div class="m-lab">Episodes</div></div>
+        <div class="metric"><div class="m-val" id="mRet">–</div><div class="m-lab">Avg return</div></div>
+        <div class="metric"><div class="m-val" id="mWin">–</div><div class="m-lab">Goal rate</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem">
+    <div class="card-h">Average return per episode <b>moving average of the last 50 episodes</b></div>
+    <canvas id="chart" class="cv short"></canvas>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li>Tabular Q-learning: after every step the agent updates <code>Q(s,a) ← Q(s,a) + α·(r + γ·max Q(s′,·) − Q(s,a))</code>. The cell colours show max Q, the arrows show the argmax. Nothing is scripted.</li>
+      <li>Rewards: +1 at the goal, −1 in a trap, −0.02 per step (so shorter paths win). Episodes end at the goal, in a trap, or after 80 steps.</li>
+      <li>ε-greedy exploration starts at 1.0 (all random) and decays towards 0.05. Turn on the slippery floor and the agent learns to keep away from traps because a bad slip is now possible.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $, clamp, lerp } = AI;
+const W = 10, H = 7, ACTS = [[0, -1], [1, 0], [0, 1], [-1, 0]], ARROW = ['↑', '→', '↓', '←'];
+const EMPTY = 0, WALL = 1, GOAL = 2, PIT = 3;
+let grid, start, Q, ep = 0, eps = 1, rets = [], wins = [], smooth = [], running = false, slip = false, tool = 'wall', agent = null, trail = [], painting = false, raf = 0;
+
+function defaultMap() {
+  grid = Array.from({ length: H }, () => Array(W).fill(EMPTY));
+  [[3, 1], [3, 2], [3, 3], [3, 4], [6, 2], [6, 3], [6, 4], [6, 5], [4, 4], [8, 1]].forEach(([x, y]) => grid[y][x] = WALL);
+  [[5, 1], [5, 5], [8, 4], [8, 5]].forEach(([x, y]) => grid[y][x] = PIT);
+  grid[1][9] = GOAL; start = [0, 6];
+}
+function resetQ() { Q = Array.from({ length: H }, () => Array.from({ length: W }, () => new Float64Array(4))); ep = 0; eps = 1; rets = []; wins = []; smooth = []; agent = null; trail = []; stats(); draw(); }
+function stepEnv(s, a, slippery) {
+  if (slippery && Math.random() < 0.2) a = (Math.random() * 4) | 0;
+  let nx = s[0] + ACTS[a][0], ny = s[1] + ACTS[a][1];
+  if (nx < 0 || ny < 0 || nx >= W || ny >= H || grid[ny][nx] === WALL) { nx = s[0]; ny = s[1]; }
+  const t = grid[ny][nx];
+  return { s: [nx, ny], r: t === GOAL ? 1 : t === PIT ? -1 : -0.02, done: t === GOAL || t === PIT };
+}
+const best = q => { let b = 0; for (let i = 1; i < 4; i++) if (q[i] > q[b]) b = i; return b; };
+function episode() {
+  const alpha = +$('#alpha').value, gamma = +$('#gamma').value;
+  let s = start.slice(), R = 0, won = 0;
+  for (let t = 0; t < 80; t++) {
+    const q = Q[s[1]][s[0]], a = Math.random() < eps ? (Math.random() * 4) | 0 : best(q);
+    const o = stepEnv(s, a, slip), nq = Q[o.s[1]][o.s[0]];
+    q[a] += alpha * (o.r + (o.done ? 0 : gamma * Math.max(...nq)) - q[a]);
+    R += o.r; s = o.s;
+    if (o.done) { won = grid[s[1]][s[0]] === GOAL ? 1 : 0; break; }
+  }
+  ep++; eps = Math.max(0.05, eps * 0.9985); rets.push(R); wins.push(won);
+}
+function stats() {
+  const n = Math.min(100, rets.length);
+  $('#mEp').textContent = ep;
+  $('#mRet').textContent = n ? (rets.slice(-n).reduce((a, b) => a + b, 0) / n).toFixed(2) : '–';
+  $('#mWin').textContent = n ? Math.round((wins.slice(-n).reduce((a, b) => a + b, 0) / n) * 100) + '%' : '–';
+  $('#epsO').textContent = eps.toFixed(2); $('#epsBar').style.width = (eps * 100) + '%';
+  $('#status').textContent = !ep ? 'untrained' : eps > 0.3 ? 'exploring…' : 'exploiting what it learned';
+  AI.lineChart($('#chart'), [{ data: smooth, color: AI.css('--a') }], { empty: 'press Train' });
+}
+const cv = $('#cv');
+function cellRect(x, y) { const w = cv._w / W, h = cv._h / H; return [x * w, y * h, w, h]; }
+function draw() {
+  const ctx = cv.getContext('2d'); if (!cv._w || !Q) return;
+  ctx.clearRect(0, 0, cv._w, cv._h);
+  let mx = 0.01, mn = -0.01; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (grid[y][x] === EMPTY) { const v = Math.max(...Q[y][x]); mx = Math.max(mx, v); mn = Math.min(mn, v); }
+  const good = AI.hex2rgb(AI.css('--good')), bad = AI.hex2rgb(AI.css('--bad'));
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const [px, py, w, h] = cellRect(x, y), t = grid[y][x], pad = 2;
+    ctx.save(); ctx.beginPath(); ctx.roundRect(px + pad, py + pad, w - pad * 2, h - pad * 2, 8);
+    if (t === WALL) { ctx.fillStyle = AI.css('--line2'); ctx.fill(); ctx.restore(); continue; }
+    if (t === GOAL) ctx.fillStyle = AI.css('--good'); else if (t === PIT) ctx.fillStyle = AI.css('--bad');
+    else { const v = Math.max(...Q[y][x]), c = v >= 0 ? good : bad, a = v >= 0 ? v / mx : v / mn; ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${0.08 + 0.5 * clamp(a, 0, 1)})`; }
+    ctx.fill(); ctx.strokeStyle = AI.css('--line'); ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (t === GOAL || t === PIT) { ctx.font = `${h * .42}px sans-serif`; ctx.fillStyle = '#fff'; ctx.fillText(t === GOAL ? '★' : '✕', px + w / 2, py + h / 2 + 1); }
+    else if (ep > 0 && Math.max(...Q[y][x]) !== 0) { ctx.font = `700 ${h * .4}px sans-serif`; ctx.fillStyle = AI.css('--text'); ctx.globalAlpha = .8; ctx.fillText(ARROW[best(Q[y][x])], px + w / 2, py + h / 2 + 1); ctx.globalAlpha = 1; }
+  }
+  const [sx, sy, sw, sh] = cellRect(start[0], start[1]); ctx.font = `700 ${sh * .2}px sans-serif`; ctx.fillStyle = AI.css('--muted'); ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('START', sx + 7, sy + 6);
+  if (trail.length > 1) { ctx.beginPath(); trail.forEach(([x, y], i) => { const [px, py, w, h] = cellRect(x, y); i ? ctx.lineTo(px + w / 2, py + h / 2) : ctx.moveTo(px + w / 2, py + h / 2); }); ctx.strokeStyle = AI.css('--a'); ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.globalAlpha = .7; ctx.stroke(); ctx.globalAlpha = 1; }
+  if (agent) { const [px, py, w, h] = cellRect(agent[0], agent[1]); ctx.beginPath(); ctx.arc(px + w / 2, py + h / 2, Math.min(w, h) * .26, 0, 6.3); ctx.fillStyle = AI.css('--a'); ctx.shadowColor = AI.css('--a'); ctx.shadowBlur = 14; ctx.fill(); ctx.shadowBlur = 0; ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke(); }
+}
+function frame() {
+  if (!running) return;
+  const n = +$('#speed').value;
+  for (let i = 0; i < n; i++) episode();
+  const w = rets.slice(-50); smooth.push(w.reduce((a, b) => a + b, 0) / w.length);
+  if (smooth.length > 600) smooth = smooth.filter((_, i) => i % 2 === 0);
+  stats(); draw(); raf = requestAnimationFrame(frame);
+}
+function setRun(v) { running = v; $('#play').textContent = v ? '⏸ Pause' : '▶ Train'; cancelAnimationFrame(raf); if (v) raf = requestAnimationFrame(frame); }
+function demo() {
+  setRun(false); agent = start.slice(); trail = [agent.slice()];
+  let t = 0; const tick = () => {
+    if (!agent) return;
+    const o = stepEnv(agent, best(Q[agent[1]][agent[0]]), slip); agent = o.s; trail.push(agent.slice()); draw();
+    if (o.done || ++t > 40) { $('#status').textContent = grid[agent[1]][agent[0]] === GOAL ? 'greedy agent reached the goal in ' + t + ' steps' : 'greedy agent failed: keep training'; return; }
+    setTimeout(tick, 170);
+  }; draw(); setTimeout(tick, 250);
+}
+
+// ---- editing ----
+const TOOLS = { wall: 'Wall', pit: 'Trap', goal: 'Goal', start: 'Start', erase: 'Erase' };
+$('#tools').innerHTML = Object.keys(TOOLS).map(k => `<button class="chip${k === tool ? ' on' : ''}" data-t="${k}">${TOOLS[k]}</button>`).join('');
+$('#tools').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; tool = b.dataset.t; AI.$$('#tools .chip').forEach(c => c.classList.toggle('on', c === b)); });
+function paint(e) {
+  const r = cv.getBoundingClientRect(), x = Math.floor(((e.clientX - r.left) / r.width) * W), y = Math.floor(((e.clientY - r.top) / r.height) * H);
+  if (x < 0 || y < 0 || x >= W || y >= H) return;
+  const isStart = x === start[0] && y === start[1];
+  if (tool === 'start') { if (grid[y][x] === EMPTY) start = [x, y]; else return; }
+  else if (isStart && tool !== 'erase') return;
+  else if (tool === 'goal') { for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (grid[j][i] === GOAL) grid[j][i] = EMPTY; grid[y][x] = GOAL; }
+  else if (!isStart) grid[y][x] = tool === 'wall' ? WALL : tool === 'pit' ? PIT : EMPTY;
+  setRun(false); resetQ();
+}
+cv.addEventListener('pointerdown', e => { painting = true; cv.setPointerCapture(e.pointerId); paint(e); });
+cv.addEventListener('pointermove', e => { if (painting && tool !== 'goal' && tool !== 'start') paint(e); });
+cv.addEventListener('pointerup', () => painting = false);
+
+$('#play').addEventListener('click', () => { agent = null; trail = []; setRun(!running); });
+$('#demo').addEventListener('click', () => { if (!ep) { $('#status').textContent = 'train first'; return; } demo(); });
+$('#reset').addEventListener('click', () => { setRun(false); resetQ(); });
+$('#slip').addEventListener('click', e => { slip = !slip; e.target.textContent = slip ? 'On' : 'Off'; e.target.classList.toggle('on', slip); setRun(false); resetQ(); });
+$('#speed').addEventListener('input', e => $('#speedO').textContent = e.target.value + ' episodes / frame');
+['alpha', 'gamma'].forEach(id => $('#' + id).addEventListener('change', () => { setRun(false); resetQ(); }));
+AI.fit(cv, draw); AI.fit($('#chart'), stats);
+AI.onTheme(() => { draw(); stats(); });
+defaultMap(); resetQ();
+</script>
+</body>
+</html>

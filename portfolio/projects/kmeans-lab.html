@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>K-Means Clustering Lab — Moiz Ahmad</title>
+<meta name="description" content="Interactive K-Means clustering with step-by-step Lloyd iterations, k-means++ seeding, Voronoi regions and an elbow chart. Runs in your browser."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Unsupervised Learning · Clustering</span>
+    <h1>K-Means Clustering Lab</h1>
+    <p class="lead">Click to add your own points or load a dataset, then step through the algorithm one assignment and one update at a time. Watch the Voronoi regions move as the centroids settle.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Canvas <b id="phase">click to add points</b></div>
+      <canvas id="cv" class="cv wide" style="cursor:crosshair"></canvas>
+      <div class="legend"><span>Click: add a point</span><span>Shaded areas: nearest-centroid (Voronoi) regions</span><span>◆ centroids</span></div>
+    </div>
+    <div class="card">
+      <div class="card-h">Controls</div>
+      <div class="ctl"><label>Dataset</label><div class="seg" id="presets"></div></div>
+      <div class="ctl"><label>Clusters (K) <output id="kO">3</output></label><input id="k" type="range" min="1" max="8" value="3"/></div>
+      <div class="ctl"><label>Initialisation</label><div class="seg" id="initSeg"><button class="chip on" data-i="pp">k-means++</button><button class="chip" data-i="rand">Random points</button></div></div>
+      <div class="row">
+        <button class="btn primary" id="run">▶ Run to convergence</button>
+        <button class="btn" id="step">Step</button>
+        <button class="btn" id="seed">Re-seed centroids</button>
+        <button class="btn" id="clear">Clear</button>
+      </div>
+      <div class="metrics" style="margin-top:1rem">
+        <div class="metric"><div class="m-val" id="mPts">0</div><div class="m-lab">Points</div></div>
+        <div class="metric"><div class="m-val" id="mIt">0</div><div class="m-lab">Iterations</div></div>
+        <div class="metric"><div class="m-val" id="mIn">–</div><div class="m-lab">Inertia</div></div>
+        <div class="metric"><div class="m-val" id="mSt">–</div><div class="m-lab">Status</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:1.1rem">
+    <div class="card">
+      <div class="card-h">Inertia per iteration <b>sum of squared distances</b></div>
+      <canvas id="inCv" class="cv short"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-h">Elbow method <b>best of 6 runs for each K</b></div>
+      <canvas id="elCv" class="cv short"></canvas>
+      <div class="row" style="margin-top:.7rem"><button class="btn" id="elbow">Compute elbow (K = 1…8)</button><span class="small" id="elNote">The "elbow" suggests a good K.</span></div>
+    </div>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li>This is Lloyd's algorithm: assign every point to its nearest centroid, move each centroid to the mean of its points, repeat until nothing changes. Convergence is detected when no assignment changes.</li>
+      <li>k-means++ seeding picks each new centroid with probability proportional to its squared distance from the existing ones, which usually gives better and more stable results than random seeds.</li>
+      <li>Load "Moons": K-Means draws straight boundaries, so it cannot separate curved shapes. That limitation is the point of that dataset.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $, clamp } = AI;
+const PAL = AI.palette;
+let pts = [], cents = [], asg = [], K = 3, initMode = 'pp', it = 0, phase = 'assign', converged = false, inertiaHist = [], timer = null;
+const d2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+
+const PRESETS = {
+  blobs() { const c = [[.25, .3], [.7, .25], [.5, .75]], o = []; c.forEach(([cx, cy]) => { for (let i = 0; i < 60; i++) o.push({ x: cx + AI.gauss() * .07, y: cy + AI.gauss() * .07 }); }); return o; },
+  five() { const c = [[.2, .25], [.8, .2], [.5, .5], [.2, .78], [.8, .8]], o = []; c.forEach(([cx, cy]) => { for (let i = 0; i < 44; i++) o.push({ x: cx + AI.gauss() * .06, y: cy + AI.gauss() * .06 }); }); return o; },
+  stretched() { const o = []; for (let i = 0; i < 3; i++) for (let j = 0; j < 70; j++) { const x = .15 + AI.gauss() * .13 + i * .0, y = .2 + i * .3 + AI.gauss() * .045; o.push({ x: x + .35 * Math.random(), y }); } return o; },
+  moons() { return AI.datasets.moons(220, .1).map(p => ({ x: .5 + p.x * .42, y: .5 - p.y * .42 })); },
+  uniform() { return Array.from({ length: 180 }, () => ({ x: .05 + Math.random() * .9, y: .05 + Math.random() * .9 })); },
+};
+const NAMES = { blobs: '3 blobs', five: '5 blobs', stretched: 'Stretched', moons: 'Moons', uniform: 'Uniform' };
+$('#presets').innerHTML = Object.keys(NAMES).map(k => `<button class="chip" data-p="${k}">${NAMES[k]}</button>`).join('');
+
+function seed() {
+  K = Math.min(+$('#k').value, Math.max(1, pts.length));
+  cents = [];
+  if (!pts.length) { draw(); return; }
+  if (initMode === 'rand') { AI.shuffle(pts.slice()).slice(0, K).forEach(p => cents.push({ x: p.x, y: p.y })); }
+  else {
+    cents.push({ ...pts[(Math.random() * pts.length) | 0] });
+    while (cents.length < K) {
+      const ds = pts.map(p => Math.min(...cents.map(c => d2(p, c)))), tot = ds.reduce((a, b) => a + b, 0);
+      let r = Math.random() * tot, i = 0;
+      while (i < ds.length - 1 && (r -= ds[i]) > 0) i++;
+      cents.push({ x: pts[i].x, y: pts[i].y });
+    }
+  }
+  asg = new Array(pts.length).fill(-1); it = 0; phase = 'assign'; converged = false; inertiaHist = [];
+  stop(); draw(); stats();
+}
+function inertia() { return pts.reduce((s, p, i) => s + (asg[i] >= 0 ? d2(p, cents[asg[i]]) : 0), 0); }
+function assign() {
+  let changed = 0;
+  pts.forEach((p, i) => { let b = 0, bd = Infinity; cents.forEach((c, k) => { const d = d2(p, c); if (d < bd) { bd = d; b = k; } }); if (asg[i] !== b) { asg[i] = b; changed++; } });
+  return changed;
+}
+function update() {
+  cents.forEach((c, k) => { let sx = 0, sy = 0, n = 0; pts.forEach((p, i) => { if (asg[i] === k) { sx += p.x; sy += p.y; n++; } }); if (n) { c.x = sx / n; c.y = sy / n; } });
+}
+function step() {
+  if (!pts.length || !cents.length) return false;
+  if (converged) return false;
+  if (phase === 'assign') {
+    const changed = assign(); inertiaHist.push(inertia()); phase = 'update'; it++;
+    if (!changed && it > 1) { converged = true; $('#phase').textContent = 'converged ✔'; }
+    else $('#phase').textContent = 'assigned points → next: move centroids';
+  } else { update(); phase = 'assign'; $('#phase').textContent = 'moved centroids → next: re-assign'; }
+  draw(); stats();
+  return !converged;
+}
+function stop() { clearInterval(timer); timer = null; $('#run').textContent = '▶ Run to convergence'; }
+function run() {
+  if (timer) { stop(); return; }
+  if (converged) seed();
+  $('#run').textContent = '⏸ Pause';
+  timer = setInterval(() => { if (!step()) stop(); }, 380);
+}
+function stats() {
+  $('#mPts').textContent = pts.length; $('#mIt').textContent = it;
+  $('#mIn').textContent = inertiaHist.length ? inertiaHist[inertiaHist.length - 1].toFixed(2) : '–';
+  $('#mSt').textContent = converged ? 'Done' : pts.length ? 'Ready' : 'Empty';
+  AI.lineChart($('#inCv'), [{ data: inertiaHist, color: AI.css('--a') }], { empty: 'run or step the algorithm' });
+}
+
+const cv = $('#cv'), off = document.createElement('canvas'), N = 64; off.width = off.height = N;
+function draw() {
+  const ctx = cv.getContext('2d'), W = cv._w, H = cv._h; if (!W) return;
+  ctx.clearRect(0, 0, W, H);
+  if (cents.length) {
+    const octx = off.getContext('2d'), img = octx.createImageData(N, N);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const q = { x: (i + .5) / N, y: (j + .5) / N }; let b = 0, bd = Infinity; cents.forEach((c, k) => { const d = d2(q, c); if (d < bd) { bd = d; b = k; } });
+      const rgb = AI.hex2rgb(PAL[b % 8]), o = (j * N + i) * 4; img.data[o] = rgb[0]; img.data[o + 1] = rgb[1]; img.data[o + 2] = rgb[2]; img.data[o + 3] = 34;
+    }
+    octx.putImageData(img, 0, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(off, 0, 0, W, H);
+  }
+  pts.forEach((p, i) => { ctx.beginPath(); ctx.arc(p.x * W, p.y * H, 4, 0, 6.3); ctx.fillStyle = asg[i] >= 0 ? PAL[asg[i] % 8] : AI.css('--muted'); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.stroke(); });
+  cents.forEach((c, k) => {
+    const x = c.x * W, y = c.y * H; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = PAL[k % 8]; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.2; ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 8;
+    ctx.fillRect(-8, -8, 16, 16); ctx.strokeRect(-8, -8, 16, 16); ctx.restore();
+  });
+}
+function load(points) { pts = points.map(p => ({ x: clamp(p.x, .02, .98), y: clamp(p.y, .02, .98) })); seed(); $('#phase').textContent = 'press Step or Run'; }
+
+// ---- elbow ----
+function kmeansFull(points, k) {
+  let best = Infinity;
+  for (let r = 0; r < 6; r++) {
+    const c = [{ ...points[(Math.random() * points.length) | 0] }];
+    while (c.length < k) { const ds = points.map(p => Math.min(...c.map(q => d2(p, q)))), tot = ds.reduce((a, b) => a + b, 0); let t = Math.random() * tot, i = 0; while (i < ds.length - 1 && (t -= ds[i]) > 0) i++; c.push({ ...points[i] }); }
+    let a = new Array(points.length).fill(-1), ch = true, g = 0;
+    while (ch && g++ < 80) {
+      ch = false; points.forEach((p, i) => { let b = 0, bd = Infinity; c.forEach((q, j) => { const d = d2(p, q); if (d < bd) { bd = d; b = j; } }); if (a[i] !== b) { a[i] = b; ch = true; } });
+      c.forEach((q, j) => { let sx = 0, sy = 0, n = 0; points.forEach((p, i) => { if (a[i] === j) { sx += p.x; sy += p.y; n++; } }); if (n) { q.x = sx / n; q.y = sy / n; } });
+    }
+    best = Math.min(best, points.reduce((s, p, i) => s + d2(p, c[a[i]]), 0));
+  }
+  return best;
+}
+let elbowData = [];
+function elbow() {
+  if (pts.length < 8) { $('#elNote').textContent = 'Add at least 8 points first.'; return; }
+  elbowData = []; for (let k = 1; k <= 8; k++) elbowData.push(kmeansFull(pts, k));
+  drawElbow();
+  const drops = elbowData.map((v, i) => (i ? elbowData[i - 1] - v : 0));
+  let k = 2; for (let i = 2; i < drops.length; i++) if (drops[i] > drops[i - 1] * 0.45) k = i + 1; else break;
+  $('#elNote').textContent = 'The curve flattens around K ≈ ' + k + '.';
+}
+function drawElbow() { AI.lineChart($('#elCv'), [{ data: elbowData, color: AI.css('--b') }], { min: 0, xlabel: 'K = 1 → 8', empty: 'press "Compute elbow"' }); }
+
+// ---- UI ----
+cv.addEventListener('pointerdown', e => {
+  const r = cv.getBoundingClientRect(); pts.push({ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
+  if (!cents.length || pts.length <= K) seed(); else { asg.push(-1); converged = false; phase = 'assign'; draw(); stats(); }
+});
+$('#presets').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) load(PRESETS[b.dataset.p]()); });
+$('#initSeg').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; initMode = b.dataset.i; AI.$$('#initSeg .chip').forEach(c => c.classList.toggle('on', c === b)); seed(); });
+$('#k').addEventListener('input', e => { $('#kO').textContent = e.target.value; seed(); });
+$('#step').addEventListener('click', () => { stop(); step(); });
+$('#run').addEventListener('click', run);
+$('#seed').addEventListener('click', seed);
+$('#clear').addEventListener('click', () => { pts = []; cents = []; asg = []; inertiaHist = []; elbowData = []; it = 0; converged = false; stop(); draw(); stats(); drawElbow(); $('#phase').textContent = 'click to add points'; });
+$('#elbow').addEventListener('click', elbow);
+AI.fit(cv, draw); AI.fit($('#inCv'), stats); AI.fit($('#elCv'), drawElbow);
+AI.onTheme(() => { draw(); stats(); drawElbow(); });
+load(PRESETS.blobs());
+</script>
+</body>
+</html>

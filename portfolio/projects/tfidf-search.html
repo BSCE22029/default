@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TF-IDF Search Engine + PCA Map — Moiz Ahmad</title>
+<meta name="description" content="A search engine built from scratch: TF-IDF vectors, cosine similarity ranking, and a PCA map showing where your query lands among the documents."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Information Retrieval · Vector Space · PCA</span>
+    <h1>TF-IDF Search Engine</h1>
+    <p class="lead">Every document becomes a vector; your query becomes one too; the closest vectors win. Search a small AI knowledge base and see your query land on a 2-D map computed with real PCA.</p>
+  </section>
+
+  <div class="card">
+    <input id="q" type="text" placeholder="Search: e.g. how do models learn from rewards?" value="how do models learn from rewards"/>
+    <div class="row" style="margin-top:.7rem"><span class="small">Try:</span><span id="ex" class="seg"></span></div>
+  </div>
+
+  <div class="grid g2" style="margin-top:1.1rem">
+    <div class="card">
+      <div class="card-h">Ranked results <b id="cnt"></b></div>
+      <div id="res" class="scroll" style="max-height:480px"></div>
+    </div>
+    <div class="card">
+      <div class="card-h">Document map <b>PCA of TF-IDF vectors</b></div>
+      <canvas id="map" class="cv sq"></canvas>
+      <div class="legend"><span><i style="background:var(--a)"></i>Documents</span><span><i style="background:var(--c1)"></i>Your query</span><span>Nearby = similar vocabulary</span></div>
+    </div>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li>Each document is turned into a vector of <code>(1 + log tf) × idf</code> weights and length-normalised. Ranking is cosine similarity between the query vector and every document. Rare words weigh more than common ones.</li>
+      <li>The map uses real PCA: the vectors are centred, the top two principal components are found with power iteration, and the query is projected into the same space.</li>
+      <li><b>Honest limits:</b> this is lexical matching on 30 short documents I wrote, with light suffix stemming. It does not understand meaning the way neural embeddings do, so a query with no overlapping words finds nothing. That gap is exactly why modern search adds embeddings.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const DOCS = [
+  ['Gradient descent', 'Gradient descent trains a model by repeatedly moving its weights a small step in the direction that reduces the loss, using the gradient.'],
+  ['Backpropagation', 'Backpropagation computes the gradient of the loss for every weight in a neural network by applying the chain rule backwards through its layers.'],
+  ['Overfitting', 'Overfitting happens when a model memorizes noise in the training data and then performs badly on new data. Regularization and more data reduce it.'],
+  ['Reinforcement learning', 'In reinforcement learning an agent takes actions in an environment and learns a policy that maximizes cumulative reward through trial and error.'],
+  ['Q-learning', 'Q-learning estimates the value of each action in each state and updates it from rewards, so the agent learns which actions lead to the highest return.'],
+  ['Convolutional networks', 'Convolutional neural networks slide small learned filters across an image to detect edges, textures and shapes, making them effective for vision.'],
+  ['Transformers', 'A transformer uses attention to let every token in a sequence look at every other token, and it underpins modern language models.'],
+  ['Attention', 'Attention computes weights that decide how much each token should influence another, using queries, keys and values.'],
+  ['Tokenization', 'Tokenization splits text into tokens such as words or sub-word pieces before a language model reads them. Byte pair encoding is a common method.'],
+  ['Word embeddings', 'Embeddings map words or tokens to dense vectors so that similar meanings end up close together in vector space.'],
+  ['Naive Bayes', 'Naive Bayes classifies text by combining word probabilities with the assumption that words are independent given the class. It is simple and fast.'],
+  ['Decision trees', 'A decision tree splits the data with yes or no questions about features, choosing each split to make the groups purer, measured by Gini impurity.'],
+  ['Random forests', 'A random forest averages many decision trees trained on random subsets of the data and features, which reduces variance and overfitting.'],
+  ['K-means clustering', 'K-means groups unlabeled points into K clusters by alternating between assigning points to the nearest centroid and moving each centroid to its cluster mean.'],
+  ['Principal component analysis', 'PCA finds the directions of greatest variance in data and projects points onto them, reducing dimensions while keeping most of the structure.'],
+  ['Cross-validation', 'Cross-validation estimates how well a model generalizes by training on part of the data and testing on the held-out part, repeated across folds.'],
+  ['Precision and recall', 'Precision measures how many predicted positives are correct, while recall measures how many real positives were found. The F1 score balances both.'],
+  ['Learning rate', 'The learning rate controls the size of each weight update. Too high and training diverges, too low and it crawls or gets stuck.'],
+  ['Activation functions', 'Activation functions such as ReLU, tanh and sigmoid add non-linearity so a neural network can learn curved decision boundaries.'],
+  ['Genetic algorithms', 'Genetic algorithms evolve a population of candidate solutions using selection, crossover and mutation, keeping those with higher fitness.'],
+  ['A* search', 'A star search finds shortest paths by expanding the node with the lowest cost so far plus a heuristic estimate of the remaining distance.'],
+  ['Retrieval augmented generation', 'Retrieval augmented generation fetches relevant documents with vector search and gives them to a language model so its answers are grounded in real sources.'],
+  ['Vector databases', 'A vector database stores embeddings and finds the nearest neighbours of a query vector quickly, which powers semantic search.'],
+  ['Fine-tuning', 'Fine-tuning continues training a pretrained model on a smaller task-specific dataset so it adapts to a new domain with little data.'],
+  ['Prompt engineering', 'Prompt engineering is the practice of writing clear instructions and examples so a language model produces the output you want.'],
+  ['Computer vision', 'Computer vision lets machines interpret images and video, covering tasks like classification, object detection and segmentation.'],
+  ['Object detection', 'Object detection finds and labels every object in an image with a bounding box and a confidence score, in real time on modern models.'],
+  ['TinyML', 'TinyML runs small quantized neural networks on microcontrollers with kilobytes of memory, enabling on-device inference at very low power.'],
+  ['Quantization', 'Quantization stores model weights with fewer bits, such as 8-bit integers instead of 32-bit floats, shrinking the model and speeding up inference.'],
+  ['Hyperparameter tuning', 'Hyperparameter tuning searches settings such as learning rate, depth and regularization strength using grid search, random search or Bayesian optimization.'],
+];
+const STOP = new Set('a an and are as at be by for from has have in is it its of on or that the their then this to with so such can how do does what which when while into than also each every both most more many much not no'.split(' '));
+const stem = w => w.length > 4 && w.endsWith('ing') ? w.slice(0, -3) : w.length > 3 && w.endsWith('ies') ? w.slice(0, -3) + 'y' : w.length > 3 && w.endsWith('es') ? w.slice(0, -2) : w.length > 3 && w.endsWith('ed') ? w.slice(0, -2) : w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w;
+const toks = t => (t.toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => !STOP.has(w)).map(stem);
+
+// ---- build the index ----
+const docTok = DOCS.map(d => toks(d[0] + ' ' + d[0] + ' ' + d[1]));
+const vocab = [...new Set(docTok.flat())].sort(), vi = new Map(vocab.map((w, i) => [w, i])), V = vocab.length, N = DOCS.length;
+const df = new Float64Array(V); docTok.forEach(t => new Set(t).forEach(w => df[vi.get(w)]++));
+const idf = Float64Array.from(df, d => Math.log((N + 1) / (d + 1)) + 1);
+function vec(tokens) {
+  const tf = new Map(); tokens.forEach(w => { if (vi.has(w)) tf.set(w, (tf.get(w) || 0) + 1); });
+  const v = new Float64Array(V); let n = 0;
+  tf.forEach((c, w) => { const i = vi.get(w), x = (1 + Math.log(c)) * idf[i]; v[i] = x; n += x * x; });
+  n = Math.sqrt(n) || 1; for (let i = 0; i < V; i++) v[i] /= n; return v;
+}
+const dvec = docTok.map(vec);
+const dot = (a, b) => { let s = 0; for (let i = 0; i < V; i++) s += a[i] * b[i]; return s; };
+
+// ---- PCA via Gram matrix + power iteration (centred) ----
+const mean = new Float64Array(V); dvec.forEach(v => { for (let i = 0; i < V; i++) mean[i] += v[i] / N; });
+const Xc = dvec.map(v => Float64Array.from(v, (x, i) => x - mean[i]));
+const G = Xc.map(a => Xc.map(b => dot(a, b)));
+function topEigen(M, skip) {
+  let v = Array.from({ length: N }, (_, i) => Math.sin(i * 12.9898 + skip.length * 4.1) + 1.1);
+  for (let it = 0; it < 200; it++) {
+    skip.forEach(([u]) => { const d = v.reduce((s, x, i) => s + x * u[i], 0); v = v.map((x, i) => x - d * u[i]); });
+    const w = M.map(r => r.reduce((s, x, j) => s + x * v[j], 0)), n = Math.hypot(...w) || 1; v = w.map(x => x / n);
+  }
+  const lam = M.map(r => r.reduce((s, x, j) => s + x * v[j], 0)).reduce((s, x, i) => s + x * v[i], 0);
+  return [v, lam];
+}
+const e1 = topEigen(G, []), e2 = topEigen(G, [e1]), EV = [e1, e2];
+const docXY = DOCS.map((_, i) => EV.map(([u, l]) => u[i] * Math.sqrt(Math.max(l, 1e-9))));
+const proj = q => { const c = Float64Array.from(q, (x, i) => x - mean[i]), s = Xc.map(r => dot(r, c)); return EV.map(([u, l]) => s.reduce((a, x, i) => a + x * u[i], 0) / Math.sqrt(Math.max(l, 1e-9))); };
+
+// ---- UI ----
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+let results = [], qxy = null, hot = -1;
+function search() {
+  const qt = toks($('#q').value), q = vec(qt), has = q.some(x => x > 0);
+  results = DOCS.map((d, i) => ({ i, s: has ? dot(q, dvec[i]) : 0 })).sort((a, b) => b.s - a.s);
+  qxy = has ? proj(q) : null;
+  const shown = results.filter(r => r.s > 0.01).slice(0, 8), qset = new Set(qt);
+  $('#cnt').textContent = has ? `${results.filter(r => r.s > 0.01).length} matches` : '';
+  $('#res').innerHTML = shown.length ? shown.map((r, k) => {
+    const d = DOCS[r.i], terms = qt.filter(w => vi.has(w) && dvec[r.i][vi.get(w)] > 0).map(w => [w, q[vi.get(w)] * dvec[r.i][vi.get(w)]]).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const body = esc(d[1]).replace(/[A-Za-z0-9]+/g, w => qset.has(stem(w.toLowerCase())) ? `<mark style="background:rgba(245,158,11,.3);color:inherit;border-radius:4px;padding:0 2px">${w}</mark>` : w);
+    return `<div class="res" data-i="${r.i}" style="padding:.75rem .8rem;margin-bottom:.55rem;border:1px solid var(--line);border-radius:14px;cursor:pointer"><div style="display:flex;justify-content:space-between;gap:.5rem;font-weight:700;font-size:.9rem"><span>${k + 1}. ${esc(d[0])}</span><span class="mono" style="color:var(--b)">${(r.s * 100).toFixed(0)}%</span></div><div class="bar" style="margin:.4rem 0"><i style="width:${Math.min(100, r.s * 140)}%"></i></div><div class="small" style="line-height:1.55">${body}</div><div class="small" style="margin-top:.35rem;color:var(--faint)">matched on: ${terms.map(t => t[0]).join(', ')}</div></div>`;
+  }).join('') : `<div class="small">${has ? 'No document shares a (stemmed) word with that query. That is the limit of lexical search.' : 'Type a query above.'}</div>`;
+  drawMap();
+}
+const map = $('#map');
+function drawMap() {
+  const ctx = map.getContext('2d'), W = map._w, H = map._h; if (!W) return;
+  ctx.clearRect(0, 0, W, H);
+  const xs = docXY.map(p => p[0]).concat(qxy ? [qxy[0]] : []), ys = docXY.map(p => p[1]).concat(qxy ? [qxy[1]] : []);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), pad = 34;
+  const X = x => pad + ((x - x0) / (x1 - x0 || 1)) * (W - pad * 2), Y = y => H - pad - ((y - y0) / (y1 - y0 || 1)) * (H - pad * 2);
+  const top = new Set(results.filter(r => r.s > 0.01).slice(0, 5).map(r => r.i));
+  ctx.font = '11px system-ui,sans-serif'; ctx.textBaseline = 'middle';
+  if (qxy) top.forEach(i => { ctx.beginPath(); ctx.moveTo(X(qxy[0]), Y(qxy[1])); ctx.lineTo(X(docXY[i][0]), Y(docXY[i][1])); ctx.strokeStyle = AI.css('--c1'); ctx.globalAlpha = .35; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; });
+  docXY.forEach((p, i) => {
+    const on = top.has(i) || i === hot; ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), on ? 6.5 : 4.5, 0, 6.3);
+    ctx.fillStyle = AI.css('--a'); ctx.globalAlpha = on ? 1 : .55; ctx.fill(); ctx.globalAlpha = 1;
+    if (on) { ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.fillStyle = AI.css('--text'); const t = DOCS[i][0]; ctx.textAlign = X(p[0]) > W - 110 ? 'right' : 'left'; ctx.fillText(t, X(p[0]) + (ctx.textAlign === 'right' ? -10 : 10), Y(p[1]) - 1); }
+  });
+  if (qxy) { const x = X(qxy[0]), y = Y(qxy[1]); ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillStyle = AI.css('--c1'); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.shadowColor = 'rgba(245,158,11,.7)'; ctx.shadowBlur = 12; ctx.fillRect(-7, -7, 14, 14); ctx.strokeRect(-7, -7, 14, 14); ctx.restore(); }
+}
+$('#q').addEventListener('input', search);
+$('#res').addEventListener('mouseover', e => { const r = e.target.closest('.res'); hot = r ? +r.dataset.i : -1; drawMap(); });
+$('#res').addEventListener('mouseleave', () => { hot = -1; drawMap(); });
+const EX = ['how do models learn from rewards', 'reduce overfitting', 'turn text into vectors', 'run neural networks on microcontrollers', 'find shortest path'];
+$('#ex').innerHTML = EX.map(t => `<button class="chip" data-q="${t}">${t}</button>`).join('');
+$('#ex').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (b) { $('#q').value = b.dataset.q; search(); } });
+AI.fit(map, drawMap); AI.onTheme(search);
+search();
+</script>
+</body>
+</html>

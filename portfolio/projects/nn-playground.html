@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Neural Network Playground — Moiz Ahmad</title>
+<meta name="description" content="Train a neural network live in your browser. Backpropagation written from scratch in JavaScript, with a real-time decision boundary."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Deep Learning · Backpropagation · From scratch</span>
+    <h1>Neural Network Playground</h1>
+    <p class="lead">Pick a dataset, shape a small network, and watch it learn. Every weight update is real: forward pass, backpropagation and gradient descent are hand-written JavaScript running in this tab.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Decision boundary <b id="arch">2 → 6 → 6 → 1</b></div>
+      <canvas id="cv" class="cv sq"></canvas>
+      <div class="legend"><span><i style="background:var(--c1)"></i>Class 1</span><span><i style="background:var(--c0)"></i>Class 0</span><span>● training points</span><span>○ test points (never trained on)</span></div>
+    </div>
+    <div class="card">
+      <div class="card-h">Controls</div>
+      <div class="ctl"><label>Dataset</label><div class="seg" id="dsSeg"></div></div>
+      <div class="ctl"><label>Input features</label><div class="seg" id="featSeg"></div></div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:.6rem">
+        <div class="ctl"><label>Hidden layers</label><select id="layers"><option>1</option><option selected>2</option><option>3</option></select></div>
+        <div class="ctl"><label>Neurons per layer</label><select id="neurons"><option>2</option><option>4</option><option selected>6</option><option>8</option></select></div>
+        <div class="ctl"><label>Activation</label><select id="act"><option>tanh</option><option>relu</option><option>sigmoid</option></select></div>
+        <div class="ctl"><label>Learning rate</label><select id="lr"><option>0.01</option><option selected>0.03</option><option>0.1</option><option>0.3</option></select></div>
+      </div>
+      <div class="ctl"><label>Data noise <output id="noiseO">0.08</output></label><input id="noise" type="range" min="0" max="0.4" step="0.02" value="0.08"/></div>
+      <div class="ctl"><label>Speed <output id="speedO">3 epochs / frame</output></label><input id="speed" type="range" min="1" max="12" step="1" value="3"/></div>
+      <div class="row">
+        <button class="btn primary" id="play">▶ Train</button>
+        <button class="btn" id="stepBtn">Step</button>
+        <button class="btn" id="reset">Reset weights</button>
+        <button class="btn" id="newdata">New data</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:1.1rem">
+    <div class="card">
+      <div class="card-h">Loss over training <b>binary cross-entropy</b></div>
+      <canvas id="loss" class="cv short"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-h">Live metrics</div>
+      <div class="metrics">
+        <div class="metric"><div class="m-val" id="mEp">0</div><div class="m-lab">Epoch</div></div>
+        <div class="metric"><div class="m-val" id="mTrL">–</div><div class="m-lab">Train loss</div></div>
+        <div class="metric"><div class="m-val" id="mTeL">–</div><div class="m-lab">Test loss</div></div>
+        <div class="metric"><div class="m-val" id="mTrA">–</div><div class="m-lab">Train acc</div></div>
+        <div class="metric"><div class="m-val" id="mTeA">–</div><div class="m-lab">Test acc</div></div>
+        <div class="metric"><div class="m-val" id="mPar">0</div><div class="m-lab">Parameters</div></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li>Weights are initialised with Xavier scaling and trained with mini-batch gradient descent (batch size 10) on a 70/30 train/test split.</li>
+      <li>The output neuron is a sigmoid trained with binary cross-entropy; the gradients are derived by hand and applied layer by layer. No ML library is used.</li>
+      <li>Try the spiral with only x and y as inputs: a small network struggles. Add the sin(x), sin(y) features or more neurons and watch the boundary snap into place. Too many neurons on noisy data shows overfitting as test loss rising above train loss.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser, nothing is sent anywhere</footer>
+</main>
+
+<script>
+const { $, clamp, lerp, hex2rgb } = AI;
+const FEATS = { x: ['x', p => p.x], y: ['y', p => p.y], x2: ['x²', p => p.x * p.x], y2: ['y²', p => p.y * p.y], xy: ['x·y', p => p.x * p.y], sx: ['sin x', p => Math.sin(3 * p.x)], sy: ['sin y', p => Math.sin(3 * p.y)] };
+const S = { ds: 'circles', feats: new Set(['x', 'y']), speed: 3, running: false };
+let data = [], train = [], test = [], net = null, epoch = 0, hist = { tr: [], te: [] };
+
+const ACT = {
+  tanh: { f: Math.tanh, d: y => 1 - y * y },
+  relu: { f: x => (x > 0 ? x : 0), d: y => (y > 0 ? 1 : 0) },
+  sigmoid: { f: x => 1 / (1 + Math.exp(-x)), d: y => y * (1 - y) },
+};
+const featKeys = () => ['x', 'y', 'x2', 'y2', 'xy', 'sx', 'sy'].filter(k => S.feats.has(k));
+const vec = p => Float64Array.from(featKeys().map(k => FEATS[k][1](p)));
+
+function makeNet(sizes, act) {
+  const W = [], B = [];
+  for (let l = 0; l < sizes.length - 1; l++) {
+    const n = sizes[l], m = sizes[l + 1], lim = Math.sqrt(6 / (n + m));
+    W.push(Array.from({ length: m }, () => Float64Array.from({ length: n }, () => (Math.random() * 2 - 1) * lim)));
+    B.push(new Float64Array(m));
+  }
+  return { sizes, W, B, act };
+}
+function forward(n, x) {
+  const A = [x], L = n.W.length, f = ACT[n.act].f;
+  for (let l = 0; l < L; l++) {
+    const a = A[l], out = new Float64Array(n.sizes[l + 1]);
+    for (let j = 0; j < out.length; j++) {
+      let s = n.B[l][j]; const w = n.W[l][j];
+      for (let i = 0; i < a.length; i++) s += w[i] * a[i];
+      out[j] = l === L - 1 ? 1 / (1 + Math.exp(-s)) : f(s);
+    }
+    A.push(out);
+  }
+  return A;
+}
+function trainBatch(n, batch, lr) {
+  const L = n.W.length, d = ACT[n.act].d;
+  const gW = n.W.map(m => m.map(r => new Float64Array(r.length))), gB = n.B.map(b => new Float64Array(b.length));
+  for (const q of batch) {
+    const A = forward(n, q.x);
+    let delta = [A[L][0] - q.y];                       // dLoss/dz for sigmoid + cross-entropy
+    for (let l = L - 1; l >= 0; l--) {
+      const a = A[l];
+      for (let j = 0; j < delta.length; j++) { gB[l][j] += delta[j]; for (let i = 0; i < a.length; i++) gW[l][j][i] += delta[j] * a[i]; }
+      if (l > 0) {
+        const nd = new Array(a.length);
+        for (let i = 0; i < a.length; i++) { let s = 0; for (let j = 0; j < delta.length; j++) s += n.W[l][j][i] * delta[j]; nd[i] = s * d(a[i]); }
+        delta = nd;
+      }
+    }
+  }
+  const k = batch.length;
+  for (let l = 0; l < L; l++) for (let j = 0; j < n.W[l].length; j++) { n.B[l][j] -= (lr * gB[l][j]) / k; for (let i = 0; i < n.W[l][j].length; i++) n.W[l][j][i] -= (lr * gW[l][j][i]) / k; }
+}
+function evaluate(set) {
+  let loss = 0, ok = 0;
+  for (const q of set) { const p = forward(net, q.x)[net.W.length][0], c = clamp(p, 1e-7, 1 - 1e-7); loss -= q.y ? Math.log(c) : Math.log(1 - c); if ((p > 0.5) === !!q.y) ok++; }
+  return { loss: loss / set.length, acc: ok / set.length };
+}
+
+function buildData() {
+  const noise = +$('#noise').value;
+  data = AI.shuffle(AI.datasets[S.ds](300, noise));
+  split();
+}
+function split() {
+  const pts = data.map(p => ({ p, x: vec(p), y: p.l }));
+  const k = Math.round(pts.length * 0.7);
+  train = pts.slice(0, k); test = pts.slice(k);
+}
+function resetNet() {
+  if (!S.feats.size) S.feats.add('x'), S.feats.add('y');
+  split();
+  const h = +$('#layers').value, n = +$('#neurons').value, sizes = [featKeys().length, ...Array(h).fill(n), 1];
+  net = makeNet(sizes, $('#act').value);
+  epoch = 0; hist = { tr: [], te: [] };
+  $('#arch').textContent = sizes.join(' → ');
+  $('#mPar').textContent = sizes.slice(1).reduce((s, m, i) => s + m * sizes[i] + m, 0);
+  refresh(true);
+}
+function runEpochs(k) {
+  const lr = +$('#lr').value;
+  for (let e = 0; e < k; e++) {
+    AI.shuffle(train);
+    for (let i = 0; i < train.length; i += 10) trainBatch(net, train.slice(i, i + 10), lr);
+    epoch++;
+  }
+  const tr = evaluate(train), te = evaluate(test);
+  hist.tr.push(tr.loss); hist.te.push(te.loss);
+  if (hist.tr.length > 400) { hist.tr = hist.tr.filter((_, i) => i % 2 === 0); hist.te = hist.te.filter((_, i) => i % 2 === 0); }
+  return { tr, te };
+}
+
+const cv = $('#cv'), off = document.createElement('canvas'), N = 46, RANGE = 1.25;
+off.width = off.height = N;
+const octx = off.getContext('2d');
+function drawBoundary() {
+  const ctx = cv.getContext('2d'), W = cv._w, H = cv._h;
+  if (!W || !net) return;
+  const A = hex2rgb(AI.css('--c1')), B = hex2rgb(AI.css('--c0'));
+  const img = octx.createImageData(N, N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = -RANGE + (2 * RANGE * (i + 0.5)) / N, y = RANGE - (2 * RANGE * (j + 0.5)) / N;
+    const p = forward(net, vec({ x, y }))[net.W.length][0], o = (j * N + i) * 4;
+    img.data[o] = lerp(B[0], A[0], p); img.data[o + 1] = lerp(B[1], A[1], p); img.data[o + 2] = lerp(B[2], A[2], p); img.data[o + 3] = 150;
+  }
+  octx.putImageData(img, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(off, 0, 0, W, H);
+  const px = x => ((x + RANGE) / (2 * RANGE)) * W, py = y => ((RANGE - y) / (2 * RANGE)) * H;
+  const c1 = AI.css('--c1'), c0 = AI.css('--c0');
+  const dot = (q, filled) => {
+    ctx.beginPath(); ctx.arc(px(q.p.x), py(q.p.y), 4.2, 0, 6.3);
+    const col = q.y ? c1 : c0;
+    if (filled) { ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.stroke(); }
+    else { ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.stroke(); }
+  };
+  train.forEach(q => dot(q, true));
+  test.forEach(q => dot(q, false));
+}
+const lossCv = $('#loss');
+function drawLoss() { AI.lineChart(lossCv, [{ data: hist.tr, color: AI.css('--a'), label: 'train' }, { data: hist.te, color: AI.css('--b'), label: 'test' }], { min: 0, xlabel: 'training steps →', empty: 'press Train to start' }); }
+function refresh(force) {
+  drawBoundary(); drawLoss();
+  const tr = evaluate(train), te = evaluate(test);
+  $('#mEp').textContent = epoch;
+  $('#mTrL').textContent = AI.fmt(tr.loss); $('#mTeL').textContent = AI.fmt(te.loss);
+  $('#mTrA').textContent = (tr.acc * 100).toFixed(0) + '%'; $('#mTeA').textContent = (te.acc * 100).toFixed(0) + '%';
+}
+
+// ---- loop ----
+let raf = 0;
+function frame() {
+  if (!S.running) return;
+  runEpochs(S.speed);
+  refresh();
+  raf = requestAnimationFrame(frame);
+}
+function setRunning(v) {
+  S.running = v; $('#play').textContent = v ? '⏸ Pause' : '▶ Train';
+  cancelAnimationFrame(raf); if (v) raf = requestAnimationFrame(frame);
+}
+
+// ---- UI ----
+const dsNames = { circles: 'Circles', xor: 'XOR', spiral: 'Spiral', moons: 'Moons', gauss: 'Blobs' };
+$('#dsSeg').innerHTML = Object.keys(dsNames).map(k => '<button class="chip' + (k === S.ds ? ' on' : '') + '" data-ds="' + k + '">' + dsNames[k] + '</button>').join('');
+$('#featSeg').innerHTML = Object.keys(FEATS).map(k => '<button class="chip' + (S.feats.has(k) ? ' on' : '') + '" data-f="' + k + '">' + FEATS[k][0] + '</button>').join('');
+$('#dsSeg').addEventListener('click', e => { const b = e.target.closest('[data-ds]'); if (!b) return; S.ds = b.dataset.ds; AI.$$('#dsSeg .chip').forEach(c => c.classList.toggle('on', c === b)); buildData(); resetNet(); });
+$('#featSeg').addEventListener('click', e => {
+  const b = e.target.closest('[data-f]'); if (!b) return;
+  const k = b.dataset.f;
+  if (S.feats.has(k) && S.feats.size === 1) return;
+  S.feats.has(k) ? S.feats.delete(k) : S.feats.add(k);
+  b.classList.toggle('on', S.feats.has(k)); resetNet();
+});
+['layers', 'neurons', 'act'].forEach(id => $('#' + id).addEventListener('change', resetNet));
+$('#noise').addEventListener('input', e => { $('#noiseO').textContent = (+e.target.value).toFixed(2); buildData(); resetNet(); });
+$('#speed').addEventListener('input', e => { S.speed = +e.target.value; $('#speedO').textContent = S.speed + (S.speed === 1 ? ' epoch' : ' epochs') + ' / frame'; });
+$('#play').addEventListener('click', () => setRunning(!S.running));
+$('#stepBtn').addEventListener('click', () => { setRunning(false); runEpochs(1); refresh(); });
+$('#reset').addEventListener('click', () => { setRunning(false); resetNet(); });
+$('#newdata').addEventListener('click', () => { buildData(); resetNet(); });
+AI.fit(cv, () => drawBoundary()); AI.fit(lossCv, drawLoss);
+AI.onTheme(() => refresh());
+buildData(); resetNet();
+</script>
+</body>
+</html>

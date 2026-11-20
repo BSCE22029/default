@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Naive Bayes Sentiment Classifier — Moiz Ahmad</title>
+<meta name="description" content="A Naive Bayes text classifier trained live in your browser. Type a review, see the prediction and exactly which words drove it. Add your own training examples."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">NLP · Text Classification · Explainable</span>
+    <h1>Sentiment Classifier from Scratch</h1>
+    <p class="lead">A multinomial Naive Bayes model trained on a small review set, right here in your browser. Type anything and see not just the verdict but the exact words that pushed it there.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Try it <b id="verdict">type a review</b></div>
+      <textarea id="inp" placeholder="e.g. The staff were friendly but the food was cold and not worth the price">The staff were friendly but the food was cold and not worth the price</textarea>
+      <div class="row" style="margin:.7rem 0"><span class="small">Examples:</span>
+        <button class="chip" data-ex="Absolutely loved it, great quality and fast delivery">great</button>
+        <button class="chip" data-ex="Terrible experience, broke after two days and support was rude">terrible</button>
+        <button class="chip" data-ex="It was not bad at all, I would happily buy it again">negation</button>
+      </div>
+      <div class="lab"><span>Probability positive</span><output id="pPos">–</output></div>
+      <div class="bar" style="height:14px"><i id="pBar" style="width:50%"></i></div>
+      <div class="card-h" style="margin:1.1rem 0 .4rem">Word contributions <b>green pushes positive · red pushes negative</b></div>
+      <div id="words" class="small" style="line-height:2.1">–</div>
+    </div>
+    <div class="card">
+      <div class="card-h">Model</div>
+      <div class="metrics">
+        <div class="metric"><div class="m-val" id="mN">0</div><div class="m-lab">Examples</div></div>
+        <div class="metric"><div class="m-val" id="mV">0</div><div class="m-lab">Vocabulary</div></div>
+        <div class="metric"><div class="m-val" id="mAcc">–</div><div class="m-lab">Held-out acc (chance 50%)</div></div>
+      </div>
+      <div class="ctl" style="margin-top:1rem"><label>Laplace smoothing α <output id="aO">1.0</output></label><input id="alpha" type="range" min="0.1" max="3" step="0.1" value="1"/></div>
+      <div class="ctl"><label>Negation handling</label><div class="seg"><button class="chip on" id="neg">On: "not good" → NOT_good</button></div></div>
+      <div class="card-h" style="margin:.4rem 0 .5rem">Most positive / negative words</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:.8rem">
+        <div id="topPos" class="small"></div><div id="topNeg" class="small"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem">
+    <div class="card-h">Training data <b>add your own: the model retrains instantly</b></div>
+    <div class="row"><input id="newTxt" type="text" placeholder="Write a short review…" style="flex:1;min-width:200px"/>
+      <button class="btn" id="addPos">+ Positive</button><button class="btn" id="addNeg">+ Negative</button></div>
+    <div class="scroll" id="list" style="margin-top:.8rem"></div>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li>Training counts how often each word appears in positive and negative examples. Prediction adds up <code>log P(word | class)</code> for every word plus the class prior and picks the larger total: that is Naive Bayes.</li>
+      <li>"Leave-one-out accuracy" retrains the model once per example with that example held out, then tests on it. It is a real estimate of how the model generalises, not a score on training data.</li>
+      <li><b>Honest limits:</b> it is trained on only about 100 short reviews that I wrote for this demo, so expect roughly 60–70% held-out accuracy and plenty of wrong answers on real-world text: most words in a new review were never seen in training. Add your own examples above and watch the number move. Sarcasm and unseen words defeat it. The value of the demo is seeing every step of the maths.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const POS = [
+  'Absolutely loved it, great quality and fast delivery', 'Fantastic service, the staff were friendly and helpful', 'Excellent value for the price, works perfectly',
+  'I am very happy with this purchase, would recommend', 'Beautiful design and really easy to use', 'Great food, lovely atmosphere and quick service',
+  'Best purchase I have made this year, amazing quality', 'The support team solved my problem in minutes, brilliant', 'Super comfortable and well made, I love it',
+  'Delicious meal, friendly waiter, we will definitely come back', 'Works great, setup was simple and fast', 'Wonderful experience from start to finish',
+  'Really impressed, it exceeded my expectations', 'Smooth, reliable and great battery life', 'Perfect fit, great material and arrived early',
+  'Clean, modern and very professional, highly recommended', 'The app is fast and intuitive, I enjoy using it', 'Good quality for the money, very satisfied',
+  'Lovely product, my kids absolutely love it', 'Outstanding customer service, they went above and beyond', 'Worth every penny, truly excellent',
+  'It was not bad at all, surprisingly good', 'Easy to install and works like a charm', 'Great sound, sleek look and a fair price',
+  'Friendly staff, spotless room and a fantastic breakfast', 'Very pleased, it does exactly what it promises', 'Superb quality, I would buy again',
+  'Highly useful, saves me so much time', 'The best coffee in town, cozy and welcoming', 'Happy customer, quick refund and polite support',
+  'I could not be happier with it, brilliant', 'Reliable and sturdy, no complaints at all',
+  'Really enjoyed the movie, the acting was superb',
+  'The hotel was spotless and the view was stunning',
+  'Quick shipping and the packaging was perfect',
+  'Such a helpful guide, clear and well written',
+  'My new phone is fast, smooth and takes beautiful photos',
+  'Great teacher, patient and very knowledgeable',
+  'The pizza was hot, fresh and absolutely delicious',
+  'Never had any problems, it just works',
+  'Pleasantly surprised, much better than I expected',
+  'Gorgeous colours and the fabric feels premium',
+  'Customer service was kind and sorted it out immediately',
+  'I have used it daily for months and it is still perfect',
+  'Fun, engaging and my whole family loved the game',
+  'Cheap but surprisingly sturdy, I am impressed',
+  'Solid build, quiet motor and easy to clean',
+  'Not a single complaint, five stars',
+  'The delivery driver was polite and on time',
+  'Amazing view, comfortable bed, will stay again',
+  'Impressive performance and a very fair price',
+  'Thrilled with the results, thank you',
+];
+const NEG = [
+  'Terrible experience, broke after two days and support was rude', 'Awful quality, a complete waste of money', 'The food was cold and the service was painfully slow',
+  'Very disappointed, it stopped working within a week', 'Not worth the price, the material feels cheap', 'Worst purchase ever, do not buy this',
+  'The staff were rude and unhelpful, never coming back', 'Poor design, confusing and full of bugs', 'It arrived late and damaged, no apology',
+  'Horrible smell, dirty room and noisy neighbours', 'The battery dies in an hour, absolutely useless', 'Overpriced and underwhelming, I regret buying it',
+  'Customer support ignored my emails, very frustrating', 'Slow, buggy and it keeps crashing', 'Cheap plastic that cracked immediately',
+  'Bland food, long wait, and the waiter was annoyed', 'Not good at all, it did not match the description', 'I hate it, returned it the next day',
+  'Disgusting, found hair in my meal', 'Misleading photos, the real thing is much worse', 'Completely broken out of the box, a nightmare to return',
+  'Uncomfortable and badly made, falls apart', 'Unreliable app that loses my data, terrible', 'It was not worth it, boring and way too expensive',
+  'Dirty tables, rude manager and cold coffee', 'The product is a joke, nothing works as promised', 'Total disaster, I want my money back',
+  'Failed after a month and they refused the warranty', 'Annoying ads, slow loading and constant errors', 'Sadly it was a letdown, would not recommend',
+  'Noisy, clumsy and not as advertised', 'Dreadful service and a rip-off',
+  'Boring movie, weak plot and terrible acting',
+  'The hotel was filthy and the staff were unhelpful',
+  'Shipping took three weeks and the box was crushed',
+  'Confusing guide, full of mistakes and hard to follow',
+  'My new phone is slow, hot and the camera is awful',
+  'Bad teacher, impatient and often late',
+  'The pizza was soggy, greasy and tasteless',
+  'Constant problems, it never works properly',
+  'Much worse than I expected, really disappointing',
+  'Ugly colours and the fabric feels scratchy',
+  'Customer service was dismissive and never replied',
+  'Used it for a month and it already stopped working',
+  'Dull, repetitive and my kids got bored in minutes',
+  'Expensive and flimsy, a big mistake',
+  'Cheap build, loud motor and impossible to clean',
+  'Not a good experience, I regret it',
+  'The delivery driver was rude and very late',
+  'Tiny room, uncomfortable bed, will not stay again',
+  'Poor performance and way too pricey',
+  'Furious with the results, avoid',
+];
+let docs = [...POS.map(t => ({ t, l: 1 })), ...NEG.map(t => ({ t, l: 0 }))];
+const NEGW = new Set(['not', 'no', 'never', "don't", "didn't", "doesn't", "wasn't", "isn't", "can't", "couldn't", "won't", 'cannot']);
+const STOP = new Set(['the', 'a', 'an', 'and', 'is', 'it', 'to', 'of', 'this', 'i', 'was', 'in', 'for', 'on', 'with', 'my', 'that', 'be', 'are', 'as', 'at', 'so', 'am', 'were', 'me', 'we', 'they', 'but', 'its', "it's", 'out', 'them']);
+let useNeg = true, alpha = 1, M = null;
+
+function tokens(text) {
+  const raw = (text.toLowerCase().match(/[a-z']+/g) || []), out = []; let flip = 0;
+  for (const w of raw) {
+    if (NEGW.has(w) && useNeg) { flip = 2; out.push(w); continue; }
+    if (STOP.has(w)) continue;
+    out.push(flip > 0 && useNeg ? 'NOT_' + w : w); if (flip > 0) flip--;
+  }
+  return out;
+}
+function counts(set) {
+  const c = [new Map(), new Map()], tot = [0, 0], n = [0, 0];
+  set.forEach(d => { n[d.l]++; tokens(d.t).forEach(w => { c[d.l].set(w, (c[d.l].get(w) || 0) + 1); tot[d.l]++; }); });
+  return { c, tot, n };
+}
+function logp(m, V, w, cl) { return Math.log(((m.c[cl].get(w) || 0) + alpha) / (m.tot[cl] + alpha * V)); }
+function predict(m, V, text, detail) {
+  const ws = tokens(text), N = m.n[0] + m.n[1];
+  let s1 = Math.log((m.n[1] + 1) / (N + 2)), s0 = Math.log((m.n[0] + 1) / (N + 2));
+  const contrib = [];
+  ws.forEach(w => { const a = logp(m, V, w, 1), b = logp(m, V, w, 0); s1 += a; s0 += b; if (detail) contrib.push([w, a - b, (m.c[0].get(w) || 0) + (m.c[1].get(w) || 0)]); });
+  const p = 1 / (1 + Math.exp(s0 - s1));
+  return { p, contrib };
+}
+function train() {
+  M = counts(docs);
+  const vocab = new Set([...M.c[0].keys(), ...M.c[1].keys()]); M.V = vocab.size; M.vocab = vocab;
+  // leave-one-out: subtract the held-out doc's counts, predict it, add them back
+  let ok = 0;
+  docs.forEach(d => {
+    const ws = tokens(d.t); ws.forEach(w => { M.c[d.l].set(w, M.c[d.l].get(w) - 1); }); M.tot[d.l] -= ws.length; M.n[d.l]--;
+    const p = predict(M, M.V, d.t).p; if ((p > .5) === !!d.l) ok++;
+    ws.forEach(w => { M.c[d.l].set(w, M.c[d.l].get(w) + 1); }); M.tot[d.l] += ws.length; M.n[d.l]++;
+  });
+  $('#mN').textContent = docs.length; $('#mV').textContent = M.V; $('#mAcc').textContent = Math.round((ok / docs.length) * 100) + '%';
+  const rank = [...vocab].filter(w => (M.c[0].get(w) || 0) + (M.c[1].get(w) || 0) >= 2).map(w => [w, logp(M, M.V, w, 1) - logp(M, M.V, w, 0)]).sort((a, b) => b[1] - a[1]);
+  const li = (a, col) => a.map(([w, s]) => `<div style="display:flex;justify-content:space-between;gap:.5rem"><span>${esc(w)}</span><span style="color:var(${col});font-family:monospace">${s > 0 ? '+' : ''}${s.toFixed(1)}</span></div>`).join('');
+  $('#topPos').innerHTML = '<b style="color:var(--good)">Positive</b>' + li(rank.slice(0, 7), '--good');
+  $('#topNeg').innerHTML = '<b style="color:var(--bad)">Negative</b>' + li(rank.slice(-7).reverse(), '--bad');
+  analyse(); list();
+}
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function analyse() {
+  const t = $('#inp').value.trim();
+  if (!t || !M) { $('#verdict').textContent = 'type a review'; $('#words').textContent = '–'; $('#pPos').textContent = '–'; $('#pBar').style.width = '50%'; return; }
+  const { p, contrib } = predict(M, M.V, t, true);
+  $('#verdict').innerHTML = p > .5 ? '<span style="color:var(--good)">Positive 👍</span>' : '<span style="color:var(--bad)">Negative 👎</span>';
+  $('#pPos').textContent = (p * 100).toFixed(1) + '%'; $('#pBar').style.width = (p * 100) + '%';
+  const mx = Math.max(1, ...contrib.map(c => Math.abs(c[1])));
+  $('#words').innerHTML = contrib.length ? contrib.map(([w, s, n]) => {
+    const a = Math.min(1, Math.abs(s) / mx), col = s >= 0 ? '52,211,153' : '251,113,133';
+    return `<span class="tok" title="seen ${n}× in training, log-odds ${s.toFixed(2)}" style="background:rgba(${col},${(0.12 + a * 0.5).toFixed(2)});${n === 0 ? 'opacity:.55;border:1px dashed var(--line2)' : ''}">${esc(w)} <small>${s >= 0 ? '+' : ''}${s.toFixed(1)}</small></span>`;
+  }).join('') + '<div class="small" style="margin-top:.4rem">Dashed words were never seen in training, so they contribute nothing.</div>' : '<span class="small">No recognisable words.</span>';
+}
+function list() {
+  $('#list').innerHTML = docs.map((d, i) => `<div style="display:flex;gap:.6rem;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--line);font-size:.83rem"><span class="tok" style="background:${d.l ? 'rgba(52,211,153,.18)' : 'rgba(251,113,133,.18)'};min-width:2.2rem;text-align:center">${d.l ? 'pos' : 'neg'}</span><span style="flex:1">${esc(d.t)}</span><button class="chip" data-del="${i}" aria-label="Delete">×</button></div>`).join('');
+}
+$('#inp').addEventListener('input', analyse);
+AI.$$('[data-ex]').forEach(b => b.addEventListener('click', () => { $('#inp').value = b.dataset.ex; analyse(); }));
+$('#alpha').addEventListener('input', e => { alpha = +e.target.value; $('#aO').textContent = alpha.toFixed(1); train(); });
+$('#neg').addEventListener('click', e => { useNeg = !useNeg; e.target.classList.toggle('on', useNeg); e.target.textContent = useNeg ? 'On: "not good" → NOT_good' : 'Off'; train(); });
+const add = l => { const t = $('#newTxt').value.trim(); if (!t) return; docs.unshift({ t, l }); $('#newTxt').value = ''; train(); };
+$('#addPos').addEventListener('click', () => add(1)); $('#addNeg').addEventListener('click', () => add(0));
+$('#list').addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (b) { docs.splice(+b.dataset.del, 1); train(); } });
+train();
+</script>
+</body>
+</html>

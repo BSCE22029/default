@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Evolving Rockets (Genetic Algorithm) — Moiz Ahmad</title>
+<meta name="description" content="A genetic algorithm evolves a swarm of rockets to reach a target around obstacles you draw. Selection, crossover and mutation, live in your browser."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Evolutionary Computation · Genetic Algorithm</span>
+    <h1>Evolving Rockets</h1>
+    <p class="lead">Generation 1 is pure chaos. Each rocket carries a random "DNA" of thrust commands; the ones that get closest breed, mutate, and slowly learn to steer around your obstacles. No physics knowledge is programmed in.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Simulation <b id="tip">drag to draw obstacles</b></div>
+      <canvas id="cv" class="cv" style="aspect-ratio:16/11;cursor:crosshair"></canvas>
+      <div class="row" style="margin-top:.8rem" id="modes">
+        <button class="chip on" data-m="draw">Draw obstacle</button><button class="chip" data-m="target">Move target</button><button class="chip" id="clr">Clear obstacles</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">Evolution settings</div>
+      <div class="ctl"><label>Mutation rate <output id="muO">0.8%</output></label><input id="mu" type="range" min="0" max="10" step="0.5" value="0.8"/></div>
+      <div class="ctl"><label>Population <output id="popO">60</output></label><input id="pop" type="range" min="20" max="150" step="10" value="60"/></div>
+      <div class="ctl"><label>Speed <output id="spO">3× per frame</output></label><input id="sp" type="range" min="1" max="12" value="3"/></div>
+      <div class="row"><button class="btn primary" id="play">⏸ Pause</button><button class="btn" id="reset">Restart evolution</button></div>
+      <div class="metrics" style="margin-top:1rem">
+        <div class="metric"><div class="m-val" id="mGen">1</div><div class="m-lab">Generation</div></div>
+        <div class="metric"><div class="m-val" id="mHit">0%</div><div class="m-lab">Reached target</div></div>
+        <div class="metric"><div class="m-val" id="mBest">–</div><div class="m-lab">Fastest (frames)</div></div>
+        <div class="metric"><div class="m-val" id="mCrash">0%</div><div class="m-lab">Crashed</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem">
+    <div class="card-h">Share of population reaching the target, per generation</div>
+    <canvas id="chart" class="cv short"></canvas>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li>Each rocket's DNA is an array of 260 thrust vectors, one per frame. Fitness rewards closeness to the target (and speed once it arrives) and punishes crashing.</li>
+      <li>Selection is fitness-proportionate ("roulette wheel", squared to favour the best). Offspring take genes from both parents (single-point crossover); every gene then mutates with the probability you set; the top 5% are always kept unchanged (elitism) and the very best is drawn in amber.</li>
+      <li>Draw a wall right in the way mid-run and watch the population adapt over the next generations. Set mutation to 0% and see evolution stall once diversity is gone.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $, clamp } = AI;
+const LIFE = 260, VW = 800, VH = 550, MAXF = 0.34, MAXV = 6;   // virtual world size
+let pop = [], gen = 1, f = 0, obst = [], target = { x: VW / 2, y: 70, r: 20 }, startP = { x: VW / 2, y: VH - 40 };
+let mode = 'draw', drag = null, running = true, hist = [], lastBest = null, prevBest = null, MU = 0.008;
+obst = [{ x: 150, y: 270, w: 220, h: 22 }, { x: 430, y: 270, w: 220, h: 22 }];
+
+const rv = () => { const a = Math.random() * 6.2832, m = Math.random() * MAXF; return [Math.cos(a) * m, Math.sin(a) * m]; };
+const newRocket = dna => ({ dna: dna || Array.from({ length: LIFE }, rv), x: startP.x, y: startP.y, vx: 0, vy: 0, dead: false, hit: false, t: 0, fit: 0, trail: [] });
+function init() { const n = +$('#pop').value; pop = Array.from({ length: n }, () => newRocket()); gen = 1; f = 0; hist = []; lastBest = null; prevBest = null; stats(); }
+function hitObstacle(x, y) { return obst.some(o => x > o.x && x < o.x + o.w && y > o.y && y < o.y + o.h); }
+function update() {
+  for (const r of pop) {
+    if (r.dead || r.hit) continue;
+    r.vx += r.dna[f][0]; r.vy += r.dna[f][1];
+    const s = Math.hypot(r.vx, r.vy); if (s > MAXV) { r.vx *= MAXV / s; r.vy *= MAXV / s; }
+    r.x += r.vx; r.y += r.vy; r.t = f;
+    if (Math.hypot(r.x - target.x, r.y - target.y) < target.r) { r.hit = true; continue; }
+    if (r.x < 0 || r.x > VW || r.y < 0 || r.y > VH || hitObstacle(r.x, r.y)) r.dead = true;
+  }
+}
+function fitness(r) {
+  const d = Math.hypot(r.x - target.x, r.y - target.y);
+  let fit = 1 / (1 + d * d / 900);
+  if (r.hit) fit = 1.5 + (1 - r.t / LIFE) * 2.5;
+  if (r.dead) fit *= 0.25;
+  return fit;
+}
+function nextGen() {
+  pop.forEach(r => r.fit = fitness(r));
+  const n = pop.length, hit = pop.filter(r => r.hit), crash = pop.filter(r => r.dead).length;
+  hist.push(hit.length / n);
+  const fastest = hit.length ? Math.min(...hit.map(r => r.t)) : null;
+  prevBest = fastest; $('#mBest').textContent = fastest == null ? '–' : fastest;
+  $('#mHit').textContent = Math.round((hit.length / n) * 100) + '%'; $('#mCrash').textContent = Math.round((crash / n) * 100) + '%';
+  const sorted = pop.slice().sort((a, b) => b.fit - a.fit), elite = sorted[0];
+  const w = r => r.fit * r.fit, total = pop.reduce((s, r) => s + w(r), 0), pick = () => { let t = Math.random() * total; for (const r of pop) { t -= w(r); if (t <= 0) return r; } return pop[0]; };
+  const next = sorted.slice(0, Math.max(1, Math.round(n * 0.05))).map((r, i) => { const c = newRocket(r.dna.slice()); c.elite = i === 0; return c; });
+  while (next.length < n) {
+    const a = pick().dna, b = pick().dna, cut = (Math.random() * LIFE) | 0;
+    const dna = a.map((g, i) => (Math.random() < MU ? rv() : i < cut ? g : b[i]));
+    next.push(newRocket(dna));
+  }
+  pop = next; gen++; f = 0; stats();
+}
+function stats() { $('#mGen').textContent = gen; AI.lineChart($('#chart'), [{ data: hist, color: AI.css('--good') }], { min: 0, max: 1, pct: true, xlabel: 'generation →', empty: 'evolving… (needs 2 generations)' }); }
+
+const cv = $('#cv');
+function draw() {
+  const ctx = cv.getContext('2d'), W = cv._w, H = cv._h; if (!W) return;
+  const sx = W / VW, sy = H / VH; ctx.clearRect(0, 0, W, H);
+  ctx.save(); ctx.scale(sx, sy);
+  const grad = ctx.createRadialGradient(target.x, target.y, 4, target.x, target.y, 90); grad.addColorStop(0, 'rgba(52,211,153,.35)'); grad.addColorStop(1, 'rgba(52,211,153,0)');
+  ctx.fillStyle = grad; ctx.fillRect(target.x - 90, target.y - 90, 180, 180);
+  ctx.beginPath(); ctx.arc(target.x, target.y, target.r, 0, 6.3); ctx.fillStyle = AI.css('--good'); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(target.x, target.y, target.r * .45, 0, 6.3); ctx.fillStyle = '#fff'; ctx.fill();
+  obst.concat(drag && drag.w ? [drag] : []).forEach(o => { ctx.beginPath(); ctx.roundRect(o.x, o.y, o.w, o.h, 6); ctx.fillStyle = AI.css('--line2'); ctx.fill(); ctx.strokeStyle = AI.css('--faint'); ctx.lineWidth = 1.5; ctx.stroke(); });
+  ctx.beginPath(); ctx.arc(startP.x, startP.y, 6, 0, 6.3); ctx.fillStyle = AI.css('--muted'); ctx.fill();
+  pop.forEach(r => {
+    const ang = Math.atan2(r.vy, r.vx || .001) + Math.PI / 2;
+    ctx.save(); ctx.translate(r.x, r.y); ctx.rotate(r.vx || r.vy ? ang : 0);
+    ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(5, 7); ctx.lineTo(0, 4); ctx.lineTo(-5, 7); ctx.closePath();
+    ctx.fillStyle = r.hit ? AI.css('--good') : r.dead ? AI.css('--bad') : r.elite ? AI.css('--c1') : AI.css('--a'); ctx.globalAlpha = r.elite ? 1 : r.dead ? .35 : .7; ctx.fill(); ctx.restore();
+  });
+  ctx.restore();
+}
+let raf = 0;
+function loop() {
+  if (running) { const n = +$('#sp').value; for (let i = 0; i < n; i++) { update(); f++; if (f >= LIFE || pop.every(r => r.dead || r.hit)) nextGen(); } }
+  draw(); raf = requestAnimationFrame(loop);
+}
+function pos(e) { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * VW, y: ((e.clientY - r.top) / r.height) * VH }; }
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); const p = pos(e); if (mode === 'target') { target.x = clamp(p.x, 30, VW - 30); target.y = clamp(p.y, 30, VH - 60); hist = []; restartGen(); } else drag = { sx: p.x, sy: p.y, x: p.x, y: p.y, w: 0, h: 0 }; });
+cv.addEventListener('pointermove', e => { if (!drag) return; const p = pos(e); drag.x = Math.min(drag.sx, p.x); drag.y = Math.min(drag.sy, p.y); drag.w = Math.abs(p.x - drag.sx); drag.h = Math.abs(p.y - drag.sy); });
+cv.addEventListener('pointerup', () => { if (drag && drag.w > 12 && drag.h > 8) { obst.push({ x: drag.x, y: drag.y, w: drag.w, h: drag.h }); restartGen(); } drag = null; });
+function restartGen() { pop = pop.map(r => ({ ...newRocket(r.dna) })); f = 0; }
+$('#modes').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  if (b.id === 'clr') { obst = []; restartGen(); return; }
+  mode = b.dataset.m; AI.$$('#modes [data-m]').forEach(c => c.classList.toggle('on', c === b)); $('#tip').textContent = mode === 'draw' ? 'drag to draw obstacles' : 'click to move the target';
+});
+$('#mu').addEventListener('input', e => { MU = e.target.value / 100; $('#muO').textContent = e.target.value + '%'; });
+$('#pop').addEventListener('input', e => { $('#popO').textContent = e.target.value; });
+$('#pop').addEventListener('change', init);
+$('#sp').addEventListener('input', e => $('#spO').textContent = e.target.value + '× per frame');
+$('#play').addEventListener('click', () => { running = !running; $('#play').textContent = running ? '⏸ Pause' : '▶ Resume'; });
+$('#reset').addEventListener('click', init);
+AI.fit(cv, draw); AI.fit($('#chart'), stats); AI.onTheme(() => { draw(); stats(); });
+init(); loop();
+</script>
+</body>
+</html>

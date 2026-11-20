@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BPE Tokenizer Trainer — Moiz Ahmad</title>
+<meta name="description" content="Train a byte-pair-encoding tokenizer on your own text and watch merges build the vocabulary, the same idea behind GPT-style tokenizers."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">LLM Foundations · Tokenization</span>
+    <h1>BPE Tokenizer Trainer</h1>
+    <p class="lead">Language models do not read letters or words; they read tokens. Train a byte-pair-encoding tokenizer on any text, drag the slider, and watch frequent letter pairs fuse into bigger tokens.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Training text <b>edit freely</b></div>
+      <textarea id="txt" style="min-height:150px"></textarea>
+      <div class="ctl" style="margin-top:1rem"><label>Merges learned <output id="mO">20</output></label><input id="merges" type="range" min="0" max="120" value="20"/></div>
+      <div class="metrics">
+        <div class="metric"><div class="m-val" id="mTok">–</div><div class="m-lab">Tokens now</div></div>
+        <div class="metric"><div class="m-val" id="mBase">–</div><div class="m-lab">Start (symbols)</div></div>
+        <div class="metric"><div class="m-val" id="mRatio">–</div><div class="m-lab">Compression</div></div>
+        <div class="metric"><div class="m-val" id="mVoc">–</div><div class="m-lab">Vocabulary</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">Tokens compressing as merges grow</div>
+      <canvas id="curve" class="cv short"></canvas>
+      <div class="card-h" style="margin-top:1rem">Last merges learned</div>
+      <div class="scroll" id="mergeList" style="max-height:150px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem">
+    <div class="card-h">Your text, as tokens <b id="shown"></b></div>
+    <div id="view" style="line-height:2.1"></div>
+    <div class="legend"><span>Each coloured block is one token</span><span>· marks a word boundary</span><span>Bigger blocks = tokens that earned a merge</span></div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem">
+    <div class="card-h">Encode new text with the learned merges</div>
+    <input id="enc" type="text" value="the newest lowering of lowest transformers"/>
+    <div id="encOut" style="margin-top:.7rem;line-height:2.1"></div>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li>This is the actual BPE training loop: start with single characters (plus an end-of-word marker), count every adjacent pair across the text, merge the most frequent pair into a new token, repeat.</li>
+      <li>Encoding new text replays the learned merges in the same order. Words the tokenizer has never seen are still handled, just split into smaller pieces.</li>
+      <li>Production tokenizers (GPT, Llama and others) work on bytes and train on terabytes of text, but the core idea is exactly this. Try training on a tiny text: the merges you get depend entirely on the data.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const SAMPLE = `low low low low low lower lower newest newest newest newest newest newest widest widest widest
+The transformer reads tokens, not words. A tokenizer splits text into tokens, and frequent pieces like "ing", "er" and "the" become single tokens.
+Training a tokenizer is cheap: count the most common pair of symbols, merge it, and repeat. Lowering the lowest, lower the newest.
+Language models predict the next token. Training on more text teaches the tokenizer which pieces of words appear together often, so common words become a single token while rare words are split into smaller pieces. Tokenizing, tokenization and tokenizer share the same stem, which is why a good tokenizer keeps "token" as one piece and adds endings like "izer" or "ization" separately. Networks learn patterns in these pieces: learning, learner and learned all reuse "learn". Smaller vocabularies mean longer sequences, and larger vocabularies mean shorter sequences but more rarely used tokens.`;
+$('#txt').value = SAMPLE;
+const EOW = '</w>';
+let trained = null, hues = new Map();
+
+function train(text, maxMerges) {
+  const freq = new Map();
+  (text.toLowerCase().match(/[\p{L}\p{N}']+|[^\s\p{L}\p{N}']/gu) || []).forEach(w => freq.set(w, (freq.get(w) || 0) + 1));
+  let words = [...freq].map(([w, f]) => ({ s: [...w].concat(EOW), f }));
+  const total = () => words.reduce((a, w) => a + w.s.length * w.f, 0), base = total();
+  const merges = [], counts = [base];
+  for (let m = 0; m < maxMerges; m++) {
+    const pc = new Map();
+    words.forEach(w => { for (let i = 0; i < w.s.length - 1; i++) { const k = w.s[i] + '\u0001' + w.s[i + 1]; pc.set(k, (pc.get(k) || 0) + w.f); } });
+    let best = null, bc = 1; pc.forEach((c, k) => { if (c > bc || (c === bc && best !== null && k < best)) { best = k; bc = c; } });
+    if (!best) break;
+    const [a, b] = best.split('\u0001'), nt = a + b;
+    words.forEach(w => { const o = []; for (let i = 0; i < w.s.length; i++) { if (i < w.s.length - 1 && w.s[i] === a && w.s[i + 1] === b) { o.push(nt); i++; } else o.push(w.s[i]); } w.s = o; });
+    merges.push({ a, b, t: nt, c: bc }); counts.push(total());
+  }
+  return { merges, counts, base, vocab: new Set([...words.flatMap(w => w.s)]) };
+}
+function encodeWord(word, merges, limit) {
+  let s = [...word].concat(EOW);
+  for (let m = 0; m < limit; m++) {
+    const { a, b, t } = merges[m], o = [];
+    for (let i = 0; i < s.length; i++) { if (i < s.length - 1 && s[i] === a && s[i + 1] === b) { o.push(t); i++; } else o.push(s[i]); }
+    s = o;
+  }
+  return s;
+}
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function chip(tok) {
+  const clean = tok.replace(EOW, '·'), multi = [...tok.replace(EOW, '')].length > 1;
+  if (!hues.has(tok)) { let h = 0; for (const ch of tok) h = (h * 31 + ch.codePointAt(0)) % 360; hues.set(tok, h); }
+  const h = hues.get(tok);
+  return `<span class="tok" style="background:hsla(${h},70%,${multi ? 55 : 50}%,${multi ? .3 : .12});${multi ? 'border:1px solid hsla(' + h + ',70%,60%,.5)' : ''}">${esc(clean)}</span>`;
+}
+function render() {
+  const text = $('#txt').value, k = +$('#merges').value;
+  trained = train(text, 120);
+  const used = Math.min(k, trained.merges.length); $('#mO').textContent = used + (used < k ? ' (max reached)' : '');
+  const cnt = trained.counts[used];
+  $('#mTok').textContent = cnt; $('#mBase').textContent = trained.base; $('#mRatio').textContent = (trained.base / cnt).toFixed(2) + '×';
+  // vocabulary at this merge count = distinct tokens in the encoded text
+  const seen = new Set(), view = [];
+  const words = text.toLowerCase().match(/[\p{L}\p{N}']+|[^\s\p{L}\p{N}']/gu) || [];
+  words.forEach((w, i) => { const t = encodeWord(w, trained.merges, used); t.forEach(x => seen.add(x)); if (i < 130) view.push(t.map(chip).join('') + '<span style="display:inline-block;width:.35rem"></span>'); });
+  $('#mVoc').textContent = seen.size;
+  $('#view').innerHTML = view.join(''); $('#shown').textContent = words.length > 130 ? '(first 130 words)' : '';
+  $('#mergeList').innerHTML = trained.merges.slice(0, used).slice(-14).reverse().map((m, i) => `<div style="display:flex;gap:.6rem;align-items:center;padding:.28rem 0;border-bottom:1px solid var(--line);font-size:.8rem"><span class="small" style="width:2rem">#${used - i}</span>${chip(m.a)}<span>+</span>${chip(m.b)}<span>→</span>${chip(m.t)}<span class="small" style="margin-left:auto">×${m.c}</span></div>`).join('') || '<span class="small">Move the slider to learn merges.</span>';
+  AI.lineChart($('#curve'), [{ data: trained.counts, color: AI.css('--a') }], { xlabel: 'merges →', empty: 'type some text' });
+  encode();
+}
+function encode() {
+  if (!trained) return;
+  const used = Math.min(+$('#merges').value, trained.merges.length);
+  const ws = $('#enc').value.toLowerCase().match(/[\p{L}\p{N}']+|[^\s\p{L}\p{N}']/gu) || [];
+  $('#encOut').innerHTML = ws.map(w => encodeWord(w, trained.merges, used).map(chip).join('') + '<span style="display:inline-block;width:.35rem"></span>').join('') || '<span class="small">Type something above.</span>';
+}
+$('#txt').addEventListener('input', render);
+$('#merges').addEventListener('input', render);
+$('#enc').addEventListener('input', encode);
+AI.fit($('#curve'), () => trained && AI.lineChart($('#curve'), [{ data: trained.counts, color: AI.css('--a') }], { xlabel: 'merges →' }));
+AI.onTheme(render);
+render();
+</script>
+</body>
+</html>
