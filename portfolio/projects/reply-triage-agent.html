@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Reply Triage Agent — Moiz Ahmad</title>
+<meta name="description" content="An agent that reads a prospect's reply, classifies intent, extracts dates and contacts, drafts the right response, and updates the pipeline. It honours unsubscribes automatically."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.7rem}
+.field label{font-size:.7rem;font-weight:600;color:var(--muted);letter-spacing:.04em}
+select{width:100%}
+mark{background:color-mix(in srgb,var(--c1) 35%,transparent);color:inherit;border-radius:4px;padding:0 .15rem}
+.intent{display:inline-block;font-size:.8rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:.3rem .8rem;border-radius:99px;color:#fff}
+.i-good{background:#059669}.i-warn{background:#d97706}.i-bad{background:#e11d48}.i-info{background:#6d3df0}.i-mute{background:#64748b}
+.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:.4rem .7rem;font-size:.82rem;margin-top:.8rem}
+.kv span:nth-child(odd){color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding-top:.1rem}
+.act{display:flex;gap:.55rem;align-items:flex-start;font-size:.82rem;padding:.4rem 0;border-bottom:1px solid var(--line)}
+.act i{font-style:normal;color:var(--b);font-weight:800}
+.inbox{width:100%;border-collapse:collapse;font-size:.78rem}
+.inbox td,.inbox th{padding:.45rem .5rem;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.inbox th{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.inbox tr.s{cursor:pointer}.inbox tr.s:hover{background:color-mix(in srgb,var(--a) 8%,transparent)}
+.pill2{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:.15rem .5rem;border-radius:99px;color:#fff;white-space:nowrap}
+.sup{display:flex;justify-content:space-between;gap:.5rem;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--line)}
+.sup button{font-size:.7rem;border:1px solid var(--line2);background:transparent;color:var(--text);border-radius:7px;cursor:pointer}
+textarea.big{min-height:130px}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Agentic AI · Business development · Inbox triage</span>
+    <h1>Reply Triage Agent</h1>
+    <p class="lead">Outreach is only half of business development; the replies are where deals are won or compliance is broken. Paste a prospect's reply and the agent works out what they want, pulls out the dates and contacts, drafts the right answer and updates your pipeline. A request to stop is always honoured.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Incoming reply</div>
+      <div class="two">
+        <div class="field"><label>Lead (from your BD pipeline, or type a name)</label><input id="lead" type="text" list="leads" placeholder="Bella Cucina"/><datalist id="leads"></datalist></div>
+        <div class="field"><label>Their email (for the do-not-contact list)</label><input id="email" type="text" placeholder="sara@bellacucina.example"/></div>
+        <div class="field"><label>Their city (optional, to propose meeting times in their time zone)</label><input id="city" type="text" placeholder="Dubai"/></div>
+        <div class="field"><label>Your starting price, if you want to quote (optional)</label><input id="price" type="text" placeholder="e.g. from $400 for a basic POS"/></div>
+      </div>
+      <div class="field"><label>Your name</label><input id="me" type="text" value="Moiz Ahmad"/></div>
+      <div class="field"><label>Their reply</label><textarea id="msg" class="big" placeholder="Paste the reply here, or pick a sample below."></textarea></div>
+      <div class="legend" id="samples" style="margin-top:0;margin-bottom:.8rem"></div>
+      <div class="row"><button class="btn primary" id="go">Triage this reply</button><button class="btn" id="all">Triage all 10 samples</button></div>
+    </div>
+    <div>
+      <div class="card" id="resCard"><div class="card-h">Agent decision <b id="conf"></b></div><div id="res"><span class="small">Pick a sample or paste a real reply, then press “Triage this reply”.</span></div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem" id="inboxCard" hidden><div class="card-h">Inbox triage <b id="inboxMeta"></b></div><div style="overflow-x:auto"><table class="inbox" id="inbox"></table></div></div>
+
+  <div class="grid g2" style="margin-top:1.1rem">
+    <div class="card"><div class="card-h">Do-not-contact list <b id="supN"></b></div><div id="sup"></div><div class="small" style="margin-top:.5rem">Shared with the <a href="bd-outreach-agent.html" style="color:var(--b)">BD Outreach Agent</a>, which refuses to draft messages to anyone on it. Stored only in this browser.</div></div>
+    <div class="card"><div class="card-h">Pipeline snapshot <b id="pipeN"></b></div><div id="pipe"></div></div>
+  </div>
+
+  <section class="note">
+    <b>What's real here, and what is not</b>
+    <ul>
+      <li><b>Real:</b> pattern-based intent classification with negation handling (“not interested” is not “interested”), entity extraction (emails, phone numbers, dates such as “back on 12 December”, timeframes such as “in 3 weeks”, names after “speak to”), response drafting, and live changes to the shared pipeline and do-not-contact list. A live time-zone lookup lets it propose meeting slots in the prospect's local time.</li>
+      <li><b>Compliance by design:</b> “unsubscribe”, “stop”, and even a bare “no” (which the BD agent's opt-out line promises to honour) put the prospect on the do-not-contact list so no further message can be drafted.</li>
+      <li><b>Not an LLM:</b> it is a rule set I wrote, so it does well on typical replies and says “needs a human” when it is unsure or the message mixes intents. I tested it on the 10 samples below, which I wrote to cover the common cases, not on a large real inbox. Always read a reply yourself before you send a response.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs in your browser, no AI API</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* blocked */ } } };
+const STAGES = ['Drafted', 'Sent', 'Replied', 'Meeting', 'Won', 'Lost'];
+const MON = 'jan feb mar apr may jun jul aug sep oct nov dec'.split(' '), DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const SAMPLES = [
+  ['Interested', "Hi Moiz, this sounds interesting. Could you send over the example you mentioned? We're open to a call next week."],
+  ['Price?', 'Thanks for reaching out. How much would a POS system cost for a single restaurant?'],
+  ['Not now', "Thanks, but we're busy with a renovation right now. Please check back in 3 months."],
+  ['Not interested', "No thanks, we already use a system and are happy with it."],
+  ['Stop', 'Please remove me from your list and do not contact us again.'],
+  ['Just "no"', 'No'],
+  ['Out of office', 'Thank you for your email. I am out of the office on annual leave and will return on 14 December. For urgent matters contact reception@bellacucina.example.'],
+  ['Wrong person', "I'm not the right person for this. Please speak to Ahmed Khan, our operations manager, at ahmed.khan@bellacucina.example."],
+  ['Meeting', "Yes, let's talk. I'm free Tuesday afternoon. My number is +971 50 123 4567."],
+  ['Unclear', 'ok'],
+];
+$('#samples').innerHTML = SAMPLES.map((s, i) => `<button class="chip" data-i="${i}">${esc(s[0])}</button>`).join('');
+
+/* ---------- classification ---------- */
+const RULES = [
+  { id: 'unsub', re: [/\b(unsubscribe|remove me|take me off|opt[- ]?out|leave me alone|stop (emailing|messaging|contacting|texting|sending|writing)|do not (contact|email|message|text)|don'?t (contact|email|message|text)|never (contact|email|message)|reported? (as )?spam)\b/ig, /^\W*(no|nope|no thanks?|no thank you|stop)\W*$/ig], label: 'Unsubscribe / opt-out', cls: 'i-bad' },
+  { id: 'ooo', re: [/\b(out of (the )?office|on (annual |maternity |paternity )?leave|on (vacation|holiday)|auto[- ]?reply|automatic reply|currently away|away (until|from)|will (be )?(back|return)|returning (on|in))\b/ig], label: 'Out of office (auto-reply)', cls: 'i-mute' },
+  { id: 'referral', re: [/\b(wrong person|not the (right|best) person|no longer (with|at|works)|left the company|speak (to|with)|talk (to|with)|reach out to|better (person|contact)|forward(ed)? (this )?to|the person (you|who))\b/ig], label: 'Referral / wrong person', cls: 'i-info' },
+  { id: 'notint', re: [/\b(not interested|no need|don'?t need|do not need|already (have|use|using)|we have (a|an|our)|happy with|no budget|not a (good )?fit|pass on this|no thank(s| you))\b/ig], label: 'Not interested', cls: 'i-bad' },
+  { id: 'notnow', re: [/\b(not (right )?now|not at the moment|maybe later|check back|circle back|revisit|get back to you|next (quarter|month|year|season)|busy (with|right now)|(in|after) (a few|\d+|one|two|three|six) (weeks?|months?))\b/ig], label: 'Not now / follow up later', cls: 'i-warn' },
+  { id: 'price', re: [/\b(price|pricing|cost|how much|quote|budget|rates?|charges?|fees?|affordable)\b/ig], label: 'Pricing question', cls: 'i-info' },
+  { id: 'meet', re: [/\b(let'?s (talk|chat|speak|schedule|set up|jump on)|can we (talk|chat|speak|call|meet)|call me|book (a|the)|schedule (a|the)|(i'?m|we'?re|am) (free|available)|available (on|at|tomorrow|next)|free (on|at|tomorrow|next|monday|tuesday|wednesday|thursday|friday)|how about (monday|tuesday|wednesday|thursday|friday|tomorrow)|my number is)\b/ig], label: 'Meeting / call request', cls: 'i-good' },
+  { id: 'interest', re: [/\b(sounds (good|great|interesting)|(?<!not )(?<!un)interested|tell me more|more (info|information|details)|send (me |us )?(over )?(the |an? )?(example|demo|details|info|information|proposal)|would like to (know|see|learn)|yes\b)/ig], label: 'Interested', cls: 'i-good' },
+  { id: 'question', re: [/\?/g, /\b(what|how|do you|can you|which|who|does it|is it|are you)\b/ig], label: 'Question', cls: 'i-info' },
+];
+const ORDER = ['unsub', 'ooo', 'referral', 'notint', 'notnow', 'meet', 'price', 'interest', 'question'];
+function classify(text) {
+  const hits = {}; RULES.forEach(r => { r.re.forEach(re => { re.lastIndex = 0; let m; while ((m = re.exec(text))) { (hits[r.id] = hits[r.id] || []).push({ s: m.index, e: m.index + m[0].length, t: m[0] }); if (m[0] === '') re.lastIndex++; } }); });
+  const found = ORDER.filter(id => hits[id]);
+  if (!found.length) return { id: 'unclear', label: 'Unclear', cls: 'i-mute', conf: 0.2, hits: [], found: [], review: true, why: 'No known pattern matched.' };
+  let id = found[0];
+  if (found.includes('meet') && found.includes('price')) id = 'meet';
+  if ((found.includes('interest') || found.includes('meet')) && found.includes('notnow') && !found.includes('unsub')) id = 'notnow';
+  const mixed = found.filter(f => !['question'].includes(f)).length > 1 && !['unsub', 'ooo'].includes(id) && !(found.includes('meet') && found.includes('interest'));
+  const wc = text.trim().split(/\s+/).length; let conf = Math.min(0.95, 0.55 + 0.12 * (hits[id] ? hits[id].length : 1) + (['unsub', 'ooo'].includes(id) ? 0.2 : 0)); if (mixed) conf -= 0.2; if (wc < 3 && id !== 'unsub') conf -= 0.25;
+  const r = RULES.find(x => x.id === id);
+  return { id, label: r.label, cls: r.cls, conf: Math.max(0.1, conf), hits: Object.values(hits).flat(), found, review: conf < 0.6 || mixed, why: mixed ? `Mixed signals (${found.map(f => RULES.find(x => x.id === f).label).join(', ')}), so I picked the safest reading and flagged it for a human.` : '' };
+}
+/* ---------- entity extraction ---------- */
+function entities(text) {
+  const out = {}; out.emails = [...new Set(text.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g) || [])]; out.phones = [...new Set((text.match(/\+?\d[\d\s().-]{7,}\d/g) || []).map(s => s.trim()))];
+  const now = new Date(), dates = [];
+  for (const m of text.matchAll(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b(?:,?\s*(\d{4}))?/ig)) dates.push(mk(+m[1], MON.indexOf(m[2].toLowerCase()), m[3], m[0]));
+  for (const m of text.matchAll(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s*(\d{4}))?/ig)) dates.push(mk(+m[2], MON.indexOf(m[1].toLowerCase()), m[3], m[0]));
+  function mk(d, mo, y, raw) { let yr = y ? +y : now.getFullYear(); let dt = new Date(Date.UTC(yr, mo, d)); if (!y && dt < now - 864e5) dt = new Date(Date.UTC(yr + 1, mo, d)); return { raw, ts: dt.getTime() }; }
+  for (const m of text.matchAll(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/ig)) { const t = new Date(); const diff = (DAYS.indexOf(m[1].toLowerCase()) - t.getDay() + 7) % 7 || 7; dates.push({ raw: m[0], ts: Date.UTC(t.getFullYear(), t.getMonth(), t.getDate() + diff) }); }
+  out.dates = dates;
+  const tf = /(?:in|after|for)\s+(a few|\d+|one|two|three|four|six)\s+(weeks?|months?)/i.exec(text); if (tf) { const n = { 'a few': 3, one: 1, two: 2, three: 3, four: 4, six: 6 }[tf[1].toLowerCase()] || +tf[1]; out.after = { raw: tf[0], days: n * (/month/i.test(tf[2]) ? 30 : 7) }; } else if (/next (quarter)/i.test(text)) out.after = { raw: 'next quarter', days: 90 }; else if (/next month/i.test(text)) out.after = { raw: 'next month', days: 30 };
+  const nm = /(?:speak|talk) (?:to|with)\s+((?:mr\.?|ms\.?|mrs\.?|dr\.?)?\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)|reach out to\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/.exec(text); out.name = nm ? (nm[1] || nm[2]).trim() : null;
+  return out;
+}
+const fmtD = ts => new Date(ts).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+/* ---------- decision and drafting ---------- */
+async function geo(city) { if (!city) return null; try { const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en`), d = await r.json(); return d.results && d.results[0]; } catch (e) { return null; } }
+function slots(g) {
+  const fl = new Set(['SA', 'KW', 'BH', 'QA', 'OM', 'YE', 'IQ', 'JO', 'EG']), tz = g ? g.timezone : null, out = []; let t = Date.now();
+  for (let i = 0; i < 14 && out.length < 2; i++) { t += 864e5; const d = new Date(t), wd = d.toLocaleDateString('en-US', { weekday: 'short', timeZone: tz || undefined }); const we = g && fl.has(g.country_code) ? ['Fri', 'Sat'] : ['Sat', 'Sun']; if (we.includes(wd) || i < 1) continue; out.push(d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz || undefined }) + (out.length ? ' at 2:00 pm' : ' at 11:00 am')); }
+  return out;
+}
+async function decide(text, ctx) {
+  const c = classify(text), e = entities(text), g = ctx.city ? await geo(ctx.city) : null, first = ctx.first ? ctx.first : '', hi = first ? `Hi ${first},` : 'Hi,', sign = `\n\nBest,\n${ctx.me}`; let draft = '', actions = [];
+  const lead = ctx.lead || 'this lead';
+  switch (c.id) {
+    case 'unsub': draft = `Understood, I've removed you from my list and you won't hear from me again. Apologies for the interruption.${sign}`; actions = [{ t: 'suppress', d: `Add ${esc(lead)}${ctx.email ? ' (' + esc(ctx.email) + ')' : ''} to the do-not-contact list` }, { t: 'stage', to: 5, d: 'Move lead to Lost' }, { t: 'info', d: 'Send no further messages or follow-ups. Cancel any scheduled ones.' }]; break;
+    case 'ooo': { const back = e.dates[0]; const when = back ? back.ts + 2 * 864e5 : Date.now() + 7 * 864e5; draft = ''; actions = [{ t: 'info', d: 'No reply needed. Do not respond to auto-replies.' }, { t: 'followup', ts: when, d: back ? `Re-send after they return: ${fmtD(when)} (two days after ${esc(back.raw)})` : `No return date found. Retry in a week: ${fmtD(when)}` }]; if (e.emails.length) actions.push({ t: 'info', d: `Alternative contact in the auto-reply: ${esc(e.emails.join(', '))}` }); break; }
+    case 'referral': draft = `${hi}\n\nThank you for pointing me in the right direction${e.name ? ', I will reach out to ' + e.name : ''}. I appreciate it and will keep it brief.${sign}`; actions = [{ t: 'stage', to: 2, d: 'Mark as Replied' }]; if (e.emails.length) actions.push({ t: 'referral', email: e.emails[0], name: e.name, d: `Add referral ${esc(e.name || '')} <${esc(e.emails[0])}> as a new lead (draft a fresh intro mentioning the referral)` }); else actions.push({ t: 'info', d: 'No email in the reply. Ask for the contact details or find them yourself.' }); break;
+    case 'notint': draft = `${hi}\n\nThank you for letting me know, and for the quick reply. I won't follow up further. If things change, you know where to find me.${sign}`; actions = [{ t: 'stage', to: 5, d: 'Move lead to Lost' }, { t: 'info', d: 'Stop the sequence. (They did not ask to be blocked, so they are not added to the do-not-contact list, but do not re-pitch soon.)' }]; break;
+    case 'notnow': { const days = e.after ? e.after.days : 60, ts = Date.now() + days * 864e5; draft = `${hi}\n\nThanks for the honest reply, that makes sense. I'll check back ${e.after ? 'in ' + e.after.raw.replace(/^(in|after|for)\s+/i, '') : 'in a couple of months'}. If it helps in the meantime, I'm happy to send a short example so you have it when the time is right.${sign}`; actions = [{ t: 'stage', to: 2, d: 'Mark as Replied' }, { t: 'followup', ts, d: `Follow up on ${fmtD(ts)}${e.after ? ' (' + esc(e.after.raw) + ')' : ' (default 60 days)'}` }]; break; }
+    case 'price': draft = `${hi}\n\nGood question. ${ctx.price ? 'Projects like this typically start ' + ctx.price.replace(/^\s*/, '') + ', with the final figure depending on scope.' : 'The cost depends on scope, so I would rather give you a real number than a vague range.'} Could you tell me roughly how many staff would use it and whether you need it to work offline? With that I can send a clear quote.${sign}`; actions = [{ t: 'stage', to: 2, d: 'Mark as Replied' }, { t: 'info', d: ctx.price ? 'Quoted a starting price from your input. Check it before sending.' : 'No starting price set, so the draft asks scoping questions instead of inventing a number.' }]; break;
+    case 'meet': { const s = slots(g), ph = e.phones[0]; draft = `${hi}\n\nGreat, thank you. ${e.dates.length ? 'You mentioned ' + e.dates[0].raw + '. ' : ''}Would ${s[0] || 'tomorrow at 11:00 am'} or ${s[1] || 'the day after at 2:00 pm'}${g ? ' (your time, ' + esc(g.timezone) + ')' : ''} work for a 15-minute call?${ph ? ' I can reach you on ' + ph + '.' : ''} If neither suits, send me a time that does.${sign}`; actions = [{ t: 'stage', to: 3, d: 'Move lead to Meeting' }, { t: 'info', d: g ? `Slots are in ${esc(g.timezone)}.` : 'No city given, so slots are in your own time zone. Add their city to get local times.' }]; break; }
+    case 'interest': draft = `${hi}\n\nThank you, glad it caught your eye. I'll put together a short example for ${lead} and send it over today. If a quick call is easier, tell me what time suits you.${sign}`; actions = [{ t: 'stage', to: 2, d: 'Mark as Replied' }, { t: 'info', d: 'Promised an example, so make sure to send it.' }]; break;
+    case 'question': draft = `${hi}\n\nThanks for asking. [Answer their question here: ${esc(text.length > 70 ? text.slice(0, 70) + '…' : text)}]\n\nHappy to explain further on a short call if that is easier.${sign}`; actions = [{ t: 'stage', to: 2, d: 'Mark as Replied' }, { t: 'info', d: 'I cannot answer questions about your business for you. Fill in the bracket yourself.' }]; break;
+    default: actions = [{ t: 'info', d: 'I could not tell what they want. Read it yourself before doing anything.' }];
+  }
+  return { c, e, g, draft, actions };
+}
+/* ---------- applying actions to shared state ---------- */
+function applyActions(res, ctx) {
+  const log = [], pipe = store.get('bd_pipeline', []), sup = store.get('bd_suppress', []); let lead = pipe.find(p => p.biz.toLowerCase() === (ctx.lead || '').toLowerCase());
+  if (!lead && ctx.lead) { lead = { id: Date.now(), biz: ctx.lead, city: ctx.city || '', chan: 'email', email: ctx.email, stage: 1 }; pipe.push(lead); log.push(`Created lead “${ctx.lead}” in the pipeline.`); }
+  res.actions.forEach(a => {
+    if (a.t === 'suppress') { if (!sup.some(s => s.biz.toLowerCase() === (ctx.lead || '').toLowerCase() && (s.email || '') === (ctx.email || ''))) sup.push({ biz: ctx.lead || '(unnamed)', email: ctx.email || '', reason: res.c.id === 'unsub' ? 'asked to stop' : 'opted out', at: Date.now() }); log.push('Added to the do-not-contact list.'); }
+    if (a.t === 'stage' && lead) { lead.stage = a.to; log.push(`Moved to ${STAGES[a.to]}.`); }
+    if (a.t === 'followup' && lead) { lead.next = a.ts; log.push(`Follow-up set for ${fmtD(a.ts)}.`); }
+    if (a.t === 'referral') { pipe.push({ id: Date.now() + 1, biz: (a.name || 'Referral') + ' (via ' + (ctx.lead || 'referral') + ')', city: ctx.city || '', chan: 'email', email: a.email, stage: 0 }); log.push(`Added referral ${a.email}.`); }
+  });
+  store.set('bd_pipeline', pipe); store.set('bd_suppress', sup); return log;
+}
+/* ---------- UI ---------- */
+const ctxNow = () => ({ lead: $('#lead').value.trim(), email: $('#email').value.trim(), city: $('#city').value.trim(), price: $('#price').value.trim(), me: $('#me').value.trim() || 'Moiz', first: '' });
+function highlight(text, hits) { const hs = [...hits].sort((a, b) => a.s - b.s); let out = '', p = 0; hs.forEach(h => { if (h.s < p || h.e <= h.s) return; out += esc(text.slice(p, h.s)) + '<mark>' + esc(text.slice(h.s, h.e)) + '</mark>'; p = h.e; }); return out + esc(text.slice(p)); }
+let cur = null;
+async function triage() {
+  const text = $('#msg').value.trim(); if (!text) { $('#res').innerHTML = '<span class="small">Paste a reply first.</span>'; return; }
+  const ctx = ctxNow(); $('#res').innerHTML = '<span class="small">Reading the reply…</span>'; const res = await decide(text, ctx); cur = { res, ctx, text };
+  const c = res.c, e = res.e, ents = [];
+  if (e.emails.length) ents.push(['Emails', e.emails.map(esc).join(', ')]); if (e.phones.length) ents.push(['Phones', e.phones.map(esc).join(', ')]); if (e.dates.length) ents.push(['Dates', e.dates.map(d => esc(d.raw) + ' → ' + fmtD(d.ts)).join('; ')]); if (e.after) ents.push(['Timeframe', esc(e.after.raw)]); if (e.name) ents.push(['Name', esc(e.name)]);
+  $('#conf').textContent = `confidence ${(c.conf * 100).toFixed(0)}%`;
+  $('#res').innerHTML = `<span class="intent ${c.cls}">${esc(c.label)}</span>${c.review ? ' <span class="small" style="color:var(--c1);font-weight:700">needs a human look</span>' : ''}<div class="bar" style="margin:.7rem 0"><i style="width:${c.conf * 100}%"></i></div>
+  <div class="small" style="margin-bottom:.6rem">${c.why ? esc(c.why) + '<br>' : ''}Matched phrases are highlighted: <span style="color:var(--text)">${highlight(text, c.hits)}</span></div>
+  ${ents.length ? `<div class="kv">${ents.map(([k, v]) => `<span>${k}</span><span>${v}</span>`).join('')}</div>` : ''}
+  <div class="card-h" style="margin-top:1rem">Recommended actions</div>${res.actions.map(a => `<div class="act"><i>${a.t === 'info' ? '•' : '→'}</i><span>${a.d}</span></div>`).join('')}
+  ${res.draft ? `<div class="card-h" style="margin-top:1rem">Draft reply <b>edit before sending</b></div><textarea id="draft" class="big">${esc(res.draft)}</textarea><div class="row" style="margin-top:.6rem"><button class="btn" id="cp">Copy</button>${ctx.email ? '<button class="btn" id="gm">Open in Gmail</button>' : ''}</div>` : '<div class="small" style="margin-top:.8rem">No reply should be sent for this one.</div>'}
+  <div class="row" style="margin-top:1rem"><button class="btn primary" id="apply">Apply actions to pipeline</button><span class="small" id="applied"></span></div>`;
+}
+$('#res').addEventListener('click', async e => {
+  if (!cur) return;
+  if (e.target.id === 'cp') { try { await navigator.clipboard.writeText($('#draft').value); e.target.textContent = 'Copied'; } catch (x) { e.target.textContent = 'Copy failed'; } }
+  if (e.target.id === 'gm') window.open(`https://mail.google.com/mail/u/0/?view=cm&fs=1&tf=1&to=${encodeURIComponent(cur.ctx.email)}&su=${encodeURIComponent('Re: your reply')}&body=${encodeURIComponent($('#draft').value)}`, '_blank', 'noopener');
+  if (e.target.id === 'apply') { const log = applyActions(cur.res, cur.ctx); $('#applied').textContent = log.length ? log.join(' ') : 'Nothing to change.'; e.target.disabled = true; side(); }
+});
+async function all() {
+  $('#inboxCard').hidden = false; const rows = []; const counts = {};
+  for (const [name, text] of SAMPLES) { const r = await decide(text, { ...ctxNow(), city: '' }); rows.push({ name, text, r }); counts[r.c.label] = (counts[r.c.label] || 0) + 1; }
+  $('#inbox').innerHTML = '<tr><th>Reply</th><th>Agent decision</th><th>Conf.</th><th>First action</th></tr>' + rows.map((x, i) => `<tr class="s" data-i="${i}"><td>${esc(x.text.length > 70 ? x.text.slice(0, 70) + '…' : x.text)}</td><td><span class="pill2 ${x.r.c.cls}">${esc(x.r.c.label)}</span>${x.r.c.review ? ' <span class="small">review</span>' : ''}</td><td>${(x.r.c.conf * 100).toFixed(0)}%</td><td>${x.r.actions[0].d}</td></tr>`).join('');
+  $('#inboxMeta').textContent = `${rows.length} replies, ${rows.filter(x => x.r.c.review).length} flagged for a human`;
+}
+$('#inbox').addEventListener('click', e => { const t = e.target.closest('tr.s'); if (t) { $('#msg').value = SAMPLES[+t.dataset.i][1]; triage(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+function side() {
+  const sup = store.get('bd_suppress', []), pipe = store.get('bd_pipeline', []); $('#supN').textContent = sup.length ? sup.length + ' blocked' : 'empty';
+  $('#sup').innerHTML = sup.length ? sup.map((s, i) => `<div class="sup"><span>${esc(s.biz)}${s.email ? ' · ' + esc(s.email) : ''} <span class="small">(${esc(s.reason)})</span></span><button data-rm="${i}">remove</button></div>`).join('') : '<span class="small">Nobody yet. Triage the “Stop” sample and apply the actions to see it fill.</span>';
+  $('#pipeN').textContent = pipe.length + ' lead' + (pipe.length === 1 ? '' : 's'); $('#pipe').innerHTML = pipe.length ? pipe.map(p => `<div class="sup"><span>${esc(p.biz)}${p.next ? ' <span class="small">· next ' + fmtD(p.next) + '</span>' : ''}</span><b style="color:var(--b);font-size:.74rem">${STAGES[p.stage]}</b></div>`).join('') : '<span class="small">Empty. Add leads in the BD Outreach Agent, or apply actions here to create one.</span>';
+  $('#leads').innerHTML = pipe.map(p => `<option value="${esc(p.biz)}">`).join('');
+}
+$('#sup').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (!b) return; const s = store.get('bd_suppress', []); s.splice(+b.dataset.rm, 1); store.set('bd_suppress', s); side(); });
+$('#samples').onclick = e => { const b = e.target.closest('[data-i]'); if (b) { $('#msg').value = SAMPLES[+b.dataset.i][1]; triage(); } };
+$('#go').onclick = triage; $('#all').onclick = all;
+side();
+window.__tri = { classify, entities, decide, SAMPLES };
+</script>
+</body>
+</html>

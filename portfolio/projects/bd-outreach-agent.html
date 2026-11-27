@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BD Outreach Agent — Moiz Ahmad</title>
+<meta name="description" content="A business-development agent that researches a prospect's location and time zone, drafts personalised outreach, checks it for compliance, and schedules follow-ups. Nothing is sent automatically."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.7rem}
+.field label{font-size:.7rem;font-weight:600;color:var(--muted);letter-spacing:.04em}
+select{width:100%}
+.step{display:grid;grid-template-columns:86px minmax(0,1fr);gap:.6rem;padding:.5rem .65rem;border:1px solid var(--line);border-radius:12px;background:var(--bg2);font-size:.82rem;animation:pop .25s both}
+:root[data-theme="light"] .step{background:#fff}
+@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.step .b{font-size:.6rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--a);padding-top:.15rem}
+.step.act .b{color:var(--b)}.step.obs .b{color:var(--c1)}.step.bad .b{color:var(--bad)}.step.ok .b{color:var(--good)}
+.tr{display:flex;flex-direction:column;gap:.4rem;max-height:340px;overflow:auto}
+.draft{border:1px solid var(--line);border-radius:14px;padding:.8rem .9rem;background:var(--bg2);margin-bottom:.7rem}
+:root[data-theme="light"] .draft{background:#fff}
+.draft h4{font-size:.7rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:.5rem;align-items:center;margin-bottom:.5rem}
+.draft pre{white-space:pre-wrap;font-family:inherit;font-size:.84rem;line-height:1.55;overflow-wrap:anywhere}
+.ck{display:flex;gap:.55rem;align-items:flex-start;font-size:.8rem;padding:.3rem 0;border-bottom:1px solid var(--line)}
+.ck i{font-style:normal;font-weight:800;width:1rem;flex:none}.ck.p i{color:var(--good)}.ck.f i{color:var(--bad)}.ck.w i{color:var(--c1)}
+.seq{display:grid;grid-template-columns:70px minmax(0,1fr);gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--line);font-size:.8rem}
+.seq b{color:var(--b);font-family:ui-monospace,Consolas,monospace;font-size:.75rem}
+.board{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:.6rem;overflow-x:auto;padding-bottom:.4rem}
+.col{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:.6rem;min-height:110px}
+:root[data-theme="light"] .col{background:#fff}
+.col h5{font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem}
+.lead{border:1px solid var(--line2);border-radius:10px;padding:.45rem .55rem;font-size:.76rem;margin-bottom:.4rem;background:var(--card)}
+.lead b{display:block}.lead .m{display:flex;gap:.3rem;margin-top:.3rem}
+.lead button{font-size:.7rem;padding:.1rem .45rem;border:1px solid var(--line2);border-radius:7px;background:transparent;color:var(--text);cursor:pointer}
+.lead button:hover{border-color:var(--a);color:var(--a)}
+.warn{padding:.7rem .9rem;border:1px solid var(--bad);border-radius:12px;color:var(--bad);font-size:.84rem;margin-bottom:.8rem}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Agentic AI · Business development · Outreach</span>
+    <h1>BD Outreach Agent</h1>
+    <p class="lead">Give it a prospect. The agent looks up where they are and what time it is there, picks an angle for their industry, drafts the message for the channel you choose, checks it against anti-spam rules, and plans the follow-ups. It never sends anything: you review and click.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Prospect brief <button class="chip" id="fill">Fill example</button></div>
+      <div class="two">
+        <div class="field"><label>Your name</label><input id="me" type="text" value="Moiz Ahmad"/></div>
+        <div class="field"><label>Your company</label><input id="co" type="text" value="Atronm Technologies"/></div>
+      </div>
+      <div class="field"><label>What you offer</label><select id="svc"><option value="pos">POS and inventory systems</option><option value="software">Custom business software</option><option value="ai">AI chatbot and automation</option><option value="web">Website and online ordering</option></select></div>
+      <div class="field"><label>One line of proof (optional, only claims you can back up)</label><input id="proof" type="text" placeholder="e.g. I build POS and inventory software for small shops."/></div>
+      <div class="field"><label>Postal address for the email footer (needed for email under CAN-SPAM and CASL)</label><input id="addr" type="text" placeholder="street, city, postal code, country"/></div>
+      <hr style="border:0;border-top:1px solid var(--line);margin:.4rem 0 .8rem"/>
+      <div class="two">
+        <div class="field"><label>Business name</label><input id="biz" type="text" placeholder="Bella Cucina"/></div>
+        <div class="field"><label>Contact first name (optional)</label><input id="first" type="text" placeholder="Sara"/></div>
+        <div class="field"><label>Industry</label><select id="ind"></select></div>
+        <div class="field"><label>City</label><input id="city" type="text" placeholder="Dubai"/></div>
+        <div class="field"><label>Channel</label><select id="chan"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="linkedin">LinkedIn note</option></select></div>
+        <div class="field"><label>Tone</label><select id="tone"><option value="friendly">Friendly</option><option value="formal">Formal</option></select></div>
+        <div class="field"><label>Contact email (optional)</label><input id="email" type="text" placeholder="sara@bellacucina.example"/></div>
+        <div class="field"><label>Phone for WhatsApp (optional)</label><input id="phone" type="text" placeholder="+971501234567"/></div>
+      </div>
+      <div class="field"><label>Something specific you noticed about them (optional, makes it far less generic)</label><input id="obs" type="text" placeholder="e.g. I saw you take orders by phone and WhatsApp only."/></div>
+      <button class="btn primary" id="run" style="width:100%">Run the BD agent</button>
+    </div>
+    <div>
+      <div class="card"><div class="card-h">Agent trace <b id="status">idle</b></div><div class="tr" id="tr"><span class="small">Fill the brief (or press “Fill example”) and run the agent.</span></div></div>
+      <div class="card" id="researchCard" hidden><div class="card-h">Research (live lookup)</div><div id="research"></div></div>
+    </div>
+  </div>
+
+  <div id="out" hidden>
+    <div class="grid g2" style="margin-top:1.1rem">
+      <div class="card"><div class="card-h">Drafts <b id="dMeta"></b></div><div id="drafts"></div></div>
+      <div>
+        <div class="card"><div class="card-h">Compliance check <b id="ckScore"></b></div><div id="checks"></div><div class="small" style="margin-top:.6rem">Rule-based checks, not legal advice. Rules differ by country.</div></div>
+        <div class="card"><div class="card-h">Follow-up plan <b id="seqTz"></b></div><div id="seq"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem">
+    <div class="card-h">Pipeline <b id="pipeMeta"></b></div>
+    <div class="board" id="board"></div>
+    <div class="small" style="margin-top:.6rem">Stored only in this browser (localStorage). The <a href="reply-triage-agent.html" style="color:var(--b)">Reply Triage Agent</a> shares this pipeline and the do-not-contact list: anyone who unsubscribes there is blocked here.</div>
+  </div>
+
+  <section class="note">
+    <b>What's real here, and what is not</b>
+    <ul>
+      <li><b>Real:</b> the city is looked up live (Open-Meteo geocoding) to get the prospect's country and time zone, and the send times, business-day logic and weekend rules are computed from that. The compliance checker, word counts, follow-up dates and pipeline are real code. Drafts are checked against a do-not-contact list that the triage agent also writes to.</li>
+      <li><b>Not an LLM, and no web scraping:</b> the writing comes from industry and service templates plus the details you type, so it is only as personalised as your brief. Browsers block reading other companies' websites, so the agent does not research the business itself; the “something you noticed” field is where real research goes.</li>
+      <li><b>Nothing is sent.</b> “Open in Gmail” and “Open in WhatsApp” only open a pre-filled compose window in your own account, and you press send. I would still send one message at a time to people who plausibly want what you sell.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs in your browser, one geocoding call, no AI API</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+/* ---- storage shared with the triage agent ---- */
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage blocked */ } } };
+const STAGES = ['Drafted', 'Sent', 'Replied', 'Meeting', 'Won', 'Lost'];
+/* ---- knowledge tables ---- */
+const IND = {
+  restaurant: { label: 'Restaurant or cafe', plural: 'restaurants and cafes', tasks: 'orders, stock and daily sales', inbound: 'menu, booking and delivery questions', online: 'ordering', action: 'order' },
+  retail: { label: 'Retail shop', plural: 'retail shops', tasks: 'stock, sales and customer credit', inbound: 'price and availability questions', online: 'ordering', action: 'order' },
+  clinic: { label: 'Clinic or dental practice', plural: 'clinics', tasks: 'appointments, patient records and billing', inbound: 'appointment and opening-hours questions', online: 'appointment booking', action: 'book' },
+  realestate: { label: 'Real estate agency', plural: 'real estate agencies', tasks: 'listings, enquiries and follow-ups', inbound: 'listing and viewing enquiries', online: 'enquiry forms', action: 'enquire' },
+  logistics: { label: 'Logistics or courier', plural: 'logistics companies', tasks: 'shipments, drivers and invoices', inbound: 'tracking and quote requests', online: 'quote requests', action: 'request a quote' },
+  professional: { label: 'Law or accounting firm', plural: 'professional firms', tasks: 'client files, deadlines and billing', inbound: 'new-client enquiries', online: 'consultation booking', action: 'book a consultation' },
+  school: { label: 'School or academy', plural: 'schools and academies', tasks: 'enrolment, attendance and fees', inbound: 'admission and fee questions', online: 'enrolment', action: 'enrol' },
+  ecom: { label: 'E-commerce brand', plural: 'online brands', tasks: 'orders, stock and returns', inbound: 'order-status and returns questions', online: 'checkout', action: 'buy' },
+};
+const SVC = {
+  pos: (i) => `a POS and inventory system so ${i.tasks} are tracked automatically`,
+  software: (i) => `custom software that keeps ${i.tasks} in one place`,
+  ai: (i) => `an AI assistant that answers ${i.inbound} on WhatsApp and your website`,
+  web: (i) => `a fast website with online ${i.online} so customers can ${i.action} without calling`,
+};
+$('#ind').innerHTML = Object.keys(IND).map(k => `<option value="${k}">${IND[k].label}</option>`).join('');
+const FRISAT = new Set(['SA', 'KW', 'BH', 'QA', 'OM', 'YE', 'IQ', 'JO', 'EG', 'DZ', 'LY', 'SD', 'SY']);
+const SPAM = ['free money', 'act now', 'limited time', 'guarantee', '100%', 'winner', 'urgent', 'click here', 'no obligation', 'risk-free', 'make money', 'buy now', '!!!'];
+
+/* ---- time helpers (no libraries) ---- */
+function tzOffset(ts, tz) { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }).formatToParts(new Date(ts)).map(x => [x.type, x.value])); return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - ts; }
+function zoned(y, m, d, h, mi, tz) { const g = Date.UTC(y, m, d, h, mi); let t = g - tzOffset(g, tz); t = g - tzOffset(t, tz); return t; }
+function localParts(ts, tz) { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', weekday: 'short' }).formatToParts(new Date(ts)).map(x => [x.type, x.value])); return { y: +p.year, m: +p.month - 1, d: +p.day, h: +p.hour, mi: +p.minute, wd: p.weekday }; }
+const fmtLocal = (ts, tz) => new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(ts));
+const isWeekend = (wd, cc) => (FRISAT.has(cc) ? wd === 'Fri' || wd === 'Sat' : wd === 'Sat' || wd === 'Sun');
+function nextBusinessSlot(afterTs, tz, cc, hour = 10) {
+  let lp = localParts(afterTs, tz), day = new Date(Date.UTC(lp.y, lp.m, lp.d));
+  for (let i = 0; i < 20; i++) { const ts = zoned(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hour, 0, tz), wd = localParts(ts, tz).wd; if (ts > afterTs && !isWeekend(wd, cc)) return ts; day = new Date(day.getTime() + 864e5); }
+  return afterTs;
+}
+
+/* ---- drafting ---- */
+const wc = s => (s.trim().match(/\S+/g) || []).length;
+function draft(b, geo, slotLabel) {
+  const i = IND[b.ind], value = SVC[b.svc](i), formal = b.tone === 'formal';
+  const hi = b.first ? (formal ? `Dear ${b.first},` : `Hi ${b.first},`) : formal ? 'Dear Sir or Madam,' : 'Hi,';
+  const sign = formal ? 'Kind regards,' : 'Best,';
+  const who = `I'm ${b.me} from ${b.co}.`;
+  const obs = b.obs ? b.obs.replace(/\s*\.?$/, '.') + ' ' : '';
+  const proof = b.proof ? b.proof.replace(/\s*\.?$/, '.') + ' ' : '';
+  const optout = `If this isn't relevant, just reply "no" and I won't contact you again.`;
+  const footer = b.addr ? `\n\n${b.me} · ${b.co}\n${b.addr}` : `\n\n${b.me} · ${b.co}`;
+  const D = {};
+  if (b.chan === 'email') {
+    D.A = { subj: `${i.label.split(' or ')[0]} in ${b.city}: quick question`, body: `${hi}\n\n${obs}${who} I help ${i.plural} in ${b.city} with ${value}.\n\n${proof}Would it be useful if I sent a two-minute example of how this could work for ${b.biz}?\n\n${optout}\n\n${sign}\n${b.me}${footer}` };
+    D.B = { subj: `An idea for ${b.biz}`, body: `${hi}\n\n${obs}${who} I build ${value}.\n\n${proof}I can put together a short demo around ${b.biz} so you can see it before deciding anything. Open to a 15-minute call ${slotLabel ? 'around ' + slotLabel : 'this week'}?\n\n${optout}\n\n${sign}\n${b.me}${footer}` };
+  } else if (b.chan === 'whatsapp') {
+    D.A = { body: `${formal ? 'Hello' : 'Hi'} ${b.first || ''}${b.first ? ',' : ''} ${who} ${obs}I help ${i.plural} in ${b.city} with ${value}. Would you like a quick example for ${b.biz}? (Reply "no" and I won't message again.)`.replace(/\s+/g, ' ') };
+    D.B = { body: `${formal ? 'Hello' : 'Hi'} ${b.first || 'there'}, ${b.me} here (${b.co}). ${proof}I can show ${b.biz} ${value.replace(/^an? /, 'how ')}. Free to look at a short demo? (Reply "no" to opt out.)`.replace(/\s+/g, ' ') };
+  } else {
+    D.A = { body: `${hi.replace(',', '')} ${b.me} here. I help ${i.plural} in ${b.city} with ${value}. Would be glad to connect.` };
+    D.B = { body: `${hi.replace(',', '')} I work with ${i.plural} on ${i.tasks}. Open to connecting?` };
+  }
+  return D;
+}
+function followups(b, first, geo) {
+  const i = IND[b.ind]; const msgs = [
+    { day: 0, t: 'Initial message' },
+    { day: 3, t: `Short bump: "Hi${b.first ? ' ' + b.first : ''}, just floating this back up in case it got buried. Happy to send the example for ${b.biz} if useful."` },
+    { day: 7, t: `Add value: share one concrete idea for ${i.tasks} at ${b.biz}, no ask beyond "worth a look?".` },
+    { day: 14, t: `Polite close: "I'll stop here so I don't clutter your inbox. If ${i.tasks} ever become a headache, I'm easy to find."` },
+  ];
+  return msgs.map((m, k) => ({ ...m, ts: k ? nextBusinessSlot(first + m.day * 864e5 - 36e5, geo.timezone, geo.country_code, 10) : first }));
+}
+function checks(b, D, geo, nowOk) {
+  const out = [], txt = Object.values(D.A).join(' ') + ' ' + Object.values(D.B).join(' '), sup = store.get('bd_suppress', []);
+  const add = (s, t) => out.push({ s, t });
+  const hit = sup.find(x => (b.email && x.email && x.email.toLowerCase() === b.email.toLowerCase()) || x.biz.toLowerCase() === b.biz.toLowerCase());
+  add(hit ? 'f' : 'p', hit ? `On the do-not-contact list (${esc(hit.reason || 'unsubscribed')}). Do not message.` : 'Not on the do-not-contact list.');
+  add(b.me && b.co ? 'p' : 'f', 'Sender is identified by name and company.');
+  if (b.chan === 'email') {
+    add(b.addr ? 'p' : 'f', b.addr ? 'Postal address is in the footer (required by CAN-SPAM and CASL).' : 'No postal address. Email footers need one under CAN-SPAM and CASL; add it above.');
+    add(/reply "no"|unsubscribe|opt out/i.test(D.A.body) ? 'p' : 'f', 'Contains a clear way to opt out.');
+    const s = D.A.subj + D.B.subj; add(!/[A-Z]{5,}|!|RE:|FWD:/.test(s) ? 'p' : 'f', 'Subject is honest: no ALL CAPS, exclamation marks or fake "RE:".');
+  } else add('w', 'Message people one at a time and only on numbers they list for business. Never bulk-send.');
+  const spam = SPAM.filter(w => txt.toLowerCase().includes(w)); add(spam.length ? 'f' : 'p', spam.length ? `Spam-trigger phrases found: ${spam.join(', ')}.` : 'No spam-trigger phrases.');
+  const limit = { email: 125, whatsapp: 70, linkedin: 55 }[b.chan]; const w = Math.max(wc(D.A.body), wc(D.B.body)); add(w <= limit ? 'p' : 'w', `Length ${w} words (target at most ${limit} for ${b.chan}).`);
+  if (b.chan === 'linkedin') add(Math.max(D.A.body.length, D.B.body.length) <= 300 ? 'p' : 'f', `Connection notes are capped at 300 characters (yours: ${Math.max(D.A.body.length, D.B.body.length)}).`);
+  add(nowOk ? 'p' : 'w', nowOk ? 'It is business hours there now.' : 'It is outside their business hours now. The plan schedules the send for their next morning.');
+  add(b.obs ? 'p' : 'w', b.obs ? 'Includes a specific observation about the prospect.' : 'No specific observation: the message will read as generic. Add one.');
+  return out;
+}
+
+/* ---- UI helpers ---- */
+const step = (cls, b, html) => { const e = $('#tr').querySelector('.small'); if (e) e.remove(); const d = document.createElement('div'); d.className = 'step ' + cls; d.innerHTML = `<span class="b">${b}</span><div>${html}</div>`; $('#tr').appendChild(d); $('#tr').scrollTop = 1e6; };
+const brief = () => ({ me: $('#me').value.trim(), co: $('#co').value.trim(), svc: $('#svc').value, proof: $('#proof').value.trim(), addr: $('#addr').value.trim(), biz: $('#biz').value.trim(), first: $('#first').value.trim(), ind: $('#ind').value, city: $('#city').value.trim(), chan: $('#chan').value, tone: $('#tone').value, email: $('#email').value.trim(), phone: $('#phone').value.replace(/[^\d]/g, ''), obs: $('#obs').value.trim() });
+let current = null;
+async function run() {
+  const b = brief(); $('#tr').innerHTML = ''; $('#out').hidden = true; $('#researchCard').hidden = true;
+  if (!b.biz || !b.city) { step('bad', 'Stop', 'I need at least the business name and the city.'); return; }
+  $('#status').textContent = 'working…'; $('#run').disabled = true;
+  try {
+    step('', 'Thought', `Goal: ${{ email: 'an email', whatsapp: 'a WhatsApp message', linkedin: 'a LinkedIn note' }[b.chan]} to ${esc(b.biz)} (${IND[b.ind].label.toLowerCase()}) in ${esc(b.city)}, offering ${esc($('#svc').selectedOptions[0].text)}. First I check the do-not-contact list, then look up where they are.`); await sleep(350);
+    const sup = store.get('bd_suppress', []), hit = sup.find(x => (b.email && x.email && x.email.toLowerCase() === b.email.toLowerCase()) || x.biz.toLowerCase() === b.biz.toLowerCase());
+    step('act', 'Action', `<code>check_suppression_list</code> (${sup.length} entr${sup.length === 1 ? 'y' : 'ies'})`); await sleep(250);
+    if (hit) { step('bad', 'Blocked', `${esc(b.biz)} asked not to be contacted (${esc(hit.reason || 'unsubscribed')}). I will not draft anything. Remove them from the list only if they asked to be re-added.`); $('#status').textContent = 'blocked'; return; }
+    step('obs', 'Observation', 'Clear: not on the list.'); await sleep(250);
+    step('act', 'Action', `<code>geocode</code> <code>GET geocoding-api.open-meteo.com … name=${esc(b.city)}</code>`);
+    let geo; const t0 = performance.now();
+    try { const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(b.city)}&count=1&language=en`); const d = await r.json(); geo = d.results && d.results[0]; step('obs', 'Observation', `HTTP ${r.status} <span class="small">· ${Math.round(performance.now() - t0)} ms</span> ${geo ? '· ' + esc(geo.name) + ', ' + esc(geo.country || '') + ', ' + esc(geo.timezone) : '· no match'}`); } catch (e) { step('bad', 'Error', `Lookup failed (${esc(e.message)}).`); }
+    if (!geo) { step('bad', 'Stop', `I could not locate “${esc(b.city)}”, so I cannot work out their time zone or business hours. Check the spelling or try a bigger nearby city.`); $('#status').textContent = 'stopped'; return; }
+    const now = Date.now(), lp = localParts(now, geo.timezone), weekend = isWeekend(lp.wd, geo.country_code), nowOk = !weekend && lp.h >= 9 && lp.h < 17;
+    $('#researchCard').hidden = false; $('#research').innerHTML = `<div class="ck p"><i>•</i><span><b>${esc(geo.name)}, ${esc(geo.country || '')}</b> (${esc(geo.country_code || '')}), timezone ${esc(geo.timezone)}${geo.population ? ', population about ' + geo.population.toLocaleString() : ''}.</span></div><div class="ck p"><i>•</i><span>Local time now: <b>${fmtLocal(now, geo.timezone)}</b> (${nowOk ? 'inside' : 'outside'} business hours).</span></div><div class="ck p"><i>•</i><span>Weekend assumed for ${esc(geo.country_code)}: ${FRISAT.has(geo.country_code) ? 'Friday and Saturday' : 'Saturday and Sunday'}.</span></div>`;
+    step('', 'Thought', `${esc(geo.name)} is in ${esc(geo.timezone)}. It is ${fmtLocal(now, geo.timezone)} there, so ${nowOk ? 'I could send now, but mid-morning is better' : 'it is outside business hours'}. I will schedule for 10:00 their time on the next working day.`); await sleep(350);
+    const slot = nextBusinessSlot(now, geo.timezone, geo.country_code, 10), slotLabel = fmtLocal(slot, geo.timezone).replace(/,/, '');
+    step('act', 'Action', `<code>pick_angle</code> industry=${b.ind}, service=${b.svc}`); await sleep(250);
+    step('obs', 'Observation', `Angle: “${esc(SVC[b.svc](IND[b.ind]))}” for ${esc(IND[b.ind].plural)}.`); await sleep(250);
+    const D = draft(b, geo, slotLabel); step('act', 'Action', `<code>write_drafts</code> channel=${b.chan}, tone=${b.tone} (2 variants for A/B testing)`); await sleep(250);
+    const ck = checks(b, D, geo, nowOk), fails = ck.filter(c => c.s === 'f').length; step(fails ? 'bad' : 'ok', fails ? 'Check' : 'Check', `Compliance check: ${ck.filter(c => c.s === 'p').length} passed, ${fails} failed, ${ck.filter(c => c.s === 'w').length} warnings.`); await sleep(250);
+    const seq = followups(b, slot, geo); step('ok', 'Done', `${seq.length}-step sequence planned. Review the drafts below, then send manually. ${fails ? '<b>Fix the failed checks first.</b>' : ''}`);
+    current = { b, geo, D, ck, seq, slot };
+    render(); $('#status').textContent = 'finished';
+  } finally { $('#run').disabled = false; }
+}
+const copy = async (txt, btn) => { try { await navigator.clipboard.writeText(txt); const o = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => (btn.textContent = o), 1200); } catch (e) { btn.textContent = 'Copy failed'; } };
+function render() {
+  const { b, geo, D, ck, seq } = current, fails = ck.filter(c => c.s === 'f').length;
+  $('#out').hidden = false; $('#dMeta').textContent = `${b.chan} · ${b.tone}`;
+  $('#drafts').innerHTML = ['A', 'B'].map(k => { const d = D[k], full = (d.subj ? 'Subject: ' + d.subj + '\n\n' : '') + d.body; return `<div class="draft"><h4><span>Variant ${k} · ${wc(d.body)} words</span><span><button class="chip" data-copy="${k}">Copy</button> <button class="chip" data-open="${k}">${b.chan === 'email' ? 'Open in Gmail' : b.chan === 'whatsapp' ? 'Open in WhatsApp' : ''}</button></span></h4><pre>${d.subj ? `<b>Subject:</b> ${esc(d.subj)}\n\n` : ''}${esc(d.body)}</pre></div>`; }).join('') + `<div class="row"><button class="btn primary" id="addPipe">Add to pipeline</button></div>`;
+  $('#drafts').querySelectorAll('[data-open]').forEach(x => x.hidden = b.chan === 'linkedin');
+  $('#checks').innerHTML = ck.map(c => `<div class="ck ${c.s}"><i>${c.s === 'p' ? '✓' : c.s === 'f' ? '✕' : '!'}</i><span>${c.t}</span></div>`).join(''); $('#ckScore').textContent = fails ? `${fails} to fix` : 'clear to send'; $('#ckScore').style.color = fails ? 'var(--bad)' : 'var(--good)';
+  $('#seqTz').textContent = 'times shown in ' + geo.timezone; $('#seq').innerHTML = seq.map(s => `<div class="seq"><b>Day ${s.day}</b><div><b style="font-family:inherit;color:var(--text)">${fmtLocal(s.ts, geo.timezone)}</b> (${fmtLocal(s.ts, Intl.DateTimeFormat().resolvedOptions().timeZone)} your time)<div class="small">${esc(s.t)}</div></div></div>`).join('');
+}
+$('#drafts').addEventListener('click', e => {
+  if (!current) return; const { b, D } = current, c = e.target.closest('[data-copy]'), o = e.target.closest('[data-open]');
+  if (c) { const d = D[c.dataset.copy]; copy((d.subj ? 'Subject: ' + d.subj + '\n\n' : '') + d.body, c); }
+  if (o) { const d = D[o.dataset.open]; const url = b.chan === 'email' ? `https://mail.google.com/mail/u/0/?view=cm&fs=1&tf=1&to=${encodeURIComponent(b.email)}&su=${encodeURIComponent(d.subj || '')}&body=${encodeURIComponent(d.body)}` : `https://wa.me/${b.phone}?text=${encodeURIComponent(d.body)}`; window.open(url, '_blank', 'noopener'); }
+  if (e.target.id === 'addPipe') { const p = store.get('bd_pipeline', []); p.push({ id: Date.now(), biz: b.biz, city: b.city, chan: b.chan, email: b.email, stage: 0, tz: current.geo.timezone, next: current.slot }); store.set('bd_pipeline', p); board(); e.target.textContent = 'Added'; e.target.disabled = true; }
+});
+function board() {
+  const p = store.get('bd_pipeline', []), sup = store.get('bd_suppress', []); $('#pipeMeta').textContent = `${p.length} lead${p.length === 1 ? '' : 's'} · ${sup.length} do-not-contact`;
+  $('#board').innerHTML = STAGES.map((s, i) => `<div class="col"><h5>${s} (${p.filter(x => x.stage === i).length})</h5>${p.filter(x => x.stage === i).map(x => `<div class="lead"><b>${esc(x.biz)}</b>${esc(x.city)} · ${esc(x.chan)}<div class="m">${i > 0 ? `<button data-mv="${x.id}:-1">←</button>` : ''}${i < 5 ? `<button data-mv="${x.id}:1">→</button>` : ''}<button data-rm="${x.id}">✕</button></div></div>`).join('')}</div>`).join('');
+}
+$('#board').addEventListener('click', e => { const m = e.target.closest('[data-mv]'), r = e.target.closest('[data-rm]'); let p = store.get('bd_pipeline', []); if (m) { const [id, d] = m.dataset.mv.split(':'); p = p.map(x => (x.id == id ? { ...x, stage: Math.max(0, Math.min(5, x.stage + +d)) } : x)); } if (r) p = p.filter(x => x.id != r.dataset.rm); store.set('bd_pipeline', p); board(); });
+$('#run').onclick = run;
+$('#fill').onclick = () => { Object.entries({ biz: 'Bella Cucina', first: 'Sara', city: 'Dubai', email: 'sara@bellacucina.example', obs: 'I noticed you take orders by phone and WhatsApp only.', proof: 'I build POS and inventory software for small businesses.', addr: '12 Example Street, Lahore, Pakistan' }).forEach(([k, v]) => ($('#' + k).value = v)); $('#ind').value = 'restaurant'; $('#svc').value = 'pos'; };
+board();
+window.__bd = { nextBusinessSlot, zoned, localParts, draft, checks };
+</script>
+</body>
+</html>

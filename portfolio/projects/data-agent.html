@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Live Data Agent — Moiz Ahmad</title>
+<meta name="description" content="An agent that answers questions by calling real public APIs: weather, exchange rates, Wikipedia, Hacker News and GitHub. Every call, status code and latency is shown."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.trace{display:flex;flex-direction:column;gap:.5rem;max-height:560px;overflow:auto;padding-right:.3rem}
+.trace::-webkit-scrollbar{width:8px}.trace::-webkit-scrollbar-thumb{background:var(--line2);border-radius:99px}
+.step{display:grid;grid-template-columns:92px minmax(0,1fr);gap:.7rem;align-items:start;padding:.6rem .7rem;border:1px solid var(--line);border-radius:14px;background:var(--bg2);animation:pop .28s ease both}
+:root[data-theme="light"] .step{background:#fff}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.badge{font-size:.62rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:.25rem .5rem;border-radius:8px;text-align:center;line-height:1.2}
+.s-thought .badge{background:color-mix(in srgb,var(--a) 18%,transparent);color:var(--a)}
+.s-action .badge{background:color-mix(in srgb,var(--b) 18%,transparent);color:var(--b)}
+.s-obs .badge{background:color-mix(in srgb,var(--c1) 18%,transparent);color:var(--c1)}
+.s-obs.err .badge{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.s-answer{border-color:color-mix(in srgb,var(--good) 55%,transparent)}
+.s-answer .badge{background:color-mix(in srgb,var(--good) 20%,transparent);color:var(--good)}
+.s-body{font-size:.86rem;min-width:0;overflow-wrap:anywhere}
+.s-body code{background:var(--canvas);border:1px solid var(--line);border-radius:7px;padding:.1rem .4rem;font-size:.74rem}
+.s-body .ms{color:var(--faint);font-size:.72rem}
+.ans{font-size:.92rem;line-height:1.6}.ans p{margin:.25rem 0}
+.src a{color:var(--b);font-size:.74rem;word-break:break-all}
+@media(max-width:560px){.step{grid-template-columns:1fr;gap:.35rem}.badge{justify-self:start;padding:.2rem .6rem}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Agentic AI · Real-world tools · Live data</span>
+    <h1>Live Data Agent</h1>
+    <p class="lead">Ask about the weather, money, people or tech news and the agent goes out and fetches the answer from real public APIs, live, from your browser. Every request, status code and response time is on the trace.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Ask the agent <b id="status">idle</b></div>
+      <div class="row" style="flex-wrap:nowrap"><input id="q" type="text" placeholder="e.g. Weather in Lahore and convert 100 USD to PKR" autocomplete="off"/><button class="btn primary" id="run">Run</button></div>
+      <div class="legend" style="margin-top:.8rem" id="ex"></div>
+      <div class="card-h" style="margin-top:1rem">Agent trace</div>
+      <div class="trace" id="trace"><div class="small" id="empty">Pick an example, or ask your own. You can combine several questions with “and”.</div></div>
+    </div>
+    <div>
+      <div class="card"><div class="card-h">Run metrics</div><div class="metrics">
+        <div class="metric"><div class="m-val" id="mCalls">0</div><div class="m-lab">API calls</div></div>
+        <div class="metric"><div class="m-val" id="mMs">0</div><div class="m-lab">Total ms</div></div>
+        <div class="metric"><div class="m-val" id="mCache">0</div><div class="m-lab">Cache hits</div></div>
+        <div class="metric"><div class="m-val" id="mFail">0</div><div class="m-lab">Failures</div></div></div></div>
+      <div class="card"><div class="card-h">Tools (all live, no API keys)</div><div id="tools"></div></div>
+      <div class="card"><div class="card-h">Answer <b id="ansN"></b></div><div class="ans" id="ans"><span class="small">The final answer and its sources appear here.</span></div></div>
+    </div>
+  </div>
+
+  <section class="note">
+    <b>What's real here, and what is not</b>
+    <ul>
+      <li><b>Real:</b> every number comes from a live HTTP request made by your browser to a public API: Open-Meteo (geocoding and weather), ExchangeRate-API (rates), Wikipedia, Hacker News and GitHub. Nothing is mocked or cached on my side. Results change as the world changes.</li>
+      <li><b>Real agent behaviour:</b> the agent picks tools, chains them (find the city's coordinates, then fetch its weather, then read its local time), caches repeated calls within the session, retries a failed request once, and reports honestly when an API is down or a place is not found.</li>
+      <li><b>Not an LLM:</b> the part that reads your question and chooses tools is a set of rules I wrote, so it understands weather, time, currency, Wikipedia lookups, Hacker News and GitHub repo questions, and nothing else. In a production agent, a language model would make that choice and these same tools would run underneath.</li>
+      <li>Free public APIs have rate limits (GitHub allows 60 requests an hour per IP). If one is busy the agent will say so.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs in your browser, calls public APIs directly, no AI API</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const WMO = { 0: 'clear sky', 1: 'mostly clear', 2: 'partly cloudy', 3: 'overcast', 45: 'fog', 48: 'freezing fog', 51: 'light drizzle', 53: 'drizzle', 55: 'heavy drizzle', 61: 'light rain', 63: 'rain', 65: 'heavy rain', 71: 'light snow', 73: 'snow', 75: 'heavy snow', 80: 'rain showers', 81: 'rain showers', 82: 'violent rain showers', 95: 'thunderstorm', 96: 'thunderstorm with hail', 99: 'thunderstorm with hail' };
+const CUR = { usd: 'USD', dollar: 'USD', dollars: 'USD', gbp: 'GBP', pound: 'GBP', pounds: 'GBP', eur: 'EUR', euro: 'EUR', euros: 'EUR', pkr: 'PKR', rupee: 'PKR', rupees: 'PKR', aed: 'AED', dirham: 'AED', dirhams: 'AED', sar: 'SAR', riyal: 'SAR', riyals: 'SAR', inr: 'INR', cad: 'CAD', aud: 'AUD', jpy: 'JPY', yen: 'JPY', cny: 'CNY', kwd: 'KWD', qar: 'QAR', bhd: 'BHD', try: 'TRY', chf: 'CHF' };
+const cache = new Map(); let st;
+const TOOLS = { geocode: 'Open-Meteo geocoding', weather: 'Open-Meteo forecast', time: 'local time from timezone', fx: 'ExchangeRate-API rates', wiki: 'Wikipedia summary', hn: 'Hacker News top stories', github: 'GitHub repository stats' };
+$('#tools').innerHTML = Object.keys(TOOLS).map(k => `<div style="display:flex;justify-content:space-between;gap:.6rem;padding:.4rem 0;border-bottom:1px solid var(--line);font-size:.8rem"><div><b style="font-family:ui-monospace,Consolas,monospace;color:var(--b)">${k}()</b><div class="small">${TOOLS[k]}</div></div><b id="tc-${k}">0</b></div>`).join('');
+const tcount = {}; const bump = k => { tcount[k] = (tcount[k] || 0) + 1; $('#tc-' + k).textContent = tcount[k]; };
+
+/* ---------- trace ---------- */
+function add(cls, badge, html, extra = '') { const e = $('#empty'); if (e) e.remove(); const d = document.createElement('div'); d.className = 'step ' + cls + extra; d.innerHTML = `<span class="badge">${badge}</span><div class="s-body">${html}</div>`; $('#trace').appendChild(d); $('#trace').scrollTop = 1e6; }
+const thought = t => add('s-thought', 'Thought', esc(t));
+async function http(tool, url, parse = 'json') {
+  bump(tool);
+  if (cache.has(url)) { st.cache++; add('s-action', 'Action', `<code>${tool}</code> <code>GET ${esc(url)}</code>`); add('s-obs', 'Cache', 'Same request already made this session, reusing the response.'); $('#mCache').textContent = st.cache; return cache.get(url); }
+  add('s-action', 'Action', `<code>${tool}</code> <code>GET ${esc(url)}</code>`); st.calls++; $('#mCalls').textContent = st.calls;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const t0 = performance.now();
+    try {
+      const r = await fetch(url, { headers: { Accept: 'application/json' } }), ms = Math.round(performance.now() - t0); st.ms += ms; $('#mMs').textContent = st.ms;
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json(); add('s-obs', 'Observation', `HTTP ${r.status} OK <span class="ms">· ${ms} ms</span>`); cache.set(url, data); return data;
+    } catch (e) {
+      st.fail++; $('#mFail').textContent = st.fail;
+      if (attempt === 1) { add('s-obs', 'Error', `Request failed (${esc(e.message)}). Retrying once.`, ' err'); await sleep(500); st.calls++; $('#mCalls').textContent = st.calls; } else { add('s-obs', 'Error', `Failed again (${esc(e.message)}). Giving up on this call.`, ' err'); return null; }
+    }
+  }
+}
+
+/* ---------- tools ---------- */
+async function geocode(place) {
+  const d = await http('geocode', `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1&language=en`);
+  if (!d) return null; if (!d.results || !d.results.length) { thought(`No place called “${place}” was found by the geocoder.`); return null; }
+  const r = d.results[0]; thought(`Found ${r.name}, ${r.country || r.admin1 || ''} at ${r.latitude.toFixed(2)}, ${r.longitude.toFixed(2)} (timezone ${r.timezone}).`); return r;
+}
+const localTime = tz => new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }).format(new Date());
+async function weather(place) {
+  const g = await geocode(place); if (!g) return { line: `I could not find “${place}”, so I have no weather for it.` };
+  const w = await http('weather', `https://api.open-meteo.com/v1/forecast?latitude=${g.latitude}&longitude=${g.longitude}&current=temperature_2m,apparent_temperature,wind_speed_10m,relative_humidity_2m,weather_code&timezone=auto`);
+  if (!w) return { line: `The weather service did not respond for ${g.name}.` };
+  const c = w.current; return { line: `<b>${esc(g.name)}${g.country ? ', ' + esc(g.country) : ''}</b>: ${c.temperature_2m}°C (feels ${c.apparent_temperature}°C), ${WMO[c.weather_code] || 'unknown conditions'}, humidity ${c.relative_humidity_2m}%, wind ${c.wind_speed_10m} km/h. Local time ${localTime(w.timezone)}.`, src: 'https://open-meteo.com/' };
+}
+async function timeIn(place) {
+  const g = await geocode(place); if (!g) return { line: `I could not find “${place}”.` };
+  bump('time'); thought(`The geocoder returned the IANA timezone ${g.timezone}, so I can compute the local time in the browser without another request.`);
+  const t = localTime(g.timezone); add('s-obs', 'Observation', `Local time computed with Intl.DateTimeFormat: ${esc(t)}`); return { line: `It is <b>${esc(t)}</b> in ${esc(g.name)}${g.country ? ', ' + esc(g.country) : ''} (${esc(g.timezone)}).` };
+}
+async function fx(amount, from, to) {
+  const d = await http('fx', `https://open.er-api.com/v6/latest/${from}`); if (!d || d.result !== 'success') return { line: `The exchange rate service is not available right now.` };
+  const rate = d.rates[to]; if (!rate) { thought(`The service has no rate for ${to}.`); return { line: `I could not find a rate for ${to}.` }; }
+  const v = amount * rate; return { line: `<b>${amount.toLocaleString()} ${from} ≈ ${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${to}</b> (1 ${from} = ${rate} ${to}, rates updated ${esc(d.time_last_update_utc.slice(0, 16))} UTC). Indicative rate, not a bank rate.`, src: 'https://www.exchangerate-api.com/' };
+}
+async function wiki(topic) {
+  const d = await http('wiki', `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic.trim().replace(/ /g, '_'))}?redirect=true`);
+  if (!d) return { line: `I could not reach Wikipedia for “${topic}”.` }; if (d.type === 'disambiguation') return { line: `“${esc(topic)}” is ambiguous on Wikipedia. Be more specific.` };
+  if (!d.extract) return { line: `Wikipedia has no page called “${esc(topic)}”.` };
+  const s = d.extract.length > 420 ? d.extract.slice(0, 420).replace(/\s\S*$/, '') + '…' : d.extract; return { line: `<b>${esc(d.title)}</b>: ${esc(s)}`, src: d.content_urls && d.content_urls.desktop.page };
+}
+async function hn(n) {
+  const ids = await http('hn', 'https://hacker-news.firebaseio.com/v0/topstories.json'); if (!ids) return { line: 'Hacker News did not respond.' };
+  const items = []; for (const id of ids.slice(0, n)) { const it = await http('hn', `https://hacker-news.firebaseio.com/v0/item/${id}.json`); if (it) items.push(it); }
+  if (!items.length) return { line: 'Could not read any stories.' };
+  return { line: `<b>Top ${items.length} on Hacker News right now</b><br>` + items.map((s, i) => `${i + 1}. ${esc(s.title)} <span class="small">(${s.score} points)</span>`).join('<br>'), src: 'https://news.ycombinator.com/' };
+}
+async function github(repo) {
+  const d = await http('github', `https://api.github.com/repos/${repo}`); if (!d) return { line: `GitHub did not respond (it may be rate limiting this IP).` };
+  if (d.message) return { line: `GitHub says: ${esc(d.message)}.` };
+  return { line: `<b>${esc(d.full_name)}</b>: ${d.stargazers_count.toLocaleString()} stars, ${d.forks_count.toLocaleString()} forks, ${d.open_issues_count.toLocaleString()} open issues, main language ${esc(d.language || 'n/a')}. ${d.description ? esc(d.description) : ''}`, src: d.html_url };
+}
+
+/* ---------- router (rules standing in for an LLM) ---------- */
+const split = q => q.split(/\?+|;|\s+and then\s+|\s+and\s+(?=(?:what|how|who|convert|weather|time|tell|top|show|get|stats|github|news)\b)/i).map(s => s.trim()).filter(Boolean);
+const places = s => { const m = /\b(?:in|for|at|of)\s+(.+)$/i.exec(s); return (m ? m[1] : s.replace(/weather|temperature|forecast|time|what|is|the|it|now|current|right/gi, '')).split(/,|\s+and\s+/i).map(x => x.replace(/[?.!]/g, '').trim()).filter(Boolean); };
+function route(c) {
+  const m = /(\d[\d,.]*)\s*([a-z]{3,7})\s+(?:to|in|into|=)\s+([a-z]{3,7})/i.exec(c);
+  if (m && CUR[m[2].toLowerCase()] && CUR[m[3].toLowerCase()]) return { t: 'fx', amount: parseFloat(m[1].replace(/,/g, '')), from: CUR[m[2].toLowerCase()], to: CUR[m[3].toLowerCase()] };
+  const gh = /(?:github\.com\/)?\b([\w.-]+\/[\w.-]+)\b/.exec(c); if (/github|repo|stars/i.test(c) && gh) return { t: 'github', repo: gh[1] };
+  if (/hacker ?news|\bhn\b|tech news|top stories/i.test(c)) { const n = /\b(\d{1,2})\b/.exec(c); return { t: 'hn', n: Math.min(8, n ? +n[1] : 5) }; }
+  if (/weather|temperature|forecast|how (hot|cold)/i.test(c)) return { t: 'weather', places: places(c) };
+  if (/\btime\b|what.?s the time|\bo.?clock\b/i.test(c)) return { t: 'time', places: places(c) };
+  const w = /(?:who (?:is|was)|what (?:is|are|was)|tell me about|about|explain|define)\s+(?:an? |the )?(.+)$/i.exec(c); if (w) return { t: 'wiki', topic: w[1].replace(/[?.!]/g, '') };
+  return null;
+}
+async function agent(q) {
+  st = { calls: 0, ms: 0, cache: 0, fail: 0 }; ['mCalls', 'mMs', 'mCache', 'mFail'].forEach(i => ($('#' + i).textContent = 0)); $('#trace').innerHTML = ''; $('#ans').innerHTML = '<span class="small">Working…</span>'; $('#status').textContent = 'working…';
+  const clauses = split(q); if (!clauses.length) { $('#status').textContent = 'idle'; return; }
+  const plans = clauses.map(c => ({ c, p: route(c) }));
+  thought(`Goal: “${q}”. I found ${plans.length} sub-task${plans.length > 1 ? 's' : ''}: ` + plans.map((x, i) => `${i + 1}) ${x.p ? { fx: 'convert currency (live rate)', github: 'GitHub repo stats', hn: 'Hacker News stories', weather: 'live weather', time: 'local time', wiki: 'Wikipedia lookup' }[x.p.t] : 'not something I can do'}`).join('; ') + '.');
+  const out = [], srcs = new Set();
+  for (const { c, p } of plans) {
+    await sleep(200);
+    if (!p) { thought(`I do not have a tool for “${c}”. My tools cover weather, local time, currency, Wikipedia, Hacker News and GitHub repos. I will say so instead of guessing.`); out.push(`I can't answer “${esc(c)}”: none of my tools cover it.`); continue; }
+    let r;
+    if (p.t === 'fx') { thought(`Currency question: I need a live ${p.from} rate table, then I multiply.`); r = await fx(p.amount, p.from, p.to); }
+    else if (p.t === 'github') { thought(`GitHub question about ${p.repo}.`); r = await github(p.repo); }
+    else if (p.t === 'hn') { thought(`I will fetch the list of top story ids, then each story.`); r = await hn(p.n); }
+    else if (p.t === 'wiki') { thought(`Looking up “${p.topic}” on Wikipedia.`); r = await wiki(p.topic); }
+    else { const ps = p.places.length ? p.places : ['']; const lines = []; for (const pl of ps) { if (!pl) { lines.push('Tell me which place you mean.'); continue; } thought(`${p.t === 'weather' ? 'Weather' : 'Time'} for “${pl}”: first I need its coordinates and timezone.`); const x = p.t === 'weather' ? await weather(pl) : await timeIn(pl); lines.push(x.line); if (x.src) srcs.add(x.src); } r = { line: lines.join('<br>') }; }
+    out.push(r.line); if (r.src) srcs.add(r.src);
+  }
+  thought('All sub-tasks are done. Composing the answer.');
+  const html = out.map(l => `<p>${l}</p>`).join('') + (srcs.size ? `<div class="src small" style="margin-top:.5rem">Sources: ${[...srcs].map(s => `<a href="${esc(s)}" target="_blank" rel="noopener">${esc(s)}</a>`).join(' · ')}</div>` : '');
+  add('s-answer', 'Answer', `<div class="ans">${html}</div>`); $('#ans').innerHTML = html; $('#ansN').textContent = `${st.calls} calls, ${st.ms} ms`; $('#status').textContent = 'finished';
+}
+const EX = ["What's the weather in Lahore and Dubai?", 'Convert 250 USD to PKR', 'What time is it in New York?', 'Top 5 Hacker News stories', 'Tell me about Alan Turing', 'Stats for github.com/torvalds/linux', 'Weather in London and convert 100 GBP to PKR and tell me about London', 'Weather in Atlantisville'];
+$('#ex').innerHTML = EX.map(e => `<button class="chip" data-q="${esc(e)}">${esc(e)}</button>`).join('');
+let busy = false; const go = async q => { if (busy || !q.trim()) return; busy = true; $('#run').disabled = true; try { await agent(q); } catch (e) { add('s-obs', 'Error', esc(e.message), ' err'); } busy = false; $('#run').disabled = false; };
+$('#run').onclick = () => go($('#q').value); $('#q').onkeydown = e => { if (e.key === 'Enter') go($('#q').value); };
+$('#ex').onclick = e => { const b = e.target.closest('[data-q]'); if (b) { $('#q').value = b.dataset.q; go(b.dataset.q); } };
+window.__data = { route, split, places };
+</script>
+</body>
+</html>
