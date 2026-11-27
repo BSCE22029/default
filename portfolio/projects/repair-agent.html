@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Test-Driven Repair Agent — Moiz Ahmad</title>
+<meta name="description" content="An agent that runs tests, finds a bug, proposes patches, re-runs the tests and keeps the best fix. A real observe, act, verify loop on buggy code."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+pre.src{margin:0;white-space:pre;overflow:auto;font-size:.8rem;line-height:1.7;background:var(--canvas);border:1px solid var(--line);border-radius:14px;padding:.8rem 0}
+pre.src span.l{display:block;padding:0 1rem}
+.l.ch{background:color-mix(in srgb,var(--good) 18%,transparent);box-shadow:inset 3px 0 var(--good)}
+.l.ch2{background:color-mix(in srgb,var(--bad) 12%,transparent);box-shadow:inset 3px 0 var(--bad);text-decoration:line-through;opacity:.7}
+.tests{display:grid;gap:.3rem;margin-top:.7rem}
+.tc{display:flex;justify-content:space-between;gap:.6rem;font-family:ui-monospace,Consolas,monospace;font-size:.74rem;padding:.3rem .6rem;border-radius:9px;border:1px solid var(--line);background:var(--bg2)}
+:root[data-theme="light"] .tc{background:#fff}
+.tc.ok{border-color:color-mix(in srgb,var(--good) 55%,transparent)}.tc.ok b{color:var(--good)}
+.tc.no{border-color:color-mix(in srgb,var(--bad) 55%,transparent)}.tc.no b{color:var(--bad)}
+.tr{display:flex;flex-direction:column;gap:.45rem;max-height:430px;overflow:auto;padding-right:.3rem}
+.ev{padding:.55rem .75rem;border-radius:12px;border:1px solid var(--line);background:var(--bg2);font-size:.82rem;animation:pop .25s both}
+:root[data-theme="light"] .ev{background:#fff}
+@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.ev small{display:block;font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;font-weight:800;margin-bottom:.15rem}
+.ev.o small{color:var(--c1)}.ev.h small{color:var(--a)}.ev.a small{color:var(--b)}.ev.v small{color:var(--good)}.ev.f small{color:var(--bad)}.ev.f{border-color:var(--bad)}.ev.v{border-color:color-mix(in srgb,var(--good) 55%,transparent)}
+.ev code{background:var(--canvas);border:1px solid var(--line);border-radius:6px;padding:.05rem .35rem}
+select{width:auto}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Agentic AI · Code repair · Observe → Act → Verify</span>
+    <h1>Test-Driven Repair Agent</h1>
+    <p class="lead">Pick a buggy function. The agent runs the tests, sees what fails, tries patches, re-runs the tests after every change and keeps what helps. It stops when everything passes or when it runs out of ideas, and it will tell you which.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Code under repair <b id="fname"></b></div>
+      <div class="row" style="margin-bottom:.8rem"><select id="sample"></select><button class="btn primary" id="go">Repair it</button><button class="btn" id="step">Step</button><button class="btn" id="reset">Reset</button></div>
+      <pre class="src" id="src"></pre>
+      <div class="card-h" style="margin-top:1rem">Test suite <b id="score"></b></div>
+      <div class="tests" id="tests"></div>
+    </div>
+    <div>
+      <div class="card"><div class="card-h">Agent loop</div><div class="tr" id="tr"><span class="small">Choose a sample and press “Repair it”. The three easy ones get fixed; the last one cannot be, and that is on purpose.</span></div></div>
+      <div class="card"><div class="card-h">Run metrics</div><div class="metrics">
+        <div class="metric"><div class="m-val" id="mRound">0</div><div class="m-lab">Rounds</div></div>
+        <div class="metric"><div class="m-val" id="mCand">0</div><div class="m-lab">Patches tried</div></div>
+        <div class="metric"><div class="m-val" id="mRuns">0</div><div class="m-lab">Test runs</div></div>
+        <div class="metric"><div class="m-val" id="mEdit">0</div><div class="m-lab">Edits applied</div></div></div></div>
+    </div>
+  </div>
+
+  <section class="note">
+    <b>What's real here, and what is not</b>
+    <ul>
+      <li><b>Real:</b> the agent genuinely executes the code under test (in your browser), reads which tests fail, generates patch candidates, re-runs the whole suite on each one, and keeps the best-scoring few (a beam search) for the next round. Loops are guarded so an infinite-loop patch is rejected instead of freezing the page.</li>
+      <li><b>Not an LLM:</b> patch candidates come from simple mutation rules (flip <code>&lt;</code> and <code>&lt;=</code>, <code>+</code> and <code>-</code>, <code>&amp;&amp;</code> and <code>||</code>, nudge a number by one, swap <code>min</code> and <code>max</code>). That is the idea behind automated program repair tools such as GenProg. It cannot invent new code, so the last sample is genuinely unfixable for it and it reports failure.</li>
+      <li>Passing the tests does not prove the code is correct. A patch can satisfy a weak suite and still be wrong, which is a known weakness of test-driven repair. The test lists are short on purpose so you can read them.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser, no AI API</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const SAMPLES = [
+  { name: 'sumTo: add 1..n', fn: 'sumTo', code: `function sumTo(n) {\n  let total = 0;\n  for (let i = 1; i < n; i++) {\n    total += i;\n  }\n  return total;\n}`, tests: [[[5], 15], [[1], 1], [[10], 55], [[0], 0], [[3], 6]] },
+  { name: 'factorial', fn: 'factorial', code: `function factorial(n) {\n  let result = 0;\n  for (let i = 2; i <= n; i++) {\n    result *= i;\n  }\n  return result;\n}`, tests: [[[5], 120], [[1], 1], [[0], 1], [[3], 6], [[6], 720]] },
+  { name: 'isLeapYear', fn: 'isLeapYear', code: `function isLeapYear(y) {\n  return y % 4 === 0 && y % 100 !== 0 && y % 400 === 0;\n}`, tests: [[[2024], true], [[1900], false], [[2000], true], [[2023], false], [[2100], false], [[1996], true]] },
+  { name: 'clamp (two bugs)', fn: 'clamp', code: `function clamp(x, lo, hi) {\n  return Math.min(lo, Math.max(hi, x));\n}`, tests: [[[5, 0, 10], 5], [[-3, 0, 10], 0], [[42, 0, 10], 10], [[7, 7, 9], 7], [[9, 7, 9], 9]] },
+  { name: 'reverseWords (not fixable)', fn: 'reverseWords', code: `function reverseWords(s) {\n  const words = s.split(' ');\n  const out = [];\n  for (let i = 0; i < words.length; i++) {\n    out.push(words[i]);\n  }\n  return out.join(' ');\n}`, tests: [[['a b c'], 'c b a'], [['hello world'], 'world hello'], [['solo'], 'solo'], [['one two'], 'two one']] },
+];
+$('#sample').innerHTML = SAMPLES.map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
+
+/* ---- sandboxed-ish execution with a loop guard ---- */
+function guard(code) { return code.replace(/\b(for|while)\s*\([^)]*\)\s*\{/g, m => m + ' if (++__g > 200000) throw new Error("loop limit");'); }
+function runTests(code, sm) {
+  let fn; const res = [];
+  try { fn = new Function('var __g = 0;\n' + guard(code) + '\nreturn ' + sm.fn + ';')(); } catch (e) { return sm.tests.map(t => ({ ok: false, got: 'syntax error' })); }
+  for (const [args, want] of sm.tests) { let got, ok = false; try { got = fn(...args); ok = JSON.stringify(got) === JSON.stringify(want); } catch (e) { got = 'error: ' + e.message; } res.push({ ok, got }); }
+  return res;
+}
+/* ---- mutation operators ---- */
+const TOK = /(===|!==|<=|>=|&&|\|\||\+\+|--|\+=|-=|\*=|\/=|Math\.(?:max|min)|\b\d+\b|[<>+\-*\/])/g;
+const ALT = { '<': ['<=', '>'], '<=': ['<'], '>': ['>=', '<'], '>=': ['>'], '===': ['!=='], '!==': ['==='], '&&': ['||'], '||': ['&&'], '+': ['-'], '-': ['+'], '*': ['/'], '/': ['*'], 'Math.max': ['Math.min'], 'Math.min': ['Math.max'] };
+function mutations(code) {
+  const out = []; let m; TOK.lastIndex = 0;
+  while ((m = TOK.exec(code))) {
+    const t = m[0], i = m.index; if (['++', '--', '+=', '-=', '*=', '/='].includes(t)) continue;
+    let alts = ALT[t] || []; if (/^\d+$/.test(t)) alts = [String(+t + 1), String(Math.max(0, +t - 1))].filter((v, k, a) => v !== t && a.indexOf(v) === k);
+    alts.forEach(a => out.push({ code: code.slice(0, i) + a + code.slice(i + t.length), from: t, to: a, at: i, line: code.slice(0, i).split('\n').length }));
+  }
+  return out;
+}
+const score = (r) => r.filter(x => x.ok).length;
+
+/* ---- the agent as a generator of events ---- */
+function* agent(sm) {
+  let stats = { rounds: 0, cand: 0, runs: 0, edits: 0 };
+  let cur = { code: sm.code, edits: [] }, r = runTests(cur.code, sm); stats.runs++;
+  const total = sm.tests.length; yield { k: 'o', t: `Ran the ${total} tests: <b>${score(r)}/${total} pass</b>. Failing: ${r.map((x, i) => (x.ok ? null : `<code>${sm.fn}(${sm.tests[i][0].map(a => JSON.stringify(a)).join(', ')})</code> got ${esc(JSON.stringify(x.got))}, want ${esc(JSON.stringify(sm.tests[i][1]))}`)).filter(Boolean).slice(0, 3).join('; ')}`, code: cur.code, res: r, stats: { ...stats } };
+  if (score(r) === total) { yield { k: 'v', t: 'Nothing to fix: all tests already pass.', code: cur.code, res: r, stats }; return; }
+  let beam = [{ ...cur, s: score(r) }]; const seen = new Set([cur.code]);
+  for (let depth = 1; depth <= 3; depth++) {
+    stats.rounds++; const pool = [];
+    for (const b of beam) for (const m of mutations(b.code)) { if (seen.has(m.code)) continue; seen.add(m.code); pool.push({ b, m }); }
+    yield { k: 'h', t: `Round ${depth}: the code can be changed in <b>${pool.length}</b> small ways (edit one operator or number). I will try every one against the tests.`, stats: { ...stats } };
+    const scored = pool.map(({ b, m }) => { const rr = runTests(m.code, sm); stats.runs++; stats.cand++; return { code: m.code, edits: [...b.edits, m], s: score(rr), res: rr }; });
+    scored.sort((a, b) => b.s - a.s || a.edits.length - b.edits.length);
+    const best = scored[0], prevBest = Math.max(...beam.map(b => b.s));
+    if (!best) { yield { k: 'f', t: 'There is nothing left I know how to change in this code.', stats }; return; }
+    const e = best.edits[best.edits.length - 1];
+    yield { k: 'a', t: `Best candidate scores <b>${best.s}/${total}</b>: change <code>${esc(e.from)}</code> to <code>${esc(e.to)}</code> on line ${e.line}. ${best.s > prevBest ? 'That is an improvement.' : 'That is no better than before, but I keep it in case a second change completes it.'}`, code: best.code, base: sm.code, res: best.res, stats: { ...stats, edits: best.edits.length } };
+    if (best.s === total) { stats.edits = best.edits.length; yield { k: 'v', t: `<b>All ${total} tests pass</b> after ${best.edits.length} edit${best.edits.length > 1 ? 's' : ''}, ${stats.cand} patches tried. Stopping. (Passing tests means the suite is satisfied, not that the code is proven correct.)`, code: best.code, base: sm.code, res: best.res, stats: { ...stats }, done: true }; return; }
+    beam = scored.filter(x => x.s >= Math.min(prevBest, best.s)).slice(0, 4); if (!beam.length) beam = [best];
+  }
+  const fin = beam[0]; yield { k: 'f', t: `Gave up after ${stats.rounds} rounds and ${stats.cand} patches. The best I found passes ${fin.s}/${total}. The bug is not something an operator or number tweak can fix, so I am <b>not claiming a fix</b> and will leave the best partial patch for a human to review.`, code: fin.code, base: sm.code, res: fin.res, stats: { ...stats, edits: fin.edits.length }, done: true, failed: true };
+}
+
+/* ---- UI ---- */
+let sm, it, timer, view;
+const lines = (code, base) => { const a = code.split('\n'), b = (base || code).split('\n'); return a.map((l, i) => `<span class="l ${base && l !== b[i] ? 'ch' : ''}">${esc(l) || ' '}</span>`).join(''); };
+function show(code, res, base) { $('#src').innerHTML = lines(code, base); if (res) { const p = score(res); $('#score').textContent = `${p}/${res.length} pass`; $('#score').style.color = p === res.length ? 'var(--good)' : 'var(--bad)'; $('#tests').innerHTML = sm.tests.map((t, i) => `<div class="tc ${res[i].ok ? 'ok' : 'no'}"><span>${sm.fn}(${t[0].map(a => JSON.stringify(a)).join(', ')}) → ${esc(JSON.stringify(t[1]))}</span><b>${res[i].ok ? 'PASS' : 'FAIL ' + esc(JSON.stringify(res[i].got))}</b></div>`).join(''); } }
+function load() { clearTimeout(timer); sm = SAMPLES[+$('#sample').value]; it = null; $('#fname').textContent = sm.fn + '()'; $('#tr').innerHTML = '<span class="small">Choose a sample and press “Repair it”.</span>'; show(sm.code, runTests(sm.code, sm)); ['mRound', 'mCand', 'mRuns', 'mEdit'].forEach(i => ($('#' + i).textContent = 0)); }
+function next() {
+  if (!it) { it = agent(sm); $('#tr').innerHTML = ''; }
+  const n = it.next(); if (n.done) return false; const e = n.value;
+  const L = { o: 'Observe', h: 'Hypothesize', a: 'Act', v: 'Verified', f: 'Gave up' }[e.k];
+  const d = document.createElement('div'); d.className = 'ev ' + e.k; d.innerHTML = `<small>${L}</small>${e.t}`; $('#tr').appendChild(d); $('#tr').scrollTop = 1e6;
+  if (e.code) show(e.code, e.res, e.k === 'o' ? null : e.base);
+  if (e.stats) { $('#mRound').textContent = e.stats.rounds; $('#mCand').textContent = e.stats.cand; $('#mRuns').textContent = e.stats.runs; $('#mEdit').textContent = e.stats.edits; }
+  return !e.done && e.k !== 'v' ? true : false;
+}
+function go() { clearTimeout(timer); const t = () => { if (next()) timer = setTimeout(t, 900); }; t(); }
+$('#sample').onchange = load; $('#reset').onclick = load; $('#go').onclick = () => { load(); go(); }; $('#step').onclick = () => { clearTimeout(timer); next(); };
+load();
+window.__rep = { SAMPLES, agent, runTests, mutations };
+</script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Goal-Oriented Planning Agent — Moiz Ahmad</title>
+<meta name="description" content="An agent that plans a sequence of actions to reach a goal, acts, notices when the world changes, and replans. Break things and watch it recover."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.inv{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.7rem}
+.item{font-size:.74rem;font-weight:600;padding:.25rem .6rem;border-radius:99px;border:1px solid var(--line2);color:var(--faint);opacity:.55;transition:.2s}
+.item.has{opacity:1;color:var(--text);border-color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)}
+.plan{display:flex;flex-direction:column;gap:.3rem;max-height:340px;overflow:auto;padding-right:.3rem}
+.ps{display:grid;grid-template-columns:26px 1fr auto;gap:.5rem;align-items:center;padding:.4rem .6rem;border:1px solid var(--line);border-radius:11px;font-size:.8rem;background:var(--bg2)}
+:root[data-theme="light"] .ps{background:#fff}
+.ps .n{font-family:ui-monospace,Consolas,monospace;color:var(--faint);font-size:.72rem}
+.ps .c{font-family:ui-monospace,Consolas,monospace;font-size:.72rem;color:var(--muted)}
+.ps.done{opacity:.5}.ps.done .t::before{content:"✓ ";color:var(--good)}
+.ps.cur{border-color:var(--a);box-shadow:0 0 0 2px color-mix(in srgb,var(--a) 22%,transparent)}
+.ps.fail{border-color:var(--bad);color:var(--bad)}
+.log{font-family:ui-monospace,Consolas,monospace;font-size:.74rem;max-height:230px}
+.log div{padding:.2rem 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.log .r{color:var(--bad)}.log .p{color:var(--a)}.log .g{color:var(--good)}
+.tg{display:flex;align-items:center;gap:.5rem;font-size:.8rem;margin:.3rem 0;cursor:pointer}
+.tg input{accent-color:var(--a);width:16px;height:16px}
+select{width:auto}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Agentic AI · Automated planning · Replanning</span>
+    <h1>Goal-Oriented Planning Agent</h1>
+    <p class="lead">Give the agent a goal and it searches for a sequence of actions that gets there, then carries it out. Close a road, steal its axe or set the forge on fire while it works, and watch it notice the plan is broken and make a new one.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">The world <b id="goalLab"></b></div>
+      <canvas id="cv" class="cv" style="aspect-ratio:16/10"></canvas>
+      <div class="inv" id="inv"></div>
+      <div class="row" style="margin-top:.9rem"><button class="btn primary" id="plan">Plan &amp; run</button><button class="btn" id="step">Step</button><button class="btn" id="reset">Reset</button>
+        <label class="small" style="display:flex;gap:.5rem;align-items:center;margin-left:auto">Speed <input id="spd" type="range" min="1" max="6" value="3" style="width:90px"/></label></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-h">Goal &amp; start</div>
+        <div class="ctl"><label>Goal</label><select id="goal"><option value="dragon">Slay the dragon</option><option value="sword">Forge a sword</option><option value="fed">Be fed</option></select></div>
+        <div class="small" style="margin-bottom:.4rem">Start with:</div>
+        <label class="tg"><input type="checkbox" data-f="AXE"/> an axe</label>
+        <label class="tg"><input type="checkbox" data-f="PICK"/> a pickaxe</label>
+        <label class="tg"><input type="checkbox" data-f="COIN"/> a coin</label>
+      </div>
+      <div class="card">
+        <div class="card-h">Break the world <b>while the agent works</b></div>
+        <div class="row"><button class="btn" id="bAxe">Steal its axe</button><button class="btn" id="bFire">Forge on fire</button></div>
+        <div class="ctl" style="margin-top:.8rem"><label>Close a road</label><select id="road"></select></div>
+        <div class="small">The agent only finds out when it tries the next step, like a real robot.</div>
+      </div>
+      <div class="card"><div class="card-h">Run metrics</div><div class="metrics">
+        <div class="metric"><div class="m-val" id="mCost">–</div><div class="m-lab">Plan cost</div></div>
+        <div class="metric"><div class="m-val" id="mNodes">–</div><div class="m-lab">States searched</div></div>
+        <div class="metric"><div class="m-val" id="mRe">0</div><div class="m-lab">Replans</div></div>
+        <div class="metric"><div class="m-val" id="mSpent">0</div><div class="m-lab">Cost spent</div></div></div></div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:1.1rem">
+    <div class="card"><div class="card-h">Current plan</div><div class="plan" id="planList"><span class="small">No plan yet. Press “Plan &amp; run”.</span></div></div>
+    <div class="card"><div class="card-h">Agent log</div><div class="log scroll" id="log"></div></div>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li><b>The planner is real search.</b> Every state is (location, set of items). Actions have preconditions, effects and costs, like STRIPS or the GOAP used in game AI. Uniform-cost search finds the cheapest sequence, and the “states searched” counter is the actual number of states it expanded.</li>
+      <li><b>Sensing and replanning are real.</b> Before each step the agent checks that the action still works in the current world. If not (no axe, road closed, forge on fire) it searches again from where it stands. If no plan exists, for example the forge is burning and the goal needs a sword, it says so instead of looping forever.</li>
+      <li>The world is small and fully known to the agent, with no randomness. It is a planning demo, not a learning one: nothing here is trained.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const F = { AXE: 1, PICK: 2, COIN: 4, WOOD: 8, ORE: 16, SWORD: 32, BREAD: 64, FED: 128, DRAGON: 256 };
+const NAMES = { AXE: 'Axe', PICK: 'Pickaxe', COIN: 'Coin', WOOD: 'Wood', ORE: 'Ore', SWORD: 'Sword', BREAD: 'Bread', FED: 'Fed', DRAGON: 'Dragon slain' };
+const LOC = { home: [.1, .22, 'Home'], forest: [.1, .78, 'Forest'], mine: [.44, .9, 'Mine'], market: [.42, .3, 'Market'], forge: [.74, .62, 'Forge'], castle: [.9, .18, 'Castle'] };
+const ROADS = [['home', 'market', 2], ['home', 'forest', 3], ['forest', 'mine', 4], ['forest', 'market', 4], ['market', 'forge', 2], ['mine', 'forge', 3], ['market', 'castle', 5], ['forge', 'castle', 3]];
+const ACTS = [
+  { n: 'work a shift', at: 'market', pre: 0, add: F.COIN, del: 0, c: 3, id: 'work' },
+  { n: 'buy axe', at: 'market', pre: F.COIN, add: F.AXE, del: F.COIN, c: 1, id: 'buyAxe' },
+  { n: 'buy pickaxe', at: 'market', pre: F.COIN, add: F.PICK, del: F.COIN, c: 1, id: 'buyPick' },
+  { n: 'chop wood', at: 'forest', pre: F.AXE, add: F.WOOD, del: 0, c: 2, id: 'chop' },
+  { n: 'mine ore', at: 'mine', pre: F.PICK, add: F.ORE, del: 0, c: 3, id: 'mine' },
+  { n: 'forge sword', at: 'forge', pre: F.ORE | F.WOOD, add: F.SWORD, del: F.ORE | F.WOOD, c: 2, id: 'forge' },
+  { n: 'bake bread', at: 'home', pre: F.WOOD, add: F.BREAD, del: F.WOOD, c: 2, id: 'bake' },
+  { n: 'eat bread', at: 'home', pre: F.BREAD, add: F.FED, del: F.BREAD, c: 1, id: 'eat' },
+  { n: 'slay dragon', at: 'castle', pre: F.SWORD | F.FED, add: F.DRAGON, del: 0, c: 4, id: 'slay' },
+];
+const GOALS = { dragon: F.DRAGON, sword: F.SWORD, fed: F.FED };
+const W = { closed: new Set(), fire: false };
+const rkey = (a, b) => [a, b].sort().join('-');
+const locs = Object.keys(LOC);
+function moves(s) {
+  const out = [];
+  ROADS.forEach(([a, b, c]) => { if (W.closed.has(rkey(a, b))) return; if (a === s.loc) out.push({ n: `walk to ${LOC[b][2]}`, to: b, c, kind: 'walk', from: a }); else if (b === s.loc) out.push({ n: `walk to ${LOC[a][2]}`, to: a, c, kind: 'walk', from: b }); });
+  ACTS.forEach(a => { if (a.at === s.loc && (s.f & a.pre) === a.pre && !(a.id === 'forge' && W.fire)) out.push({ ...a, kind: 'act', to: s.loc }); });
+  return out;
+}
+const apply = (s, m) => (m.kind === 'walk' ? { loc: m.to, f: s.f } : { loc: s.loc, f: (s.f & ~m.del) | m.add });
+function search(start, goal) {
+  const key = s => locs.indexOf(s.loc) * 512 + s.f, dist = new Map([[key(start), 0]]), prev = new Map(), pq = [[0, start]]; let nodes = 0;
+  while (pq.length) {
+    pq.sort((a, b) => a[0] - b[0]); const [d, s] = pq.shift(); if (d > dist.get(key(s))) continue; nodes++;
+    if ((s.f & goal) === goal) { const path = []; let k = key(s); while (prev.has(k)) { const p = prev.get(k); path.push(p.m); k = p.k; } return { path: path.reverse(), cost: d, nodes }; }
+    for (const m of moves(s)) { const t = apply(s, m), nd = d + m.c, k = key(t); if (nd < (dist.get(k) ?? Infinity)) { dist.set(k, nd); prev.set(k, { k: key(s), m }); pq.push([nd, t]); } }
+  }
+  return { path: null, nodes };
+}
+
+/* ---------- agent runtime ---------- */
+let S, plan, idx, spent, replans, timer, anim = null, logs = [];
+const say = (cls, t) => { logs.push(`<div class="${cls}">${t}</div>`); $('#log').innerHTML = logs.slice().reverse().join(''); };
+function startState() { let f = 0; document.querySelectorAll('[data-f]').forEach(c => { if (c.checked) f |= F[c.dataset.f]; }); return { loc: 'home', f }; }
+function reset() {
+  clearTimeout(timer); timer = null; S = startState(); plan = null; idx = 0; spent = 0; replans = 0; logs = []; anim = null; $('#log').innerHTML = ''; $('#planList').innerHTML = '<span class="small">No plan yet. Press “Plan &amp; run”.</span>';
+  ['mCost', 'mNodes'].forEach(i => ($('#' + i).textContent = '–')); $('#mRe').textContent = 0; $('#mSpent').textContent = 0; $('#goalLab').textContent = ''; hud();
+}
+function makePlan(why) {
+  const goal = GOALS[$('#goal').value], r = search(S, goal);
+  $('#mNodes').textContent = r.nodes;
+  if (!r.path) { plan = null; $('#mCost').textContent = '–'; say('r', `No plan exists from ${LOC[S.loc][2]} (searched ${r.nodes} states). The goal is unreachable in this world.`); drawPlan(); return false; }
+  plan = r.path; idx = 0; $('#mCost').textContent = r.cost; say('p', `${why} Plan: ${r.path.length} steps, cost ${r.cost}, searched ${r.nodes} states.`); drawPlan(); return true;
+}
+function drawPlan() {
+  if (!plan) { $('#planList').innerHTML = '<span class="small">No valid plan.</span>'; return; }
+  $('#planList').innerHTML = plan.map((m, i) => `<div class="ps ${i < idx ? 'done' : i === idx ? 'cur' : ''}"><span class="n">${i + 1}</span><span class="t">${m.n}</span><span class="c">+${m.c}</span></div>`).join('') || '<span class="small">Already satisfied: nothing to do.</span>';
+  const cur = $('#planList .cur'); if (cur) cur.scrollIntoView({ block: 'nearest' });
+}
+function stepOnce() {
+  if (!plan) { if (!makePlan(idx === 0 && !replans ? 'Goal received.' : 'Replanning.')) return false; if (!plan.length) { say('g', 'The goal is already true.'); return false; } return true; }
+  if (idx >= plan.length) { say('g', `Goal reached. Total cost ${spent}, replans ${replans}.`); return false; }
+  const m = plan[idx], valid = moves(S).find(x => x.n === m.n && (x.kind === 'walk' ? x.to === m.to : true));
+  if (!valid) {
+    const why = m.kind === 'walk' ? `the road to ${LOC[m.to][2]} is closed` : m.id === 'forge' && W.fire ? 'the forge is on fire' : `preconditions for “${m.n}” are no longer true`;
+    say('r', `Step ${idx + 1} “${m.n}” failed: ${why}. Replanning from ${LOC[S.loc][2]}.`); replans++; $('#mRe').textContent = replans; document.querySelectorAll('#planList .cur').forEach(e => e.classList.add('fail'));
+    plan = null; return makePlan('Replanned.') ? true : false;
+  }
+  const from = S.loc; S = apply(S, valid); spent += valid.c; $('#mSpent').textContent = spent; say('', `${idx + 1}. ${valid.n} (cost ${valid.c})`); idx++; anim = { from, to: S.loc, t0: performance.now() }; drawPlan(); hud();
+  if (idx >= plan.length && (S.f & GOALS[$('#goal').value]) === GOALS[$('#goal').value]) { say('g', `Goal reached: ${$('#goal').selectedOptions[0].text}. Total cost ${spent}, replans ${replans}.`); return false; }
+  return true;
+}
+function run() { clearTimeout(timer); const ms = [1500, 1100, 750, 450, 260, 120][+$('#spd').value - 1]; const go = () => { if (stepOnce()) timer = setTimeout(go, ms); else timer = null; }; go(); }
+function hud() { $('#inv').innerHTML = Object.keys(F).map(k => `<span class="item ${S.f & F[k] ? 'has' : ''}">${NAMES[k]}</span>`).join(''); $('#goalLab').textContent = 'goal: ' + $('#goal').selectedOptions[0].text; }
+
+/* ---------- drawing ---------- */
+const cv = $('#cv');
+function draw(now) {
+  const ctx = cv.getContext('2d'), w = cv._w, h = cv._h; if (!w || !S) return; ctx.clearRect(0, 0, w, h);
+  const P = k => [LOC[k][0] * w, LOC[k][1] * h], muted = AI.css('--muted'), line = AI.css('--line2');
+  ROADS.forEach(([a, b, c]) => { const [x1, y1] = P(a), [x2, y2] = P(b), closed = W.closed.has(rkey(a, b)); ctx.strokeStyle = closed ? AI.css('--bad') : line; ctx.lineWidth = 3; ctx.setLineDash(closed ? [6, 6] : []); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = closed ? AI.css('--bad') : muted; ctx.font = '600 11px ui-monospace,Consolas,monospace'; ctx.textAlign = 'center'; ctx.fillText(closed ? '✕' : c, (x1 + x2) / 2, (y1 + y2) / 2 - 6); });
+  if (plan) { ctx.strokeStyle = AI.css('--a'); ctx.globalAlpha = .55; ctx.lineWidth = 4; ctx.beginPath(); let cur = S.loc, first = true; ctx.moveTo(...P(cur)); plan.slice(idx).forEach(m => { if (m.kind === 'walk') { cur = m.to; ctx.lineTo(...P(cur)); } }); ctx.stroke(); ctx.globalAlpha = 1; }
+  const ICON = { home: '🏠', forest: '🌲', mine: '⛏️', market: '🛒', forge: W.fire ? '🔥' : '⚒️', castle: '🏰' };
+  locs.forEach(k => { const [x, y] = P(k); ctx.fillStyle = AI.css('--card-solid'); ctx.strokeStyle = k === S.loc ? AI.css('--a') : line; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 26, 0, 6.3); ctx.fill(); ctx.stroke(); ctx.font = '22px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#000'; ctx.fillText(ICON[k], x, y + 8); ctx.fillStyle = AI.css('--text'); ctx.font = '600 11px system-ui'; ctx.fillText(LOC[k][2], x, y + 44); });
+  let [ax, ay] = P(S.loc); if (anim) { const t = Math.min(1, (now - anim.t0) / 380), [fx, fy] = P(anim.from), [tx, ty] = P(anim.to); ax = fx + (tx - fx) * t; ay = fy + (ty - fy) * t; if (t >= 1) anim = null; }
+  ctx.fillStyle = AI.css('--a'); ctx.shadowColor = AI.css('--a'); ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(ax, ay - 30, 9, 0, 6.3); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.font = '700 10px system-ui'; ctx.fillText('A', ax, ay - 27);
+}
+(function loop(now) { draw(now); requestAnimationFrame(loop); })(0);
+AI.fit(cv, () => {});
+$('#road').innerHTML = '<option value="">none</option>' + ROADS.map(([a, b]) => `<option value="${rkey(a, b)}">${LOC[a][2]} – ${LOC[b][2]}</option>`).join('');
+$('#road').onchange = e => { W.closed.clear(); if (e.target.value) W.closed.add(e.target.value); say('r', e.target.value ? `World changed: road ${e.target.selectedOptions[0].text} closed.` : 'World changed: all roads open.'); };
+$('#bAxe').onclick = () => { S.f &= ~F.AXE; hud(); say('r', 'World changed: the axe was stolen.'); };
+$('#bFire').onclick = () => { W.fire = !W.fire; $('#bFire').textContent = W.fire ? 'Put out the fire' : 'Forge on fire'; say('r', W.fire ? 'World changed: the forge is on fire.' : 'World changed: the fire is out.'); };
+$('#plan').onclick = () => { if (timer) return; if (plan && idx >= plan.length) reset(); run(); };
+$('#step').onclick = () => { clearTimeout(timer); timer = null; stepOnce(); };
+$('#reset').onclick = () => { W.closed.clear(); W.fire = false; $('#road').value = ''; $('#bFire').textContent = 'Forge on fire'; reset(); };
+$('#goal').onchange = () => { reset(); };
+document.querySelectorAll('[data-f]').forEach(c => (c.onchange = reset));
+reset();
+window.__goap = { search, startState, W, F };
+</script>
+</body>
+</html>
