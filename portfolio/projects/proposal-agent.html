@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Freelance Proposal Agent — Moiz Ahmad</title>
+<meta name="description" content="Paste a freelance job post. The agent extracts requirements, matches them to your skills, flags red flags, estimates effort and price, and drafts an honest proposal that names any gaps."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}@media(max-width:560px){.two{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.7rem}.field label{font-size:.7rem;font-weight:600;color:var(--muted);letter-spacing:.04em}
+.step{display:grid;grid-template-columns:86px minmax(0,1fr);gap:.6rem;padding:.5rem .65rem;border:1px solid var(--line);border-radius:12px;background:var(--bg2);font-size:.82rem;animation:pop .25s both;margin-bottom:.4rem}
+:root[data-theme="light"] .step{background:#fff}@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.step .b{font-size:.6rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--a);padding-top:.15rem}.step.act .b{color:var(--b)}.step.obs .b{color:var(--c1)}.step.ok .b{color:var(--good)}.step.bad .b{color:var(--bad)}
+.tr{max-height:300px;overflow:auto}
+.sk{display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid var(--line);font-size:.82rem}
+.tag2{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:.15rem .55rem;border-radius:99px;color:#fff;white-space:nowrap}
+.t-have{background:#059669}.t-adj{background:#d97706}.t-gap{background:#e11d48}
+.verdict{font-size:1.1rem;font-weight:800;padding:.7rem 1rem;border-radius:14px;border:1px solid var(--line2);margin-bottom:.8rem}
+.v-go{border-color:var(--good);color:var(--good)}.v-disc{border-color:var(--c1);color:var(--c1)}.v-skip{border-color:var(--bad);color:var(--bad)}
+.flag{display:flex;gap:.5rem;font-size:.8rem;padding:.3rem 0;color:var(--bad)}
+textarea.job{min-height:200px}textarea.prop{min-height:300px}
+select{width:100%}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Agentic AI · Freelancing · Decision support</span>
+    <h1>Freelance Proposal Agent</h1>
+    <p class="lead">Most freelancers lose time on bad-fit jobs and lose jobs with generic proposals. Paste a job post and the agent reads it, checks it against your real skills, spots red flags, estimates the work, and writes a proposal that names any gaps honestly instead of hiding them.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Job post <button class="chip" id="ex1">Example: good fit</button> <button class="chip" id="ex2">Example: risky</button></div>
+      <div class="field"><textarea id="job" class="job" placeholder="Paste the full job description here…"></textarea></div>
+      <div class="card-h">You</div>
+      <div class="two"><div class="field"><label>Your name</label><input id="me" type="text" value="Moiz"/></div><div class="field"><label>Hourly rate (USD)</label><input id="rate" type="text" value="20"/></div></div>
+      <div class="field"><label>Skills you can really deliver (comma separated, be strict)</label><textarea id="skills" style="min-height:80px">React, JavaScript, HTML, CSS, Node.js, Python, Supabase, PostgreSQL, REST API, n8n, web scraping, POS system, inventory system, CRM, dashboard, landing page, Git, Vercel, machine learning, chatbot</textarea></div>
+      <div class="field"><label>One true line of proof (optional)</label><input id="proof" type="text" placeholder="e.g. I built a POS and inventory system for a retail shop."/></div>
+      <button class="btn primary" id="run" style="width:100%">Run the proposal agent</button>
+    </div>
+    <div>
+      <div class="card"><div class="card-h">Agent trace <b id="status">idle</b></div><div class="tr" id="tr"><span class="small">Paste a job (or use an example) and run the agent.</span></div></div>
+      <div class="card" id="vCard" hidden><div class="card-h">Verdict</div><div id="verdict"></div></div>
+    </div>
+  </div>
+
+  <div id="out" hidden>
+    <div class="grid g2" style="margin-top:1.1rem">
+      <div class="card"><div class="card-h">Skill match</div><div id="match"></div><div class="card-h" style="margin-top:1rem">Red flags</div><div id="flags"></div></div>
+      <div class="card"><div class="card-h">Effort &amp; price</div><div class="metrics" id="est"></div><div class="small" style="margin-top:.7rem" id="estNote"></div></div>
+    </div>
+    <div class="card" style="margin-top:1.1rem"><div class="card-h">Draft proposal <b id="pw"></b></div><textarea id="prop" class="prop"></textarea><div class="row" style="margin-top:.6rem"><button class="btn" id="cp">Copy</button><span class="small">Edit it. A proposal you have not read is not yours yet.</span></div></div>
+  </div>
+
+  <section class="note">
+    <b>What's real here, and what is not</b>
+    <ul>
+      <li><b>Real:</b> the agent parses your pasted text (budget, timeline, required vs nice-to-have skills using a skill dictionary of about 70 technologies with aliases), compares it with the skills you list, scores the fit, applies red-flag rules (unpaid trials, off-platform payment, absurd deadlines, budget far below the estimated work) and builds the effort estimate from deliverable keywords. All of it runs in your browser and nothing is uploaded.</li>
+      <li><b>Honest by design:</b> any required skill you did not list is named in the proposal as a gap, with how you would handle it. It never claims a skill you did not enter. Related skills (for example Vue when you know React) are shown as “adjacent”, not as a match.</li>
+      <li><b>Not an LLM:</b> the proposal is assembled from templates and the specifics found in the post, so read it and add your own voice. The hours are rough rule-of-thumb figures, not a quote: check them against your own experience.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser, no AI API</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+/* skill dictionary: canonical -> aliases */
+const DICT = { 'react': ['react', 'reactjs', 'react.js'], 'next.js': ['next.js', 'nextjs'], 'vue': ['vue', 'vuejs', 'vue.js', 'nuxt'], 'angular': ['angular'], 'javascript': ['javascript', 'js', 'es6'], 'typescript': ['typescript'], 'html': ['html', 'html5'], 'css': ['css', 'css3', 'tailwind', 'sass', 'bootstrap'], 'node.js': ['node', 'nodejs', 'node.js', 'express'], 'python': ['python'], 'django': ['django'], 'flask': ['flask'], 'fastapi': ['fastapi'], 'php': ['php', 'laravel', 'wordpress', 'woocommerce'], 'java': ['java'], 'c#': ['c#', '.net', 'asp.net'], 'go': ['golang'], 'ruby': ['ruby', 'rails'], 'flutter': ['flutter'], 'react native': ['react native'], 'android': ['android', 'kotlin'], 'ios': ['ios', 'swift', 'swiftui'], 'sql': ['sql'], 'postgresql': ['postgres', 'postgresql'], 'mysql': ['mysql', 'mariadb'], 'mongodb': ['mongodb', 'mongo'], 'supabase': ['supabase'], 'firebase': ['firebase', 'firestore'], 'aws': ['aws', 'amazon web services', 'lambda', 's3', 'ec2'], 'docker': ['docker', 'kubernetes'], 'rest api': ['rest api', 'rest', 'api', 'apis', 'graphql', 'webhook', 'webhooks', 'integration'], 'n8n': ['n8n', 'zapier', 'make.com', 'automation'], 'web scraping': ['scraping', 'scraper', 'crawler', 'crawling', 'puppeteer', 'selenium'], 'machine learning': ['machine learning', 'ml', 'deep learning', 'tensorflow', 'pytorch', 'neural network', 'computer vision', 'nlp'], 'chatbot': ['chatbot', 'chat bot', 'llm', 'openai', 'gpt', 'langchain'], 'pos system': ['pos', 'point of sale'], 'inventory system': ['inventory', 'stock management'], 'crm': ['crm'], 'dashboard': ['dashboard', 'admin panel', 'analytics'], 'landing page': ['landing page', 'portfolio site', 'website', 'web site', 'wordpress'], 'e-commerce': ['e-commerce', 'ecommerce', 'online store', 'shopify', 'woocommerce', 'checkout'], 'git': ['git', 'github'], 'vercel': ['vercel', 'netlify', 'heroku'], 'figma': ['figma', 'ui design', 'ux design'], 'seo': ['seo'], 'embedded': ['embedded', 'arduino', 'esp32', 'microcontroller', 'raspberry pi', 'firmware'], 'data analysis': ['data analysis', 'pandas', 'excel', 'power bi', 'tableau', 'data visualization'], 'blockchain': ['blockchain', 'solidity', 'web3', 'smart contract', 'nft'] };
+const ADJ = { react: ['vue', 'angular', 'next.js', 'react native', 'typescript'], 'next.js': ['react'], vue: ['react'], angular: ['react', 'typescript'], typescript: ['javascript'], 'node.js': ['javascript', 'python'], django: ['python', 'flask'], flask: ['python'], fastapi: ['python', 'flask'], mysql: ['postgresql', 'sql'], postgresql: ['sql'], sql: ['postgresql'], mongodb: ['postgresql', 'supabase'], firebase: ['supabase'], aws: ['vercel', 'docker'], docker: ['vercel'], php: ['node.js', 'python'], flutter: ['react native', 'android'], 'react native': ['react'], 'landing page': ['html', 'css', 'react'], 'e-commerce': ['landing page', 'rest api', 'pos system'], seo: ['landing page'], figma: ['css'], 'data analysis': ['python', 'dashboard'] };
+const HOURS = [['landing page', 10], ['e-commerce', 60], ['dashboard', 35], ['crm', 60], ['pos system', 45], ['inventory system', 30], ['chatbot', 28], ['machine learning', 40], ['web scraping', 12], ['rest api', 18], ['n8n', 14], ['android', 120], ['ios', 120], ['flutter', 100], ['react native', 100], ['blockchain', 80], ['embedded', 50], ['data analysis', 20]];
+const norm = s => s.toLowerCase();
+function find(text) { const t = ' ' + norm(text).replace(/[^a-z0-9+#.\s-]/g, ' ') + ' ', out = new Set(); Object.entries(DICT).forEach(([k, al]) => { if (al.some(a => new RegExp('(^|[^a-z0-9])' + a.replace(/[.+#]/g, m => '\\' + m) + '([^a-z0-9]|$)').test(t))) out.add(k); }); return out; }
+function parse(job) {
+  const sents = job.split(/(?<=[.!?\n])\s+|\n+/).map(s => s.trim()).filter(Boolean), must = new Set(), nice = new Set(), all = find(job);
+  sents.forEach(s => { const f = find(s); if (!f.size) return; const isNice = /\b(nice to have|plus|preferred|bonus|ideally|optional|a plus)\b/i.test(s); f.forEach(x => (isNice ? nice : must).add(x)); });
+  nice.forEach(x => must.has(x) && nice.delete(x));
+  const bud = /\$\s?(\d[\d,]*)(?:\s?[-–to]+\s?\$?\s?(\d[\d,]*))?(?:\s*(?:k|K))?/.exec(job), budget = bud ? { lo: +bud[1].replace(/,/g, '') * (/k/i.test(bud[0]) ? 1000 : 1), hi: bud[2] ? +bud[2].replace(/,/g, '') : null, raw: bud[0] } : null;
+  const tl = /(?:within|in|by|deadline of|ready in|complete in|finish in)\s+(\d+)\s*(hours?|days?|weeks?|months?)/i.exec(job), asap = /\b(asap|urgent|immediately|today|tonight)\b/i.test(job);
+  let days = tl ? +tl[1] * ({ hour: 1 / 24, day: 1, week: 7, month: 30 }[tl[2].toLowerCase().replace(/s$/, '')]) : null;
+  return { title: (sents[0] || '').slice(0, 90), all, must, nice, budget, days, asap, sents };
+}
+function match(p, mine) {
+  const myAdj = new Set(); mine.forEach(m => (ADJ[m] || []).forEach(a => myAdj.add(a))); Object.entries(ADJ).forEach(([k, arr]) => arr.forEach(a => mine.has(a) && myAdj.add(k)));
+  const rows = []; const add = (skill, req) => rows.push({ skill, req, st: mine.has(skill) ? 'have' : myAdj.has(skill) ? 'adj' : 'gap' });
+  p.must.forEach(s => add(s, true)); p.nice.forEach(s => add(s, false)); return rows;
+}
+function flags(job, p, est) {
+  const f = [], j = job.toLowerCase();
+  if (/\b(free (test|trial|sample|work)|unpaid|test project.*(free|unpaid)|for exposure|equity only|revenue share only)\b/.test(j)) f.push('Asks for unpaid work (free test, trial or equity only).');
+  if (/\b(whatsapp|telegram|skype|email me|gmail|outside (of )?(the )?(platform|upwork|fiverr)|pay(ment)? (outside|directly))\b/.test(j)) f.push('Pushes you off the platform or to private chat before a contract.');
+  if (/\b(crypto|bitcoin|usdt|gift ?card|western union)\b/.test(j) && !/blockchain developer/.test(j)) f.push('Payment in crypto or gift cards.');
+  if (p.days !== null && p.days < 1.5) f.push(`Deadline under 36 hours (${p.days < 1 ? Math.round(p.days * 24) + ' hours' : '1 day'}) for real work.`);
+  if (/\bunlimited revisions\b/.test(j)) f.push('“Unlimited revisions” with a fixed price is a scope trap.');
+  if (/\b(100% (success|guarantee)|no mistakes|perfect)\b/.test(j)) f.push('Demands perfection or guarantees, which usually means disputes.');
+  if (p.budget && est && p.budget.lo < est.low * 0.4) f.push(`Stated budget ${p.budget.raw.trim()} is far below the estimated work (${Math.round(est.low)}–${Math.round(est.high)} USD).`);
+  if (j.length < 180) f.push('Very short post: requirements are unclear, so expect scope creep.');
+  if (!p.budget) f.push('No budget stated, so ask before investing time.');
+  return f;
+}
+function estimate(p, rate, gaps) {
+  const hit = HOURS.filter(([k]) => p.all.has(k)).sort((a, b) => b[1] - a[1]); let h = 0, why = []; hit.forEach(([k, v], i) => { const c = i ? Math.round(v * 0.35) : v; h += c; why.push(`${k} ${c}h${i ? ' (overlaps, counted at 35%)' : ''}`); }); if (!h) { h = 20; why.push('no clear deliverable found: 20h default'); }
+  const mult = 1 + 0.15 * gaps; const hi = h * mult * 1.35, lo = h * mult * 0.8; return { hours: Math.round(h * mult), low: lo * rate, high: hi * rate, hlo: Math.round(lo), hhi: Math.round(hi), why, mult };
+}
+function propose(me, proof, p, rows, est, job) {
+  const have = rows.filter(r => r.st === 'have' && r.req).map(r => r.skill), adj = rows.filter(r => r.st === 'adj' && r.req).map(r => r.skill), gap = rows.filter(r => r.st === 'gap' && r.req).map(r => r.skill);
+  const list = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  const need = (p.sents.find(s => /\b(need|looking for|require|want|build|develop|create)\b/i.test(s)) || p.title).replace(/^[-•*\s]+/, '').slice(0, 140).replace(/[.!?]+$/, '');
+  const qs = []; if (!p.budget) qs.push('What budget range do you have in mind?'); if (p.days === null && !p.asap) qs.push('What is your ideal delivery date?'); if (p.all.size < 3) qs.push('Which features are must-haves for a first version?'); if (qs.length < 2) qs.push('Do you already have designs or a reference site you like?');
+  let t = `Hi,\n\nYou wrote: “${need}”. That is the kind of project I work on.\n\n`;
+  t += have.length ? `Directly relevant to what you need: I work with ${list(have)}.${proof ? ' ' + proof.replace(/\s*\.?$/, '.') : ''}\n\n` : (proof ? proof.replace(/\s*\.?$/, '.') + '\n\n' : '');
+  if (adj.length) t += `Close to my experience but not identical: ${list(adj)}. I have worked with related tools and would ramp up quickly, but I would rather tell you that now.\n\n`;
+  if (gap.length) t += `Where I am not the right fit: ${list(gap)}. I have not delivered that professionally, so ${gap.length > 1 ? 'those parts' : 'that part'} would either need someone else or extra time that I would flag openly.\n\n`;
+  t += `How I would approach it:\n1. A short call or message exchange to confirm scope and what “done” means.\n2. A first working version in about ${Math.max(2, Math.round(est.hours / 3 / 8))} days so you can react to something real.\n3. Revisions, handover and a short note on how to run it.\n\nEstimated effort: ${est.hlo}–${est.hhi} hours. ${p.budget ? 'Your stated budget is ' + p.budget.raw.trim() + ', and I will tell you plainly if the scope needs trimming to fit it.' : 'I will give a fixed price once the scope is clear.'}\n\n${qs.length > 1 ? 'Two quick questions' : 'One quick question'}:\n` + qs.slice(0, 2).map((q, i) => `${i + 1}. ${q}`).join('\n') + `\n\nBest,\n${me}`;
+  return t;
+}
+const EX1 = `Need a React developer to build an inventory and POS dashboard for my retail shop
+
+We need a web dashboard where staff can track stock, record sales and see daily reports. The backend can use Supabase or any PostgreSQL database. Must have experience with React and REST APIs. Nice to have: experience with barcode scanners, or Vercel deployment.
+
+Budget: $400-$600. Timeline: within 3 weeks. Please share a similar project you built.`;
+const EX2 = `URGENT!!! Need full stack mobile app + website + AI chatbot in 24 hours
+
+Looking for a Flutter and Angular expert with blockchain experience. You must build a complete app like Uber with payments. We will pay $30 total. Do a free test project first and then we contact you on WhatsApp for payment outside the platform. Unlimited revisions. Must be 100% perfect.`;
+$('#ex1').onclick = () => ($('#job').value = EX1); $('#ex2').onclick = () => ($('#job').value = EX2);
+const step = (c, b, h) => { const e = $('#tr').querySelector('.small'); if (e) e.remove(); const d = document.createElement('div'); d.className = 'step ' + c; d.innerHTML = `<span class="b">${b}</span><div>${h}</div>`; $('#tr').appendChild(d); $('#tr').scrollTop = 1e6; };
+async function run() {
+  const job = $('#job').value.trim(); $('#tr').innerHTML = ''; $('#out').hidden = true; $('#vCard').hidden = true; if (job.length < 40) { step('bad', 'Stop', 'Paste the full job description (at least a couple of sentences).'); return; }
+  $('#run').disabled = true; $('#status').textContent = 'working…';
+  const rate = Math.max(1, parseFloat($('#rate').value) || 20), mine = find($('#skills').value);
+  step('', 'Thought', `Goal: decide whether this job is worth applying to and, if so, write an honest proposal. You listed ${mine.size} recognised skills.`); await sleep(350);
+  const p = parse(job); step('act', 'Action', '<code>parse_job_post</code>'); await sleep(300);
+  step('obs', 'Observation', `Found ${p.all.size} technologies (${p.must.size} required, ${p.nice.size} nice to have). Budget: ${p.budget ? esc(p.budget.raw.trim()) : 'not stated'}. Deadline: ${p.days !== null ? Math.round(p.days * 10) / 10 + ' days' : p.asap ? 'ASAP' : 'not stated'}.`); await sleep(300);
+  const rows = match(p, mine), gaps = rows.filter(r => r.st === 'gap' && r.req).length; step('act', 'Action', '<code>match_skills</code>'); await sleep(300);
+  step('obs', 'Observation', `Required skills: ${rows.filter(r => r.req && r.st === 'have').length} you have, ${rows.filter(r => r.req && r.st === 'adj').length} adjacent, ${gaps} gaps.`); await sleep(300);
+  const est = estimate(p, rate, gaps); step('act', 'Action', `<code>estimate_effort</code> rate=${rate} USD/h`); await sleep(300);
+  step('obs', 'Observation', `About ${est.hlo}–${est.hhi} hours (${est.why.map(esc).join(', ')}${gaps ? `; +${Math.round((est.mult - 1) * 100)}% for ${gaps} gap${gaps > 1 ? 's' : ''}` : ''}). Price at your rate: $${Math.round(est.low)}–$${Math.round(est.high)}.`); await sleep(300);
+  const fl = flags(job, p, est), reqN = rows.filter(r => r.req).length, score = reqN ? Math.round(100 * rows.filter(r => r.req).reduce((a, r) => a + (r.st === 'have' ? 1 : r.st === 'adj' ? 0.5 : 0), 0) / reqN) : 40;
+  const hard = fl.filter(x => /unpaid|platform|crypto|under 36|perfection|far below/.test(x)).length; step('act', 'Action', '<code>check_red_flags</code>'); await sleep(300);
+  step(fl.length ? 'bad' : 'obs', 'Observation', fl.length ? `${fl.length} flag${fl.length > 1 ? 's' : ''} found (${hard} serious).` : 'No red flags found.'); await sleep(300);
+  let v, cls; const budgetOnly = hard === 1 && fl.some(x => /far below/.test(x)) && score >= 70; if (hard >= 2 || score < 25) { v = 'Skip this one'; cls = 'v-skip'; } else if (budgetOnly) { v = 'Good fit: negotiate the budget or scope'; cls = 'v-disc'; } else if (hard === 1 || gaps > 0 || score < 70) { v = score >= 50 && hard === 0 ? 'Apply, and disclose the gaps' : 'Think twice before applying'; cls = hard ? 'v-skip' : 'v-disc'; } else { v = 'Apply: strong fit'; cls = 'v-go'; }
+  step('ok', 'Done', `Fit ${score}%. Verdict: ${v}.`);
+  $('#vCard').hidden = false; $('#verdict').innerHTML = `<div class="verdict ${cls}">${v} <span style="font-weight:600;font-size:.85rem">· fit ${score}%</span></div><div class="small">${budgetOnly ? 'Skills match, but the stated budget is well under the estimated work. Propose a smaller first version.' : hard ? 'Serious red flags mean unpaid time or payment risk. A proposal is optional here.' : gaps ? 'You can win this if you are upfront about what you have not done.' : 'Your skills cover what they asked for.'}</div>`;
+  $('#out').hidden = false;
+  $('#match').innerHTML = rows.length ? rows.map(r => `<div class="sk"><span>${esc(r.skill)} <span class="small">${r.req ? 'required' : 'nice to have'}</span></span><span class="tag2 t-${r.st}">${{ have: 'you have it', adj: 'adjacent', gap: 'gap' }[r.st]}</span></div>`).join('') : '<span class="small">No recognised technologies found in the post.</span>';
+  $('#flags').innerHTML = fl.length ? fl.map(x => `<div class="flag"><b>⚑</b><span>${esc(x)}</span></div>`).join('') : '<span class="small">None found.</span>';
+  $('#est').innerHTML = `<div class="metric"><div class="m-val">${est.hlo}–${est.hhi}</div><div class="m-lab">Hours</div></div><div class="metric"><div class="m-val">$${Math.round(est.low)}–${Math.round(est.high)}</div><div class="m-lab">At $${rate}/h</div></div><div class="metric"><div class="m-val">${p.budget ? esc(p.budget.raw.trim()) : '–'}</div><div class="m-lab">Their budget</div></div>`;
+  $('#estNote').textContent = p.budget ? (p.budget.lo * (p.budget.hi ? 1 : 1) >= est.low * 0.8 ? 'Their budget is in a realistic range for this scope.' : 'Their budget is below your estimate: negotiate scope, not your rate.') : 'No budget given. Ask before you spend time.';
+  const prop = propose($('#me').value.trim() || 'Moiz', $('#proof').value.trim(), p, rows, est, job); $('#prop').value = prop; $('#pw').textContent = prop.trim().split(/\s+/).length + ' words';
+  $('#status').textContent = 'finished'; $('#run').disabled = false;
+}
+$('#run').onclick = run;
+$('#cp').onclick = async e => { try { await navigator.clipboard.writeText($('#prop').value); e.target.textContent = 'Copied'; } catch (x) { e.target.textContent = 'Copy failed'; } };
+window.__pa = { parse, find, match, estimate, flags, propose };
+</script>
+</body>
+</html>

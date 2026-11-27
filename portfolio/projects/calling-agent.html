@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Calling Agent Simulator — Moiz Ahmad</title>
+<meta name="description" content="A phone-call agent you can talk to: it opens with an AI disclosure, follows a call script, handles objections, honours do-not-call requests and logs the outcome. Simulated in the browser, with a TwiML export for real telephony."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}@media(max-width:560px){.two{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.6rem}.field label{font-size:.7rem;font-weight:600;color:var(--muted);letter-spacing:.04em}
+select{width:100%}
+.phone{border:1px solid var(--line2);border-radius:22px;padding:1rem;background:var(--bg2)}
+:root[data-theme="light"] .phone{background:#fff}
+.bar2{display:flex;justify-content:space-between;align-items:center;margin-bottom:.7rem}
+.who{font-weight:800}.timer{font-family:ui-monospace,Consolas,monospace;color:var(--muted)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--faint);margin-right:.4rem}.dot.on{background:var(--good);box-shadow:0 0 8px var(--good)}.dot.ring{background:var(--c1);animation:blink .7s infinite}
+@keyframes blink{50%{opacity:.2}}
+.tr{height:300px;overflow:auto;display:flex;flex-direction:column;gap:.45rem;padding:.2rem}
+.m{padding:.5rem .8rem;border-radius:14px;font-size:.85rem;max-width:88%;animation:pop .2s both;overflow-wrap:anywhere}
+@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.m.ag{align-self:flex-start;background:color-mix(in srgb,var(--a) 14%,transparent);border:1px solid color-mix(in srgb,var(--a) 40%,transparent)}
+.m.cl{align-self:flex-end;background:var(--grad);color:#fff}
+.m.sys{align-self:center;font-size:.74rem;color:var(--muted);background:transparent;font-style:italic}
+.m small{display:block;opacity:.6;font-size:.62rem;margin-top:.1rem}
+.calls{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
+.btn.end{background:#e11d48;border-color:#e11d48;color:#fff}.btn.dial{background:#059669;border-color:#059669;color:#fff}
+.nodes{display:flex;flex-wrap:wrap;gap:.35rem}.nd{font-size:.72rem;padding:.2rem .6rem;border-radius:99px;border:1px solid var(--line2);color:var(--faint)}.nd.cur{border-color:var(--a);color:var(--text);background:color-mix(in srgb,var(--a) 18%,transparent)}.nd.done{color:var(--good);border-color:var(--good)}
+.ck{display:flex;gap:.5rem;font-size:.8rem;padding:.3rem 0;border-bottom:1px solid var(--line)}.ck i{font-style:normal;font-weight:800;width:1rem}.ck.p i{color:var(--good)}.ck.f i{color:var(--bad)}
+.log td,.log th{padding:.4rem .5rem;border-bottom:1px solid var(--line);font-size:.76rem;text-align:left}.log th{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+pre.x{font-size:.72rem;max-height:240px}
+.disp{display:inline-block;font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:.15rem .55rem;border-radius:99px;color:#fff}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Voice AI · Phone agents · Call automation</span>
+    <h1>AI Calling Agent Simulator</h1>
+    <p class="lead">Dial the agent and play the person who picks up. It introduces itself as an automated assistant, follows a call script, deals with “who is this?”, “call me later” and “stop calling me”, books the outcome and logs the call. No real phone call is made: this is the agent's brain, running in your browser.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Set up the call</div>
+      <div class="field"><label>Scenario</label><select id="scn"><option value="dental">Dental clinic: appointment confirmation</option><option value="sales">Software agency: lead qualification</option></select></div>
+      <div class="two"><div class="field"><label>Person being called</label><input id="name" type="text" value="Sara"/></div><div class="field"><label>Business (for the sales scenario)</label><input id="biz" type="text" value="Bella Cucina"/></div></div>
+      <div class="two"><div class="field"><label>Their time zone</label><select id="tz"></select></div><div class="field"><label>Speak the agent's lines aloud</label><select id="tts"><option value="1">Yes (text to speech)</option><option value="0">No</option></select></div></div>
+      <div class="card-h" style="margin-top:.4rem">Pre-call compliance <b id="pre"></b></div><div id="checks"></div>
+    </div>
+    <div class="phone">
+      <div class="bar2"><div><div class="who" id="who">Ready to dial</div><div class="small"><span class="dot" id="dot"></span><span id="cst">idle</span></div></div><div class="timer" id="clock">00:00</div></div>
+      <div class="tr" id="tr"></div>
+      <form id="form" class="row" style="margin-top:.6rem;flex-wrap:nowrap"><input id="inp" type="text" placeholder="You are the person on the phone. Type what you say…" autocomplete="off" disabled/><button class="btn" type="submit" id="say" disabled>Say</button><button class="btn" type="button" id="mic" disabled title="Speak instead of typing (Chrome or Edge)">🎙️</button></form>
+      <div class="calls"><button class="btn dial" id="dial">Dial</button><button class="btn end" id="hang" disabled>Hang up</button><button class="btn" id="sil" disabled>Stay silent</button><button class="btn" id="vm" disabled>Voicemail</button></div>
+      <div class="legend" id="hints" style="margin-top:.7rem"></div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:1.1rem">
+    <div class="card"><div class="card-h">Call flow</div><div class="nodes" id="nodes"></div><div class="card-h" style="margin-top:1rem">Last decision</div><div class="small" id="why">Dial to start.</div></div>
+    <div class="card"><div class="card-h">Call log <b id="logN"></b></div><div style="overflow-x:auto"><table class="log" id="log" style="width:100%;border-collapse:collapse"></table></div><div class="row" style="margin-top:.6rem"><button class="btn" id="clr">Clear log</button></div></div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem"><div class="card-h">Take it to real telephony <b>TwiML export</b></div>
+    <p class="small" style="margin-bottom:.6rem">This is what the current script step looks like as a Twilio-style webhook response. Connecting it to a real phone line needs a server that returns this XML, a telephony account and a verified number. I have not done that here and no call is ever placed from this page.</p>
+    <pre class="code x" id="twiml"></pre></div>
+
+  <section class="note">
+    <b>What's real here, and what is not</b>
+    <ul>
+      <li><b>Real:</b> a call state machine (greeting, purpose, objections, booking, close), intent detection with global handlers that work at any point (“are you a robot?”, “stop calling me”, “call me later”, “wrong number”, “I want a human”), silence and voicemail handling, a call timer, a persistent call log, and a pre-call compliance check on the recipient's local calling hours and a do-not-call list.</li>
+      <li><b>Built-in ethics:</b> the agent always says it is an automated assistant at the start and answers honestly if asked. A “stop calling” request puts the number on the do-not-call list and the dial button refuses next time. It never pretends to be human and never calls outside 8 am to 9 pm local time.</li>
+      <li><b>Not a real phone call, and not an LLM:</b> there is no telephony and no AI model, so the script is rule-based and handles the situations listed above, not open conversation. Real outbound calling also has legal requirements that vary by country (consent, do-not-call registries, disclosure of automated calls); this demo is not legal advice.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser, no AI API, no real calls</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* blocked */ } } };
+const TZ = [['Asia/Karachi', 'Pakistan (PKT)'], ['Asia/Dubai', 'UAE (GST)'], ['Europe/London', 'UK'], ['America/New_York', 'US East'], ['America/Los_Angeles', 'US West'], ['Asia/Riyadh', 'Saudi Arabia']];
+$('#tz').innerHTML = TZ.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+const NAMES = { dental: ['greet', 'purpose', 'offer', 'confirmed', 'close'], sales: ['greet', 'purpose', 'need', 'demo', 'slot', 'close'] };
+/* ---------- NLU ---------- */
+const has = (re, t) => re.test(t);
+const YES = /\b(yes|yeah|yep|yup|sure|ok(ay)?|correct|speaking|that'?s me|this is (him|her|she|he)|of course|go ahead|please do|sounds good|why not|fine|i can|i will|absolutely)\b/i, NO = /\b(no|nope|nah|not|can'?t|cannot|won'?t|don'?t|never|unable|wrong)\b/i;
+const G = { dnc: /(stop calling|do not call|don'?t call|remove (me|my number)|take me off|never call|unsubscribe|put me on the do not call)/i, human: /(talk to (a )?(human|person)|real person|speak (to|with) (a |someone)|representative|your manager|transfer me|human please)/i, robot: /(are you (a |an )?(robot|bot|ai|machine|real|human|person|automated|computer)|is this (a )?(robot|bot|recording|ai|machine|automated)|you('re| are) (a )?(robot|bot|ai|machine))/i, who: /(who (is this|are you|'?s calling|is calling)|what company|where are you calling from|how did you get my number)/i, busy: /(busy|not a good time|call (me )?(back )?later|in a meeting|driving|can'?t talk|bad time|another time)/i, wrong: /(wrong number|no one by that name|not (sara|him|her|me)\b|doesn'?t live|never heard of)/i, repeat: /^(what|pardon|sorry|come again|say that again|repeat|huh|could you repeat|i didn'?t (hear|catch)|can you repeat)/i, price: /(how much|price|cost|expensive|charge|fee)/i };
+/* ---------- scenarios: each node returns the agent's line; step() decides what to do with the caller's words ---------- */
+const SC = {
+  dental: {
+    title: 'Smile Dental Clinic', purposeKey: 'confirm',
+    say: { greet: v => `Hello, this is an automated assistant calling from Smile Dental Clinic. This call may be recorded. Am I speaking with ${v.name}?`, purpose: v => `Thanks, ${v.name}. I'm calling to confirm your check-up on Monday at 11 am. Will you be able to attend?`, offer: v => `No problem at all. I can offer Tuesday at 10 am, or Thursday at 3 pm. Which would you prefer?`, confirmed: v => `Wonderful, you are confirmed for Monday at 11 am. We will send a text reminder the day before. Is there anything else I can help with?`, close: v => `Thank you, ${v.name}. Goodbye!` },
+    hints: ['Yes, speaking', 'Who is this?', 'Are you a robot?', 'Yes I can come', "I can't make it", 'Thursday', 'Call me later', 'Stop calling me'],
+    step(node, t, v, c) {
+      if (node === 'greet') { if (YES.test(t) && !has(/\bnot\b/i, t)) return { to: 'purpose', why: 'Identity confirmed.' }; if (NO.test(t)) return { end: 'Wrong number', say: "I'm sorry for the interruption. Goodbye.", why: 'Not the right person.' }; }
+      if (node === 'purpose') { if (has(/(reschedul|another (day|time)|change|different|can'?t|cannot|unable|won'?t|not able|no\b)/i, t)) return { to: 'offer', why: 'Cannot attend, so offering new slots.' }; if (YES.test(t)) return { to: 'confirmed', why: 'Caller confirmed the appointment.', outcome: 'Confirmed' }; }
+      if (node === 'offer') { if (has(/(tue|first|10)/i, t)) { c.slot = 'Tuesday at 10 am'; return { to: 'close', say: `Done. I have moved you to Tuesday at 10 am. We will send a text to confirm. Goodbye, ${v.name}!`, why: 'Chose the first slot.', outcome: 'Rescheduled' }; } if (has(/(thu|second|3|three)/i, t)) { c.slot = 'Thursday at 3 pm'; return { to: 'close', say: `Done. I have moved you to Thursday at 3 pm. We will send a text to confirm. Goodbye, ${v.name}!`, why: 'Chose the second slot.', outcome: 'Rescheduled' }; } if (has(/(neither|none|other|different)/i, t) || NO.test(t)) return { to: 'close', say: `Understood. I will ask our receptionist to call you to find a time that suits you. Goodbye, ${v.name}.`, why: 'Neither slot works, so a human callback is queued.', outcome: 'Callback requested' }; }
+      if (node === 'confirmed') { if (NO.test(t) || has(/(that'?s all|nothing|all good|no thanks)/i, t)) return { to: 'close', why: 'Nothing further.', outcome: 'Confirmed' }; if (YES.test(t)) return { to: 'close', say: 'Our receptionist will be happy to help with that when you visit. Goodbye!', why: 'Extra request deferred to staff.', outcome: 'Confirmed' }; }
+      return null;
+    },
+  },
+  sales: {
+    title: 'Atronm Technologies', purposeKey: 'qualify',
+    say: { greet: v => `Hello, this is an automated assistant calling on behalf of Atronm Technologies. This call may be recorded. Am I speaking with ${v.name}?`, purpose: v => `Thanks, ${v.name}. We build point-of-sale and stock software for small businesses. Are you the person who decides on software for ${v.biz}? `, need: v => `Great. How do you track stock and sales today: on paper, in a spreadsheet, or with a software system?`, demo: v => `That is a common situation, and it is exactly what we help with. Would you like a short, free demo built around ${v.biz}?`, slot: v => `Excellent. I can have our developer call you Tuesday at 11 am or Wednesday at 4 pm. Which suits you?`, close: v => `Thank you for your time, ${v.name}. Goodbye!` },
+    hints: ['Yes, speaking', 'What company is this?', 'How much does it cost?', 'We use a spreadsheet', 'Yes, a demo sounds good', 'Wednesday', "Not interested", 'Stop calling me'],
+    step(node, t, v, c) {
+      if (node === 'greet') { if (YES.test(t) && !has(/\bnot\b/i, t)) return { to: 'purpose', why: 'Identity confirmed.' }; if (NO.test(t)) return { end: 'Wrong number', say: "I'm sorry for the interruption. Goodbye.", why: 'Not the right person.' }; }
+      if (node === 'purpose') { if (has(/(not interested|no thanks|no thank you|not looking|we('re| are) (fine|good|covered))/i, t)) return { to: 'close', say: `Understood, thank you for your time, ${v.name}. Goodbye.`, why: 'Declined.', outcome: 'Not interested' }; if (has(/(owner|manager|i do|i am|i'?m the|yes)/i, t) && !NO.test(t.replace(/not sure/i, ''))) return { to: 'need', why: 'Decision maker confirmed.' }; if (NO.test(t)) return { to: 'close', say: `No problem. Could you tell me the best person to contact? ... Actually, I will not keep you. Thank you, goodbye.`, why: 'Not the decision maker; ending politely.', outcome: 'Not the decision maker' }; }
+      if (node === 'need') { if (has(/(paper|notebook|register|manual|handwritten|ledger)/i, t)) { c.need = 'paper'; return { to: 'demo', why: 'Uses paper: strong need.' }; } if (has(/(spreadsheet|excel|sheet)/i, t)) { c.need = 'spreadsheet'; return { to: 'demo', why: 'Uses spreadsheets: good need.' }; } if (has(/(software|system|app|pos|quickbooks|odoo|already)/i, t)) { c.need = 'software'; return { to: 'close', say: `Good to hear you already have something in place. I will not take more of your time. Thank you, ${v.name}. Goodbye!`, why: 'Already has software: low need.', outcome: 'Not interested' }; } }
+      if (node === 'demo') { if (has(/(not interested|no thanks|no thank you|maybe later|not now)/i, t) || (NO.test(t) && !YES.test(t))) return { to: 'close', say: `That is fine. Thank you for your time, ${v.name}. Goodbye!`, why: 'Declined the demo.', outcome: 'Not interested' }; if (YES.test(t) || has(/(demo|show me|interested|tell me more)/i, t)) return { to: 'slot', why: 'Agreed to a demo.' }; }
+      if (node === 'slot') { if (has(/(tue|first|11)/i, t)) { c.slot = 'Tuesday 11 am'; return { to: 'close', say: `Booked for Tuesday at 11 am. You will get a confirmation message. Thank you, ${v.name}, goodbye!`, why: 'Booked a demo call.', outcome: 'Demo booked' }; } if (has(/(wed|second|4|four)/i, t)) { c.slot = 'Wednesday 4 pm'; return { to: 'close', say: `Booked for Wednesday at 4 pm. You will get a confirmation message. Thank you, ${v.name}, goodbye!`, why: 'Booked a demo call.', outcome: 'Demo booked' }; } if (NO.test(t)) return { to: 'close', say: `No problem. Our developer will send a message so you can pick a time. Goodbye, ${v.name}.`, why: 'No slot picked, so a message will follow.', outcome: 'Follow-up message' }; }
+      return null;
+    },
+  },
+};
+/* ---------- call runtime ---------- */
+let call = null, clockT = null, synth = window.speechSynthesis;
+const vars = () => ({ name: $('#name').value.trim() || 'there', biz: $('#biz').value.trim() || 'your business' });
+function bub(cls, text, tag) { const m = document.createElement('div'); m.className = 'm ' + cls; m.innerHTML = esc(text) + (tag ? `<small>${esc(tag)}</small>` : ''); $('#tr').appendChild(m); $('#tr').scrollTop = 1e6; }
+function speak(text) { if ($('#tts').value === '1' && synth) { synth.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; synth.speak(u); } }
+function agentSay(text, node, why) { bub('ag', text, 'agent'); speak(text); if (why) $('#why').textContent = why; if (node) { call.node = node; drawNodes(); } twiml(); }
+const localHour = () => +new Intl.DateTimeFormat('en-GB', { timeZone: $('#tz').value, hour: 'numeric', hourCycle: 'h23' }).format(new Date());
+function checks() {
+  const h = localHour(), dnc = store.get('call_dnc', []), n = $('#name').value.trim().toLowerCase(), c = [];
+  c.push([h >= 8 && h < 21, `Local time there is ${String(h).padStart(2, '0')}:xx. Calls are only allowed 08:00 to 21:00 (${h >= 8 && h < 21 ? 'inside' : 'outside'} that window).`]);
+  c.push([!dnc.includes(n), dnc.includes(n) ? `${esc($('#name').value)} is on the do-not-call list. Dialling is blocked.` : 'Number is not on the do-not-call list.']);
+  c.push([true, 'The agent opens by saying it is automated and that the call may be recorded.']);
+  $('#checks').innerHTML = c.map(([ok, t]) => `<div class="ck ${ok ? 'p' : 'f'}"><i>${ok ? '✓' : '✕'}</i><span>${t}</span></div>`).join(''); const bad = c.filter(x => !x[0]).length; $('#pre').textContent = bad ? 'cannot dial' : 'clear to dial'; $('#pre').style.color = bad ? 'var(--bad)' : 'var(--good)'; return !bad;
+}
+function drawNodes() { const sc = $('#scn').value, list = NAMES[sc]; const cur = call ? call.node : null, idx = list.indexOf(cur); $('#nodes').innerHTML = list.map((n, i) => `<span class="nd ${n === cur ? 'cur' : call && i < idx ? 'done' : ''}">${n}</span>`).join(''); }
+function hints() { $('#hints').innerHTML = SC[$('#scn').value].hints.map(h => `<button class="chip" data-h="${esc(h)}">${esc(h)}</button>`).join(''); }
+function twiml() {
+  if (!call) { $('#twiml').textContent = '<!-- dial a call to see the TwiML for the current step -->'; return; }
+  const line = (SC[call.sc].say[call.node] || (() => ''))(vars()), x = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  $('#twiml').textContent = call.node === 'close' ? `<Response>\n  <Say>${x(call.last || line)}</Say>\n  <Hangup/>\n</Response>` : `<Response>\n  <Gather input="speech" action="/call/${call.sc}/${call.node}/next" method="POST" speechTimeout="auto" timeout="6">\n    <Say>${x(call.last || line)}</Say>\n  </Gather>\n  <!-- no speech heard: Twilio continues here -->\n  <Redirect>/call/${call.sc}/${call.node}/silence</Redirect>\n</Response>`;
+}
+function dial() {
+  if (call) return; if (!checks()) { bub('sys', 'Call blocked by the compliance check.'); return; } if (synth) synth.cancel();
+  const sc = $('#scn').value; call = { sc, node: 'greet', t0: Date.now(), turns: 0, silent: 0, c: {}, outcome: null, last: null, done: false };
+  $('#tr').innerHTML = ''; $('#who').textContent = vars().name; $('#dot').className = 'dot ring'; $('#cst').textContent = 'ringing…'; ['dial'].forEach(i => ($('#' + i).disabled = true)); $('#hang').disabled = false;
+  bub('sys', 'Ringing…'); setTimeout(() => { if (!call) return; $('#dot').className = 'dot on'; $('#cst').textContent = 'connected'; bub('sys', `${vars().name} picked up. You are ${vars().name} now: say or type something like “Hello?”`); $('#inp').disabled = $('#say').disabled = $('#sil').disabled = $('#vm').disabled = false; $('#mic').disabled = !SR; $('#inp').focus(); clockT = setInterval(() => { const s = Math.floor((Date.now() - call.t0) / 1000); $('#clock').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }, 500); agentSay(SC[sc].say.greet(vars()), 'greet', 'Opening: disclose that it is automated, then confirm who is on the line.'); }, 1400);
+}
+function end(outcome, byAgent) { if (!call || call.done) return; call.done = true; clearInterval(clockT); if (synth) setTimeout(() => {}, 0); const dur = Math.floor((Date.now() - call.t0) / 1000), o = outcome || call.outcome || 'No outcome'; bub('sys', `Call ended (${byAgent ? 'agent hung up' : 'caller hung up'}). Outcome: ${o}.`); $('#dot').className = 'dot'; $('#cst').textContent = 'ended: ' + o; ['inp', 'say', 'sil', 'vm', 'mic', 'hang'].forEach(i => ($('#' + i).disabled = true)); $('#dial').disabled = false;
+  const log = store.get('call_log', []); log.unshift({ at: Date.now(), name: vars().name, sc: call.sc, dur, o, turns: call.turns, slot: call.c.slot || '' }); store.set('call_log', log.slice(0, 30)); const sc = call.sc; call = null; drawLog(); drawNodes(); twiml(); checks(); $('#why').textContent = `Call finished: ${o}.`; void sc; }
+function respond(text) {
+  if (!call || call.done) return; const t = text.trim(), v = vars(); call.turns++; call.silent = 0; bub('cl', t || '(says nothing)', 'you');
+  const S = SC[call.sc]; let r = null, why = '';
+  if (G.dnc.test(t)) { const d = store.get('call_dnc', []), n = $('#name').value.trim().toLowerCase(); if (!d.includes(n)) d.push(n); store.set('call_dnc', d); call.outcome = 'Do not call'; const l = `Understood. I have added your number to our do-not-call list and you will not be called again. I apologise for the interruption. Goodbye.`; call.last = l; agentSay(l, 'close', 'Global rule: a stop request is always honoured, logged and ends the call.'); return setTimeout(() => end('Do not call', true), 900); }
+  if (G.robot.test(t)) { call.last = 'I am an automated assistant, not a person. I can answer a few questions or arrange for a team member to call you back. How would you like to continue?'; agentSay(call.last, null, 'Global rule: always answer honestly that it is automated.'); return; }
+  if (G.human.test(t)) { call.outcome = 'Transfer requested'; call.last = 'Of course. I will have a team member call you back shortly. Thank you, and goodbye.'; agentSay(call.last, 'close', 'Global rule: caller asked for a human, so a callback is queued (simulated).'); return setTimeout(() => end('Transfer requested', true), 900); }
+  if (G.wrong.test(t) && call.node === 'greet') { call.last = "I'm sorry for the interruption. Goodbye."; agentSay(call.last, 'close', 'Wrong number.'); return setTimeout(() => end('Wrong number', true), 900); }
+  if (G.who.test(t)) { call.last = `I'm an automated assistant calling for ${S.title}. ` + (call.sc === 'sales' ? 'We found your business listing. ' : 'You are on our patient list. ') + 'Is now an okay time?'; agentSay(call.last, null, 'Global rule: answer "who is this" plainly, then ask permission.'); return; }
+  if (G.busy.test(t)) { call.outcome = 'Callback later'; call.last = `No problem, ${v.name}. I will try again at a better time. Goodbye.`; agentSay(call.last, 'close', 'Caller is busy: schedule a callback instead of pushing on.'); return setTimeout(() => end('Callback later', true), 900); }
+  if (G.price.test(t) && call.sc === 'sales') { call.last = 'Pricing depends on the size of the business, so I do not want to guess a number. After a short demo our developer can give you a clear quote.'; agentSay(call.last, null, 'Objection: price. Do not invent a number; steer to the demo.'); return; }
+  if (!t) return silence();
+  if (call.node === 'greet' && /^(hello|hi|hey|hello\?|yes\?|who'?s this)\W*$/i.test(t)) { call.last = S.say.greet(v); agentSay(call.last, null, 'Caller just said hello: repeat the opening so they hear the disclosure and the question.'); return; }
+  if (G.repeat.test(t) && t.split(/\s+/).length < 6) { const l = call.last || S.say[call.node](v); agentSay(l, null, 'Caller did not catch it: repeat the last line.'); return; }
+  r = S.step(call.node, t, v, call.c);
+  if (!r) { call.fail = (call.fail || 0) + 1; if (call.fail >= 3) { call.outcome = 'Unclear, handed to human'; call.last = "I'm sorry, I am having trouble understanding. I will ask a team member to call you. Goodbye."; agentSay(call.last, 'close', 'Three misunderstandings in a row: stop guessing and hand off.'); return setTimeout(() => end('Unclear, handed to human', true), 900); } call.last = "Sorry, I didn't quite get that. " + S.say[call.node](v); agentSay(call.last, null, `Did not understand (${call.fail}/3). Re-asking instead of guessing.`); return; }
+  call.fail = 0; if (r.outcome) call.outcome = r.outcome; if (r.end) { call.outcome = r.end; call.last = r.say; agentSay(r.say, 'close', r.why); return setTimeout(() => end(r.end, true), 900); }
+  const line = r.say || S.say[r.to](v); call.last = line; agentSay(line, r.to, r.why); if (r.to === 'close') setTimeout(() => end(call && call.outcome, true), 1200);
+}
+function silence() { if (!call || call.done) return; call.silent++; bub('sys', '(silence)'); if (call.silent >= 2) { call.outcome = 'No response'; call.last = 'I am not hearing anything, so I will hang up. Goodbye.'; agentSay(call.last, 'close', 'Silence twice: end the call politely.'); return setTimeout(() => end('No response', true), 900); } call.last = 'Hello? Are you still there? ' + SC[call.sc].say[call.node](vars()); agentSay(call.last, null, 'Silence: check the caller is there, then repeat.'); }
+function voicemail() { if (!call || call.done) return; bub('sys', 'The call went to voicemail.'); const l = `Hello ${vars().name}, this is an automated message from ${SC[call.sc].title}. ` + (call.sc === 'dental' ? 'We are calling to confirm your appointment. Please call us back at your convenience.' : 'We wanted to offer a short software demo. If you are interested, reply to our message or call us back.') + ' To stop receiving calls, say stop or tell our team. Goodbye.'; call.last = l; agentSay(l, 'close', 'Voicemail: leave a short, honest, identified message with an opt-out, then hang up.'); setTimeout(() => end('Voicemail left', true), 1200); }
+const OC = { 'Confirmed': '#059669', 'Rescheduled': '#059669', 'Demo booked': '#059669', 'Follow-up message': '#6d3df0', 'Callback requested': '#d97706', 'Callback later': '#d97706', 'Transfer requested': '#d97706', 'Voicemail left': '#64748b', 'Not interested': '#64748b', 'Wrong number': '#64748b', 'No response': '#64748b', 'Do not call': '#e11d48', 'Unclear, handed to human': '#d97706', 'Not the decision maker': '#64748b' };
+function drawLog() { const l = store.get('call_log', []); $('#logN').textContent = l.length + ' call' + (l.length === 1 ? '' : 's'); $('#log').innerHTML = l.length ? '<tr><th>When</th><th>Who</th><th>Outcome</th><th>Time</th></tr>' + l.map(c => `<tr><td>${new Date(c.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td><td>${esc(c.name)} <span class="small">(${c.sc})</span></td><td><span class="disp" style="background:${OC[c.o] || '#64748b'}">${esc(c.o)}</span>${c.slot ? ' <span class="small">' + esc(c.slot) + '</span>' : ''}</td><td>${c.dur}s</td></tr>`).join('') : '<tr><td class="small">No calls yet.</td></tr>'; }
+/* ---------- speech in (optional) ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition; let rec;
+$('#mic').onclick = () => { if (!SR || !call) return; if (synth) synth.cancel(); rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.onresult = e => { const q = e.results[0][0].transcript; respond(q); }; rec.onerror = () => bub('sys', '(could not hear you: type instead)'); try { rec.start(); bub('sys', '(listening…)'); } catch (e) { /* busy */ } };
+if (!SR) $('#mic').title = 'Speech recognition is not available in this browser';
+$('#dial').onclick = dial; $('#hang').onclick = () => end('Caller hung up'); $('#sil').onclick = silence; $('#vm').onclick = voicemail;
+$('#form').onsubmit = e => { e.preventDefault(); const q = $('#inp').value; $('#inp').value = ''; respond(q); };
+$('#hints').onclick = e => { const b = e.target.closest('[data-h]'); if (b && call && !call.done) respond(b.dataset.h); };
+$('#clr').onclick = () => { store.set('call_log', []); store.set('call_dnc', []); drawLog(); checks(); };
+$('#scn').onchange = () => { if (!call) { hints(); drawNodes(); } }; ['name', 'tz'].forEach(i => ($('#' + i).oninput = $('#' + i).onchange = checks));
+hints(); drawNodes(); drawLog(); checks(); twiml();
+window.__call = { SC, G, YES, NO };
+</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Business Chatbot Builder — Moiz Ahmad</title>
+<meta name="description" content="A customer-service chatbot for a café that answers FAQs by retrieval, takes orders and table bookings with slot filling, and hands off to a human when unsure. Edit its knowledge live."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.chat{display:flex;flex-direction:column;height:520px}
+.msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:.5rem;padding:.3rem .2rem .6rem}
+.m{max-width:84%;padding:.55rem .8rem;border-radius:16px;font-size:.87rem;line-height:1.5;animation:pop .2s both;white-space:pre-wrap;overflow-wrap:anywhere}
+@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.m.bot{align-self:flex-start;background:var(--bg2);border:1px solid var(--line);border-bottom-left-radius:5px}
+:root[data-theme="light"] .m.bot{background:#fff}
+.m.me{align-self:flex-end;background:var(--grad);color:#fff;border-bottom-right-radius:5px}
+.m.typing{color:var(--muted);font-style:italic}
+.sugg{display:flex;flex-wrap:wrap;gap:.35rem;margin:.4rem 0}
+.send{display:flex;gap:.5rem}
+.dbg{font-family:ui-monospace,Consolas,monospace;font-size:.76rem}
+.dbg .r{display:flex;justify-content:space-between;gap:.5rem;padding:.25rem 0;border-bottom:1px solid var(--line)}
+.dbg .r span:first-child{color:var(--muted)}
+.kb{max-height:230px;overflow:auto}
+.kbi{display:flex;justify-content:space-between;gap:.5rem;font-size:.76rem;padding:.35rem 0;border-bottom:1px solid var(--line)}
+.kbi button{border:1px solid var(--line2);background:transparent;color:var(--text);border-radius:7px;cursor:pointer;font-size:.7rem;height:1.5rem}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Conversational AI · Customer service · Dialogue management</span>
+    <h1>Business Chatbot Builder</h1>
+    <p class="lead">A working support bot for a fictional café. It answers questions from a knowledge base you can edit, takes orders and table bookings by asking for whatever is missing, and hands over to a human instead of guessing. The panel on the right shows exactly why it answered the way it did.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h">Brew &amp; Bean Café assistant <b id="tstat">online</b></div>
+      <div class="chat"><div class="msgs" id="msgs"></div>
+        <div class="sugg" id="sugg"></div>
+        <form class="send" id="form"><input id="inp" type="text" placeholder="Type a message…" autocomplete="off"/><button class="btn primary" type="submit">Send</button></form>
+      </div>
+    </div>
+    <div>
+      <div class="card"><div class="card-h">Why it answered that <b id="turn"></b></div><div class="dbg" id="dbg"><span class="small">Send a message to see the intent, confidence, matched knowledge and conversation state.</span></div></div>
+      <div class="card"><div class="card-h">Teach it <b id="kbn"></b></div>
+        <div class="two"><input id="nq" type="text" placeholder="Question, e.g. Do you have oat milk?"/><input id="na" type="text" placeholder="Answer"/></div>
+        <button class="btn" id="add" style="margin-top:.5rem">Add to knowledge base</button>
+        <div class="kb" id="kb" style="margin-top:.6rem"></div></div>
+    </div>
+  </div>
+
+  <section class="note">
+    <b>What's real here, and what is not</b>
+    <ul>
+      <li><b>Real:</b> FAQ answers come from TF-IDF cosine retrieval over the knowledge base (with a light stemmer and a small synonym list), and the bot answers only when the match is strong enough. Orders and bookings use slot filling: it extracts items and quantities (“two lattes and a croissant”), party size, time and day from free text and asks only for what is missing. You can ask a question mid-order and it answers, then returns to the order. Add a Q&amp;A on the right and ask it immediately: it learns instantly.</li>
+      <li><b>Honest fallback:</b> below the confidence threshold it says it is not sure and offers a human, instead of making something up. “Talk to a human” always works.</li>
+      <li><b>Not an LLM, and a demo shop:</b> it only knows what is in its knowledge base and menu, so unusual phrasing can miss. The café, prices and address are invented, and orders and bookings are not sent anywhere. To use this for a real business, the knowledge base would be replaced with the business's own content and the order step connected to its system.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser, no AI API</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const MENU = { latte: 4, cappuccino: 4, espresso: 3, 'cold brew': 4.5, croissant: 3, brownie: 3.5, tea: 2.5, sandwich: 6 };
+const ALIAS = { lattes: 'latte', cappuccinos: 'cappuccino', espressos: 'espresso', 'cold brews': 'cold brew', croissants: 'croissant', brownies: 'brownie', teas: 'tea', sandwiches: 'sandwich', coffee: 'latte' };
+const KB = [
+  ['What are your opening hours? When are you open?', 'We are open every day from 8:00 am to 10:00 pm. Fridays we close at 11:00 pm.'],
+  ['Where are you located? What is your address?', 'We are at 12 Demo Street, Sample City (a made-up address, this is a demo shop).'],
+  ['What is on the menu? What do you sell?', 'Drinks: latte $4, cappuccino $4, espresso $3, cold brew $4.50, tea $2.50. Food: croissant $3, brownie $3.50, sandwich $6.'],
+  ['Do you deliver? Is there home delivery?', 'Yes, we deliver within 5 km for a $2 fee, usually in 30 to 40 minutes. Say "I want to order" to start.'],
+  ['Do you have vegan or dairy-free options? Oat milk? Almond milk?', 'Yes. Any drink can be made with oat or almond milk at no extra charge, and the brownie and sandwich are vegan.'],
+  ['Do you have wifi? Internet?', 'Yes, free wifi. Ask at the counter for the password.'],
+  ['What payment methods do you accept? Cards? Cash?', 'Cash, all major cards and mobile wallets.'],
+  ['Is there parking nearby?', 'There is free street parking on Demo Street and a paid car park two minutes away.'],
+  ['Do you have a loyalty programme? Discounts? Rewards?', 'Yes. Every 10th drink is free. Ask for a loyalty card at the counter.'],
+  ['Are you hiring? Jobs? Careers?', 'We are sometimes hiring baristas. Send your CV to the email on our contact page.'],
+  ['Is the café pet friendly? Can I bring my dog?', 'Dogs are welcome on the outdoor terrace.'],
+  ['Do you do catering or large orders for events?', 'Yes, for orders of 20 or more please talk to our team. I can pass you to a human.'],
+];
+let docs = [], idfMap = new Map();
+const SYN = { open: 'hours', close: 'hours', timing: 'hours', timings: 'hours', time: 'hours', cost: 'price', price: 'menu', eat: 'menu', drink: 'menu', food: 'menu', coffee: 'menu', where: 'located', address: 'located', location: 'located', find: 'located', wifi: 'wifi', internet: 'wifi', 'wi-fi': 'wifi', pay: 'payment', card: 'payment', cash: 'payment', hire: 'hiring', job: 'hiring', career: 'hiring', work: 'hiring', dog: 'pet', cat: 'pet', pets: 'pet', discount: 'loyalty', reward: 'loyalty', points: 'loyalty', milk: 'vegan', oat: 'vegan', almond: 'vegan', dairy: 'vegan', vegetarian: 'vegan', deliver: 'delivery', delivering: 'delivery', park: 'parking', car: 'parking', event: 'catering', party: 'catering', bulk: 'catering' };
+const STOP = new Set('a an the of in on at to is are was were what whats how do does did you your i me my we our can could would please for and or by from with that this it be as any there have has get want like tell about'.split(' '));
+const stem = t => (t.length > 3 && t.endsWith('s') && !t.endsWith('ss') ? t.slice(0, -1) : t);
+const toks = s => s.toLowerCase().replace(/[^a-z0-9\s'-]/g, ' ').split(/\s+/).filter(t => t && !STOP.has(t)).map(stem).flatMap(t => (SYN[t] ? [t, SYN[t]] : [t]));
+function index() { docs = KB.map(([q, a]) => { const t = toks(q + ' ' + a), tf = new Map(); t.forEach(x => tf.set(x, (tf.get(x) || 0) + 1)); return { tf, qOnly: new Set(toks(q)) }; }); const df = new Map(); docs.forEach(d => d.tf.forEach((_, k) => df.set(k, (df.get(k) || 0) + 1))); idfMap = new Map(); df.forEach((v, k) => idfMap.set(k, Math.log(1 + docs.length / v))); docs.forEach(d => { let n = 0; d.w = new Map(); d.tf.forEach((c, k) => { const w = (1 + Math.log(c)) * idfMap.get(k); d.w.set(k, w); n += w * w; }); d.n = Math.sqrt(n) || 1; }); $('#kbn').textContent = KB.length + ' answers'; $('#kb').innerHTML = KB.map((k, i) => `<div class="kbi"><span>${esc(k[0].split('?')[0])}?</span><button data-rm="${i}">✕</button></div>`).join(''); }
+function retrieve(q) { const qt = toks(q); if (!qt.length) return []; const tf = new Map(); qt.forEach(x => tf.set(x, (tf.get(x) || 0) + 1)); let qn = 0; const qw = new Map(); tf.forEach((c, k) => { const w = (1 + Math.log(c)) * (idfMap.get(k) || Math.log(1 + docs.length)); qw.set(k, w); qn += w * w; }); qn = Math.sqrt(qn) || 1;
+  return docs.map((d, i) => { let dot = 0; qw.forEach((w, k) => { if (d.w.has(k)) dot += w * d.w.get(k); }); return { i, s: dot / (qn * d.n) }; }).sort((a, b) => b.s - a.s).slice(0, 3); }
+
+/* ---------- slot extraction ---------- */
+const NUM = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+function items(t) { const s = t.toLowerCase(), out = []; const names = [...Object.keys(MENU), ...Object.keys(ALIAS)].sort((a, b) => b.length - a.length); const used = new Set();
+  names.forEach(n => { const re = new RegExp('(?:(\\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten)\\s+)?\\b' + n + '\\b', 'g'); let m; while ((m = re.exec(s))) { const key = ALIAS[n] || n; if (used.has(m.index)) continue; used.add(m.index); const q = m[1] ? (NUM[m[1]] || +m[1]) : 1; const e = out.find(o => o.name === key); if (e) e.q += q; else out.push({ name: key, q }); } }); return out; }
+function timeOf(t) { const m = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i.exec(t) || /\b([01]?\d|2[0-3]):([0-5]\d)\b/.exec(t); if (!m) return null; let h = +m[1], mi = m[2] ? +m[2] : 0; const ap = m[3] && m[3].toLowerCase(); if (ap === 'pm' && h < 12) h += 12; if (ap === 'am' && h === 12) h = 0; if (h > 23) return null; return `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`; }
+function dayOf(t) { const s = t.toLowerCase(); if (/\btoday|tonight\b/.test(s)) return 'today'; if (/\btomorrow\b/.test(s)) return 'tomorrow'; const d = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/.exec(s); return d ? d[1] : null; }
+function sizeOf(t) { const m = /\b(\d{1,2})\s*(people|persons|guests|of us|pax|seats)\b/i.exec(t) || /\bfor\s+(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\b/i.exec(t) || /\btable\s+(?:for\s+)?(\d{1,2})\b/i.exec(t); if (!m) return null; const v = NUM[m[1].toLowerCase()] || +m[1]; return v >= 1 && v <= 20 ? v : null; }
+
+/* ---------- dialogue manager ---------- */
+let S, turns = 0;
+const fresh = () => ({ flow: null, cart: [], name: null, book: { size: null, time: null, day: null, name: null }, pendingAsk: null });
+const money = n => '$' + n.toFixed(2).replace(/\.00$/, '');
+const cartText = c => c.map(i => `${i.q} × ${i.name} (${money(i.q * MENU[i.name])})`).join(', ');
+const total = c => c.reduce((a, i) => a + i.q * MENU[i.name], 0);
+function say(text, dbg) { return { text, dbg }; }
+function ask() {
+  if (S.flow === 'order') { if (!S.cart.length) return 'What would you like to order? (e.g. “two lattes and a croissant”)'; if (!S.pendingAsk) { S.pendingAsk = 'more'; return `So far: ${cartText(S.cart)}, total ${money(total(S.cart))}.\nAnything else? Say "no" if that's all.`; } if (S.pendingAsk === 'name') return 'What name should I put on the order?'; }
+  if (S.flow === 'book') { const b = S.book; if (!b.size) return 'How many people is the table for?'; if (!b.day) return 'Which day: today, tomorrow, or a weekday?'; if (!b.time) return 'What time would you like? (e.g. 7:30 pm)'; if (!b.name) return 'What name should the booking be under?'; }
+  return null;
+}
+function handle(raw) {
+  const t = raw.trim(), low = t.toLowerCase(), d = { intent: '', conf: 0, match: '', slots: '' }; turns++;
+  if (/\b(human|agent|person|manager|someone real|representative|operator)\b/.test(low)) { S = fresh(); d.intent = 'handoff'; d.conf = 1; return say('Of course. I am passing you to a team member. While you wait, please leave your phone number or email and we will contact you within one business day. (Demo: nothing is actually sent.)', d); }
+  if (/\b(cancel|stop|never ?mind|forget it|start over|reset)\b/.test(low) && S.flow) { const f = S.flow; S = fresh(); d.intent = 'cancel'; d.conf = 1; return say(`No problem, I cancelled the ${f === 'book' ? 'booking' : 'order'}. How else can I help?`, d); }
+  if (/^(hi|hello|hey|salam|assalam|good (morning|afternoon|evening))\b/.test(low) && !S.flow) { d.intent = 'greeting'; d.conf = 1; return say('Hello! Welcome to Brew & Bean. I can answer questions, take an order or book a table. What would you like?', d); }
+  if (/^(thanks|thank you|thx|great thanks|ok thanks)\b/.test(low)) { d.intent = 'thanks'; d.conf = 1; const a = ask(); return say('You are welcome!' + (a ? '\n\n' + a : ''), d); }
+  if (/^(bye|goodbye|see you|that'?s all)\b/.test(low) && !S.flow) { d.intent = 'bye'; d.conf = 1; return say('Goodbye, have a lovely day!', d); }
+  const pi = items(t); if (pi.length && /\b(price|cost|how much|much is)\b/.test(low)) { d.intent = 'price_lookup'; d.conf = 0.95; d.slots = pi.map(x => x.name).join(', '); const a = ask(); return say(pi.map(x => `A ${x.name} is ${money(MENU[x.name])}.`).join(' ') + (a ? '\n\n' + a : ''), d); }
+  // ---- active flows ----
+  if (S.flow === 'order') {
+    const it = items(t);
+    if (S.pendingAsk === 'name' && !it.length && !/\?/.test(t)) { S.name = t.replace(/^(my name is|it'?s|i am|i'm|name:?)\s*/i, '').replace(/[.!]/g, '').trim().slice(0, 40); const total_ = total(S.cart); const msg = `Order placed for ${S.name}: ${cartText(S.cart)}. Total ${money(total_)}, ready in about 10 minutes. (This is a demo: nothing was actually sent.)`; d.intent = 'order:complete'; d.conf = 1; d.slots = `cart=${cartText(S.cart)}; name=${S.name}`; S = fresh(); return say(msg, d); }
+    if (it.length) { it.forEach(x => { const e = S.cart.find(c => c.name === x.name); if (e) e.q += x.q; else S.cart.push(x); }); S.pendingAsk = null; d.intent = 'order:add_items'; d.conf = 0.95; d.slots = `+${it.map(x => x.q + ' ' + x.name).join(', ')}`; return say(`Added ${it.map(x => x.q + ' × ' + x.name).join(', ')}.\n` + ask(), d); }
+    if (S.pendingAsk === 'more' && /^(no|nope|that'?s (all|it)|nothing( else)?|done|i'?m good|no thanks?)\b/.test(low)) { S.pendingAsk = 'name'; d.intent = 'order:confirm'; d.conf = 0.95; return say(`Great. Total is ${money(total(S.cart))}.\n` + ask(), d); }
+  }
+  if (S.flow === 'book') {
+    const b = S.book, before = JSON.stringify(b); const sz = sizeOf(t) ?? (/^\d{1,2}$/.test(t) && !b.size ? +t : null), tm = timeOf(t), dy = dayOf(t); if (tm && (+tm.slice(0, 2) < 8 || +tm.slice(0, 2) >= 22)) { d.intent = 'book:time_rejected'; d.conf = 0.9; d.slots = JSON.stringify(b); return say(`Sorry, we are only open 8:00 am to 10:00 pm, so ${tm} will not work. What other time would you like?`, d); } if (sz) b.size = sz; if (tm) b.time = tm; if (dy) b.day = dy;
+    if (b.size && b.day && b.time && !b.name && !tm && !dy && !sz && !/\?/.test(t) && t.split(/\s+/).length <= 4) b.name = t.replace(/^(my name is|it'?s|under|name:?)\s*/i, '').replace(/[.!]/g, '').trim();
+    if (JSON.stringify(b) !== before) { d.intent = 'book:fill_slots'; d.conf = 0.95; d.slots = JSON.stringify(b); if (b.size && b.day && b.time && b.name) { const hh = +b.time.slice(0, 2); const msg = hh < 8 || hh >= 22 ? `Sorry, we are only open 8:00 am to 10:00 pm, so ${b.time} will not work. What other time would you like?` : null; if (msg) { b.time = null; return say(msg, d); } const out = `Booked: table for ${b.size} ${/^(today|tomorrow)$/.test(b.day) ? b.day : 'on ' + b.day} at ${b.time}, under ${b.name}. See you then! (Demo: nothing was actually sent.)`; S = fresh(); return say(out, d); } return say(ask(), d); }
+  }
+  // ---- start flows ----
+  const wantsOrder = /\b(order|buy|get me|i('d| would) like|i want|can i (get|have)|takeaway|take away)\b/.test(low) && (items(t).length || /\border\b/.test(low));
+  const wantsBook = /\b(book|reserve|reservation|table)\b/.test(low);
+  if (wantsBook && !S.flow) { S.flow = 'book'; const b = S.book; b.size = sizeOf(t); b.time = timeOf(t); b.day = dayOf(t); d.intent = 'book:start'; d.conf = 0.9; d.slots = JSON.stringify(b); return say('Happy to book a table.\n' + ask(), d); }
+  if (wantsOrder && !S.flow) { S.flow = 'order'; const it = items(t); S.cart = it; d.intent = 'order:start'; d.conf = 0.9; d.slots = it.length ? it.map(x => x.q + ' ' + x.name).join(', ') : 'none yet'; return say((it.length ? `Got it: ${cartText(it)}.\n` : 'Sure, let me take your order.\n') + ask(), d); }
+  // ---- FAQ retrieval ----
+  const r = retrieve(t), top = r[0]; d.match = r.map(x => `${(x.s * 100).toFixed(0)}% ${KB[x.i][0].split('?')[0]}`).join(' | ');
+  if (top && top.s >= 0.3) { d.intent = 'faq'; d.conf = Math.min(0.99, top.s + 0.3); const a = ask(); return say(KB[top.i][1] + (a ? '\n\n' + a : ''), d); }
+  d.intent = 'fallback'; d.conf = top ? top.s : 0; const a = ask();
+  return say(a ? `I did not catch that. ${a}` : "I'm not sure I understood that, and I would rather not guess. You can ask about hours, menu, delivery or parking, order food, book a table, or type \"human\" to talk to our team.", d);
+}
+/* ---------- UI ---------- */
+function bubble(cls, text) { const m = document.createElement('div'); m.className = 'm ' + cls; m.textContent = text; $('#msgs').appendChild(m); $('#msgs').scrollTop = 1e6; return m; }
+async function send(text) {
+  if (!text.trim()) return; bubble('me', text); $('#inp').value = ''; const ty = bubble('bot typing', 'typing…'); $('#tstat').textContent = 'typing'; await sleep(350 + Math.min(600, text.length * 8));
+  const r = handle(text); ty.remove(); bubble('bot', r.text); $('#tstat').textContent = 'online'; $('#turn').textContent = 'turn ' + turns;
+  const d = r.dbg, st = S.flow ? `${S.flow} flow` : 'idle'; $('#dbg').innerHTML = [['Intent', d.intent], ['Confidence', (d.conf * 100).toFixed(0) + '%'], ['State', st], ['Slots', d.slots || '–'], ['Top matches', d.match || '–']].map(([k, v]) => `<div class="r"><span>${k}</span><span style="text-align:right;overflow-wrap:anywhere;max-width:70%">${esc(v)}</span></div>`).join('');
+  suggest();
+}
+function suggest() { const base = S.flow === 'order' ? ['No, that is all', 'Add a croissant', 'cancel'] : S.flow === 'book' ? ['tomorrow', '7:30 pm', 'cancel'] : ['What are your hours?', 'Do you have vegan options?', 'I want two lattes and a croissant', 'Book a table for 4 tomorrow at 7pm', 'Where is parking?', 'Talk to a human']; $('#sugg').innerHTML = base.map(b => `<button class="chip" data-s="${esc(b)}">${esc(b)}</button>`).join(''); }
+$('#form').onsubmit = e => { e.preventDefault(); send($('#inp').value); };
+$('#sugg').onclick = e => { const b = e.target.closest('[data-s]'); if (b) send(b.dataset.s); };
+$('#add').onclick = () => { const q = $('#nq').value.trim(), a = $('#na').value.trim(); if (!q || !a) return; KB.push([q, a]); index(); $('#nq').value = $('#na').value = ''; bubble('bot', `(Learned a new answer. Try asking: “${q}”)`); };
+$('#kb').onclick = e => { const b = e.target.closest('[data-rm]'); if (b) { KB.splice(+b.dataset.rm, 1); index(); } };
+S = fresh(); index(); bubble('bot', 'Hello! I am the Brew & Bean assistant (a demo bot). Ask me anything about the café, order food, or book a table.'); suggest();
+window.__bot = { handle, reset: () => (S = fresh()), retrieve, items };
+</script>
+</body>
+</html>

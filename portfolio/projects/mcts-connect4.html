@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MCTS Connect Four Agent — Moiz Ahmad</title>
+<meta name="description" content="Play Connect Four against an agent that thinks by simulating thousands of games (Monte Carlo Tree Search). See how many simulations it ran and how much it likes each move."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.board{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;background:linear-gradient(160deg,#1e3a8a,#1d4ed8);padding:10px;border-radius:18px;box-shadow:var(--shadow);max-width:520px;margin:0 auto}
+.cell{aspect-ratio:1;border-radius:50%;background:var(--bg);box-shadow:inset 0 3px 8px rgba(0,0,0,.5);position:relative;transition:background .15s}
+:root[data-theme="light"] .cell{background:#eef2ff}
+.cell.p1{background:radial-gradient(circle at 35% 30%,#fb7185,#e11d48)}
+.cell.p2{background:radial-gradient(circle at 35% 30%,#fde68a,#f59e0b)}
+.cell.win{outline:4px solid #fff;outline-offset:-4px;animation:pulse .8s infinite alternate}
+@keyframes pulse{to{filter:brightness(1.35)}}
+.cols{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;max-width:520px;margin:0 auto .4rem;padding:0 10px}
+.cols button{font:inherit;font-size:.8rem;font-weight:700;border:1px solid var(--line2);background:transparent;color:var(--muted);border-radius:10px;padding:.35rem 0;cursor:pointer;transition:.15s}
+.cols button:hover:not(:disabled){border-color:var(--a);color:var(--a)}.cols button:disabled{opacity:.3;cursor:not-allowed}
+.stat{display:grid;grid-template-columns:22px 1fr 78px;gap:.5rem;align-items:center;font-size:.78rem;padding:.2rem 0;font-family:ui-monospace,Consolas,monospace}
+.stat .bar{height:10px}.stat.best .bar>i{background:linear-gradient(90deg,#f59e0b,#fde68a)}
+.status{text-align:center;font-weight:700;margin:.8rem 0;min-height:1.6rem}
+select{width:auto}
+table.bm{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.6rem}.bm td,.bm th{padding:.4rem .5rem;border-bottom:1px solid var(--line);text-align:right;font-family:ui-monospace,Consolas,monospace}.bm th{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.bm td:first-child,.bm th:first-child{text-align:left}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Agentic AI · Decision making · Monte Carlo Tree Search</span>
+    <h1>MCTS Connect Four Agent</h1>
+    <p class="lead">This agent has no opening book and no hand-written strategy. On its turn it plays thousands of random games from the current position, keeps score for every move, and picks the one that wins most often. Give it more thinking time and it plays better. You are red.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="cols" id="cols"></div>
+      <div class="board" id="board"></div>
+      <div class="status" id="status"></div>
+      <div class="row" style="justify-content:center"><button class="btn primary" id="new">New game</button><button class="btn" id="undo">Undo my last move</button></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-h">Agent settings</div>
+        <div class="ctl"><label>Thinking budget <output id="sO">1500</output> simulations per move</label><input id="sims" type="range" min="50" max="6000" step="50" value="1500"/></div>
+        <div class="ctl"><label>Who starts</label><select id="first"><option value="h">You (red)</option><option value="a">Agent (yellow)</option></select></div>
+        <div class="metrics" style="margin-top:.8rem">
+          <div class="metric"><div class="m-val" id="mSims">–</div><div class="m-lab">Simulations</div></div>
+          <div class="metric"><div class="m-val" id="mMs">–</div><div class="m-lab">Think ms</div></div>
+          <div class="metric"><div class="m-val" id="mWin">–</div><div class="m-lab">Agent win est.</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-h">What the agent is thinking <b>visits per column</b></div><div id="stats"><span class="small">After the agent moves, you will see how many simulations it spent on each column and how often it won from there.</span></div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem">
+    <div class="card-h">Arena <b>agent vs a random player, 20 games each, agent moves second</b></div>
+    <div class="row"><button class="btn primary" id="arena">Run the arena</button><span class="small" id="arenaStat">Tests the agent at 50, 300 and 1500 simulations per move. Takes about a minute.</span></div>
+    <table class="bm" id="bm" hidden><thead><tr><th>Simulations / move</th><th>Agent wins</th><th>Draws</th><th>Agent losses</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <section class="note">
+    <b>What's real here</b>
+    <ul>
+      <li><b>Real search:</b> the agent grows a game tree with UCT (Upper Confidence bounds for Trees): it selects a promising node, expands it, plays the game out with random moves, and passes the result back up. The table on the right is the real visit and win counts from that search, not an animation.</li>
+      <li><b>No game knowledge beyond the rules.</b> It is never told to block a three-in-a-row; it finds blocks because losing branches show up in its simulations. With a very small budget (50) it misses things, and you can beat it. With thousands it rarely loses a tactic.</li>
+      <li><b>Not a solved game:</b> Connect Four can be solved perfectly with deep search and a strong evaluation. This is the same family of method as the planning inside AlphaGo, minus the neural network, so it is strong but not perfect.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs entirely in your browser</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const R = 6, C = 7;
+const rnd = n => (Math.random() * n) | 0;
+class G {
+  constructor() { this.b = new Int8Array(R * C); this.h = new Int8Array(C); this.turn = 1; this.winner = 0; this.moves = 0; this.last = -1; }
+  clone() { const g = new G(); g.b.set(this.b); g.h.set(this.h); g.turn = this.turn; g.winner = this.winner; g.moves = this.moves; g.last = this.last; return g; }
+  legal() { const o = []; for (let c = 0; c < C; c++) if (this.h[c] < R) o.push(c); return o; }
+  play(c) { const r = R - 1 - this.h[c]; this.b[r * C + c] = this.turn; this.h[c]++; this.moves++; this.last = r * C + c; if (this.win(r, c)) this.winner = this.turn; this.turn = 3 - this.turn; }
+  win(r, c, cells) {
+    const p = this.b[r * C + c];
+    for (const [dr, dc] of [[0, 1], [1, 0], [1, 1], [1, -1]]) { let n = 1; const line = [[r, c]]; for (const s of [1, -1]) { let rr = r + dr * s, cc = c + dc * s; while (rr >= 0 && rr < R && cc >= 0 && cc < C && this.b[rr * C + cc] === p) { n++; line.push([rr, cc]); rr += dr * s; cc += dc * s; } } if (n >= 4) { if (cells) cells.push(...line); return true; } }
+    return false;
+  }
+  over() { return this.winner !== 0 || this.moves === R * C; }
+}
+/* ---------- Monte Carlo Tree Search ---------- */
+class Node { constructor(g, parent, move) { this.g = g; this.p = parent; this.m = move; this.kids = []; this.untried = g.over() ? [] : g.legal(); this.n = 0; this.w = 0; /* wins for the player who just moved */ } }
+function mcts(root, sims) {
+  const rootNode = new Node(root.clone(), null, -1), me = root.turn;
+  for (let i = 0; i < sims; i++) {
+    let node = rootNode;
+    while (!node.untried.length && node.kids.length) { let best = null, bs = -Infinity; const ln = Math.log(node.n); for (const k of node.kids) { const s = k.w / k.n + 1.41 * Math.sqrt(ln / k.n); if (s > bs) { bs = s; best = k; } } node = best; }
+    if (node.untried.length) { const m = node.untried.splice(rnd(node.untried.length), 1)[0], g = node.g.clone(); g.play(m); const k = new Node(g, node, m); node.kids.push(k); node = k; }
+    const g = node.g.clone(); while (!g.over()) { const l = g.legal(); g.play(l[rnd(l.length)]); }
+    const winner = g.winner; for (let n = node; n; n = n.p) { n.n++; const mover = 3 - n.g.turn; if (winner === 0) n.w += 0.5; else if (winner === mover) n.w += 1; }
+  }
+  const stats = rootNode.kids.map(k => ({ m: k.m, n: k.n, wr: k.w / k.n })).sort((a, b) => a.m - b.m);
+  const best = stats.reduce((a, b) => (b.n > a.n ? b : a));
+  return { move: best.m, stats, wr: best.wr, sims };
+}
+/* ---------- UI ---------- */
+let g, history, busy = false, over = false, winCells = [];
+const sims = () => +$('#sims').value;
+$('#cols').innerHTML = Array.from({ length: C }, (_, c) => `<button data-c="${c}" aria-label="Drop in column ${c + 1}">${c + 1}</button>`).join('');
+$('#board').innerHTML = Array.from({ length: R * C }, (_, i) => `<div class="cell" data-i="${i}"></div>`).join('');
+function draw() {
+  const cells = $('#board').children; for (let i = 0; i < R * C; i++) { cells[i].className = 'cell' + (g.b[i] ? ' p' + g.b[i] : '') + (winCells.some(w => w[0] * C + w[1] === i) ? ' win' : ''); }
+  const open = !busy && !over && g.turn === 1; $('#cols').querySelectorAll('button').forEach((b, c) => (b.disabled = !open || g.h[c] >= R));
+  $('#status').textContent = over ? (g.winner === 1 ? 'You win! 🎉' : g.winner === 2 ? 'The agent wins.' : 'Draw.') : busy ? 'Agent is simulating…' : g.turn === 1 ? 'Your move: pick a column.' : '';
+  $('#undo').disabled = busy || history.length < 2;
+}
+function finish() { if (g.winner) { const [r, c] = [Math.floor(g.last / C), g.last % C]; winCells = []; g.win(r, c, winCells); } over = g.over(); draw(); }
+function agentMove() {
+  if (g.over()) { finish(); return; } busy = true; draw();
+  setTimeout(() => {
+    const t0 = performance.now(), res = mcts(g, sims()), ms = Math.round(performance.now() - t0);
+    history.push(g.clone()); g.play(res.move);
+    $('#mSims').textContent = res.sims.toLocaleString(); $('#mMs').textContent = ms; $('#mWin').textContent = Math.round(res.wr * 100) + '%';
+    const mx = Math.max(...res.stats.map(s => s.n)); const full = Array.from({ length: C }, (_, c) => res.stats.find(s => s.m === c) || { m: c, n: 0, wr: 0 });
+    $('#stats').innerHTML = full.map(s => `<div class="stat ${s.m === res.move ? 'best' : ''}"><span>${s.m + 1}</span><div class="bar"><i style="width:${(s.n / mx) * 100}%"></i></div><span>${s.n ? s.n + ' · ' + Math.round(s.wr * 100) + '%' : 'full'}</span></div>`).join('') + '<div class="small" style="margin-top:.5rem">Bar = simulations spent on that column. Number = visits · win rate for the agent. The agent plays the most-visited column (highlighted).</div>';
+    busy = false; finish();
+  }, 30);
+}
+function reset() { g = new G(); history = []; over = false; winCells = []; busy = false; draw(); if ($('#first').value === 'a') agentMove(); }
+$('#cols').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (!b || busy || over || g.turn !== 1) return; const c = +b.dataset.c; if (g.h[c] >= R) return; history.push(g.clone()); g.play(c); finish(); if (!over) agentMove(); });
+$('#undo').onclick = () => { if (busy || history.length < 2) return; g = history[history.length - 2]; history.length -= 2; over = false; winCells = []; draw(); };
+$('#new').onclick = reset; $('#first').onchange = reset; $('#sims').oninput = e => ($('#sO').textContent = e.target.value);
+$('#arena').onclick = async () => {
+  $('#arena').disabled = true; $('#bm').hidden = false; const tb = $('#bm tbody'); tb.innerHTML = '';
+  for (const s of [50, 300, 1500]) {
+    let w = 0, d = 0, l = 0;
+    for (let k = 0; k < 20; k++) {
+      $('#arenaStat').textContent = `Playing ${s} sims: game ${k + 1}/20`; await new Promise(r => setTimeout(r, 0));
+      const gg = new G(); while (!gg.over()) { if (gg.turn === 2) gg.play(mcts(gg, s).move); else { const lg = gg.legal(); gg.play(lg[rnd(lg.length)]); } }
+      if (gg.winner === 2) w++; else if (gg.winner === 1) l++; else d++;
+    }
+    tb.insertAdjacentHTML('beforeend', `<tr><td>${s}</td><td style="color:var(--good)">${w}</td><td>${d}</td><td style="color:var(--bad)">${l}</td></tr>`);
+  }
+  $('#arenaStat').textContent = 'Done. The random player moves first each game.'; $('#arena').disabled = false;
+};
+window.__c4 = { G, mcts };
+reset();
+</script>
+</body>
+</html>

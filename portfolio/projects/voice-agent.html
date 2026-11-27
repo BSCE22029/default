@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Voice Assistant Agent — Moiz Ahmad</title>
+<meta name="description" content="A hands-free voice agent in the browser: speak to it, and it answers out loud. It tells the time anywhere, fetches live weather, does maths, sets real timers, takes notes and looks things up on Wikipedia."/>
+<link rel="stylesheet" href="ai-lab/ai.css"/>
+<script src="ai-lab/ai.js"></script>
+<style>
+.stage{display:flex;flex-direction:column;align-items:center;gap:.9rem;padding:.6rem 0 1rem}
+.orb{width:140px;height:140px;border-radius:50%;border:0;cursor:pointer;background:radial-gradient(circle at 35% 30%,#a78bfa,#6d28d9 55%,#1e1b4b);box-shadow:0 0 0 0 rgba(139,92,246,.5),0 14px 40px rgba(109,40,217,.45);color:#fff;font-size:2.2rem;transition:transform .2s;position:relative}
+.orb:hover{transform:scale(1.04)}
+.orb.listening{background:radial-gradient(circle at 35% 30%,#fda4af,#e11d48 55%,#4c0519);animation:ring 1.2s infinite}
+.orb.thinking{background:radial-gradient(circle at 35% 30%,#fde68a,#d97706 55%,#451a03);animation:spin 1.4s linear infinite}
+.orb.speaking{background:radial-gradient(circle at 35% 30%,#6ee7b7,#059669 55%,#022c22);animation:ring 0.7s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,255,255,.35),0 14px 40px rgba(0,0,0,.4)}100%{box-shadow:0 0 0 28px rgba(255,255,255,0),0 14px 40px rgba(0,0,0,.4)}}
+@keyframes spin{to{filter:hue-rotate(40deg) brightness(1.15)}}
+.state{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.78rem;color:var(--muted);min-height:1.2rem}
+.live{font-style:italic;color:var(--muted);min-height:1.4rem;text-align:center;font-size:.9rem}
+.convo{max-height:330px;overflow:auto;display:flex;flex-direction:column;gap:.45rem}
+.m{padding:.5rem .8rem;border-radius:14px;font-size:.86rem;max-width:88%;animation:pop .2s both;overflow-wrap:anywhere}
+@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.m.me{align-self:flex-end;background:var(--grad);color:#fff}.m.ai{align-self:flex-start;background:var(--bg2);border:1px solid var(--line)}
+:root[data-theme="light"] .m.ai{background:#fff}
+.m small{display:block;opacity:.6;font-size:.64rem;margin-top:.15rem}
+.warn{padding:.7rem .9rem;border:1px solid var(--c1);border-radius:12px;color:var(--c1);font-size:.82rem;margin-bottom:.8rem}
+.tm{display:flex;justify-content:space-between;gap:.5rem;font-family:ui-monospace,Consolas,monospace;font-size:.85rem;padding:.3rem 0;border-bottom:1px solid var(--line)}
+.tm button{border:1px solid var(--line2);background:transparent;color:var(--text);border-radius:7px;cursor:pointer;font-size:.7rem}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+select{width:100%}
+form.t{display:flex;gap:.5rem;width:100%}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top"><a class="back" href="../index.html#projects">← Portfolio</a><div class="top-r"><span class="pill">AI Lab</span><button id="themeBtn" class="icon-btn" aria-label="Toggle theme"></button></div></header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Voice AI · Speech in, speech out · Tool use</span>
+    <h1>Voice Assistant Agent</h1>
+    <p class="lead">Press the orb and talk. The agent listens, works out what you want, calls the right tool (live clock, weather, calculator, timer, notes, Wikipedia) and answers out loud. You can type instead if you prefer.</p>
+  </section>
+
+  <div class="grid g2">
+    <div class="card">
+      <div id="warn" class="warn" hidden></div>
+      <div class="stage">
+        <button class="orb" id="orb" aria-label="Talk to the assistant">🎙️</button>
+        <div class="state" id="state">tap to talk</div>
+        <div class="live" id="live"></div>
+        <form class="t" id="tform"><input id="typed" type="text" placeholder="…or type a command and press Enter" autocomplete="off"/><button class="btn" type="submit">Send</button></form>
+      </div>
+      <div class="legend" id="chips" style="margin-top:0"></div>
+      <div class="card-h" style="margin-top:1rem">Conversation</div>
+      <div class="convo" id="convo"><span class="small">Nothing yet. Try: “what time is it in Tokyo”.</span></div>
+    </div>
+    <div>
+      <div class="card"><div class="card-h">Voice settings</div>
+        <div class="two"><div class="ctl"><label>Voice</label><select id="voice"></select></div><div class="ctl"><label>Speed <output id="rO">1.0</output></label><input id="rate" type="range" min="0.7" max="1.5" step="0.1" value="1"/></div></div>
+        <label style="display:flex;gap:.5rem;align-items:center;font-size:.82rem;margin-bottom:.4rem"><input type="checkbox" id="speak" checked style="accent-color:var(--a)"/> Speak the answers</label>
+        <label style="display:flex;gap:.5rem;align-items:center;font-size:.82rem"><input type="checkbox" id="hands" style="accent-color:var(--a)"/> Hands-free: keep listening after each answer</label>
+        <div class="ctl" style="margin-top:.7rem"><label>Recognition language</label><select id="lang"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="en-IN">English (India)</option><option value="ur-PK">Urdu (Pakistan)</option></select></div>
+      </div>
+      <div class="card"><div class="card-h">Active timers</div><div id="timers"><span class="small">No timers. Say “set a timer for 20 seconds”.</span></div></div>
+      <div class="card"><div class="card-h">Notes <b id="nN"></b></div><div id="notes"></div></div>
+    </div>
+  </div>
+
+  <section class="note">
+    <b>What's real here, and what is not</b>
+    <ul>
+      <li><b>Real:</b> listening uses your browser's built-in speech recognition and speaking uses its speech synthesis (the Web Speech API). The tools are real: the clock uses time zones from a live geocoding lookup, weather comes from the Open-Meteo API, the calculator is a hand-written parser, timers genuinely count down and ring, notes persist in your browser, and Wikipedia answers come from its public API.</li>
+      <li><b>Privacy, plainly:</b> in Chrome and Edge, speech recognition sends your audio to the browser vendor's cloud service to be transcribed. This page itself records nothing and sends your text only to the public APIs above when a question needs them. If you do not want to use the microphone, type instead. Firefox does not support speech recognition at all.</li>
+      <li><b>Not an LLM:</b> understanding is rule-based, so it knows the dozen or so things above and says so when it does not understand. I could not test the microphone in my build environment, so I tested the full pipeline by typed input; speech recognition quality depends on your browser and microphone.</li>
+    </ul>
+  </section>
+  <footer class="foot">Built by Moiz Ahmad · runs in your browser, no AI API</footer>
+</main>
+
+<script>
+const { $ } = AI;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* blocked */ } } };
+/* ---------- calculator ---------- */
+function calc(src) { const s = src.replace(/\s+/g, ''); let i = 0; const pk = () => s[i], num = () => { const m = /^\d*\.?\d+/.exec(s.slice(i)); if (!m) throw new Error('I could not read that sum'); i += m[0].length; return parseFloat(m[0]); }; const prim = () => { if (s.startsWith('sqrt(', i)) { i += 5; const v = ex(); i++; if (v < 0) throw new Error('square root of a negative number'); return Math.sqrt(v); } if (pk() === '(') { i++; const v = ex(); i++; return v; } return num(); }; const un = () => (pk() === '-' ? (i++, -un()) : prim()); const pw = () => { const b = un(); if (pk() === '^') { i++; return Math.pow(b, pw()); } return b; }; const tm = () => { let v = pw(); while (pk() === '*' || pk() === '/') { const o = s[i++], r = pw(); if (o === '/' && r === 0) throw new Error('you cannot divide by zero'); v = o === '*' ? v * r : v / r; } return v; }; const ex = () => { let v = tm(); while (pk() === '+' || pk() === '-') { const o = s[i++], r = tm(); v = o === '+' ? v + r : v - r; } return v; }; const v = ex(); if (i < s.length) throw new Error('I could not read that sum'); return v; }
+const W2N = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, ninety: 90, hundred: 100, a: 1, an: 1, half: 0.5 };
+const nums = s => s.replace(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|ninety|hundred)\b/g, m => W2N[m]);
+function mathOf(q) { let s = nums(q.toLowerCase()).replace(/[?!,]/g, '').replace(/^(what is|what's|whats|calculate|compute|how much is|work out)\s+/, '').replace(/^the\s+/, '').replace(/divide\s+(\d[\d.]*)\s+by\s+(\d[\d.]*)/, '$1/$2').replace(/multiply\s+(\d[\d.]*)\s+by\s+(\d[\d.]*)/, '$1*$2').replace(/add\s+(\d[\d.]*)\s+(?:and|to)\s+(\d[\d.]*)/, '$1+$2').replace(/subtract\s+(\d[\d.]*)\s+from\s+(\d[\d.]*)/, '$2-$1'); s = s.replace(/(\d[\d.]*)\s*(%|percent)\s*of\s*(\d[\d.]*)/, '(($1/100)*$3)').replace(/square root of\s*(\d[\d.]*)/, 'sqrt($1)').replace(/(\d[\d.]*)\s*squared/, '($1)^2').replace(/divided by|over/g, '/').replace(/multiplied by|times|\bx\b/g, '*').replace(/\bplus\b/g, '+').replace(/\bminus\b/g, '-').replace(/to the power of/g, '^'); return /\d/.test(s) && /^[\d.\s+\-*/^()sqrt]+$/.test(s) ? s : null; }
+/* ---------- network tools ---------- */
+async function geo(place) { const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1&language=en`); const d = await r.json(); return d.results && d.results[0]; }
+const WMO = { 0: 'clear', 1: 'mostly clear', 2: 'partly cloudy', 3: 'overcast', 45: 'foggy', 48: 'foggy', 51: 'drizzling lightly', 53: 'drizzling', 55: 'drizzling heavily', 61: 'lightly raining', 63: 'raining', 65: 'raining heavily', 71: 'lightly snowing', 73: 'snowing', 75: 'snowing heavily', 80: 'showery', 81: 'showery', 82: 'stormy with rain', 95: 'thunderstorming', 96: 'thunderstorming', 99: 'thunderstorming' };
+async function weatherIn(place) { const g = await geo(place); if (!g) return `I couldn't find a place called ${place}.`; const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${g.latitude}&longitude=${g.longitude}&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto`), d = await r.json(), c = d.current; return `In ${g.name}${g.country ? ', ' + g.country : ''} it is ${Math.round(c.temperature_2m)} degrees Celsius and ${WMO[c.weather_code] || 'unsettled'}, with wind at ${Math.round(c.wind_speed_10m)} kilometres per hour.`; }
+async function timeIn(place) { const g = await geo(place); if (!g) return `I couldn't find a place called ${place}.`; const t = new Intl.DateTimeFormat('en-US', { timeZone: g.timezone, hour: 'numeric', minute: '2-digit', weekday: 'long' }).format(new Date()); return `It is ${t} in ${g.name}.`; }
+async function wiki(topic) { const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic.trim().replace(/ /g, '_'))}?redirect=true`); if (!r.ok) return `I couldn't find anything about ${topic}.`; const d = await r.json(); if (!d.extract) return `I couldn't find anything about ${topic}.`; const sents = d.extract.match(/[^.!?]+[.!?]+/g) || [d.extract]; return sents.slice(0, 2).join(' ').replace(/\s*\([^)]*\)/g, '').trim(); }
+/* ---------- timers, notes, beep ---------- */
+let timers = [], tid = 0, ac;
+function beep() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); [0, 0.25, 0.5].forEach(t => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; o.connect(g); g.connect(ac.destination); g.gain.setValueAtTime(0.2, ac.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + t + 0.2); o.start(ac.currentTime + t); o.stop(ac.currentTime + t + 0.22); }); } catch (e) { /* no audio */ } }
+const human = sec => { const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return [h && h + (h > 1 ? ' hours' : ' hour'), m && m + (m > 1 ? ' minutes' : ' minute'), s && s + (s > 1 ? ' seconds' : ' second')].filter(Boolean).join(' and '); };
+function parseDur(t) { let sec = 0, m; const s = nums(t.toLowerCase()); const re = /(\d+(?:\.\d+)?|half an?|a|an)\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)/g; while ((m = re.exec(s))) { const n = /half/.test(m[1]) ? 0.5 : /^an?$/.test(m[1]) ? 1 : +m[1]; sec += n * (/^h/.test(m[2]) ? 3600 : /^m/.test(m[2]) ? 60 : 1); } return Math.round(sec); }
+function drawTimers() { $('#timers').innerHTML = timers.length ? timers.map(t => `<div class="tm"><span>${esc(t.label)}</span><span>${Math.max(0, Math.ceil((t.end - Date.now()) / 1000))}s</span><button data-x="${t.id}">cancel</button></div>`).join('') : '<span class="small">No timers. Say “set a timer for 20 seconds”.</span>'; }
+setInterval(() => { const now = Date.now(); timers.filter(t => t.end <= now).forEach(t => { timers = timers.filter(x => x !== t); beep(); out(`Your ${t.label} timer is done.`, true); }); drawTimers(); }, 500);
+$('#timers').onclick = e => { const b = e.target.closest('[data-x]'); if (b) { timers = timers.filter(t => t.id != b.dataset.x); drawTimers(); } };
+function drawNotes() { const n = store.get('va_notes', []); $('#nN').textContent = n.length; $('#notes').innerHTML = n.length ? n.map((x, i) => `<div class="tm"><span>${esc(x)}</span><button data-n="${i}">✕</button></div>`).join('') : '<span class="small">None. Say “take a note: buy milk”.</span>'; }
+$('#notes').onclick = e => { const b = e.target.closest('[data-n]'); if (b) { const n = store.get('va_notes', []); n.splice(+b.dataset.n, 1); store.set('va_notes', n); drawNotes(); } };
+
+/* ---------- the agent: intent -> tool -> reply ---------- */
+let awaiting = null;
+async function think(q) {
+  const l = q.toLowerCase().replace(/[?.!]+$/g, '').trim(); if (!l) return null;
+  if (awaiting) { const a = awaiting; awaiting = null; if (/^(cancel|never ?mind|forget it)/.test(l)) return 'Okay, cancelled.'; const place = l.replace(/^(in|for|at)\s+/, ''); return a === 'weather' ? weatherIn(place) : timeIn(place); }
+  if (/^(hi|hello|hey|salam|assalam)/.test(l)) return 'Hello! I can tell the time, check weather, do maths, set timers, take notes or look things up. What would you like?';
+  if (/\b(thank you|thanks)\b/.test(l)) return 'You are welcome.';
+  if (/\b(what can you do|help|what do you do)\b/.test(l)) return 'Ask me the time in any city, the weather, a sum like twelve times fifteen, to set a timer, to take a note, or about a person or place, like who is Alan Turing.';
+  const tm = /\b(set|start)\b.*\b(timer|alarm)\b|\btimer for\b|\bremind me in\b/.test(l); if (tm) { const sec = parseDur(l); if (!sec) return 'For how long? Say for example, set a timer for two minutes.'; if (sec > 86400) return 'That is longer than a day, which is too long for a timer in a browser tab.'; const label = human(sec); timers.push({ id: ++tid, end: Date.now() + sec * 1000, label }); drawTimers(); return `Timer set for ${label}. Keep this tab open so I can ring.`; }
+  if (/\b(cancel|stop|clear)\b.*\btimers?\b/.test(l)) { const n = timers.length; timers = []; drawTimers(); return n ? 'All timers cancelled.' : 'You have no timers running.'; }
+  if (/\b(how long|how much time).*(left|remaining)|\bwhen does.*timer\b/.test(l)) return timers.length ? timers.map(t => `${human(Math.max(1, Math.ceil((t.end - Date.now()) / 1000)))} left on the ${t.label} timer`).join('. ') + '.' : 'You have no timers running.';
+  let m = /\b(?:take|make|add|save|write)\s+(?:a\s+)?note\s*(?:that|to|saying|:)?\s*(.+)$/.exec(l) || /^remember(?:\s+that|\s+to)?\s+(.+)$/.exec(l); if (m) { const n = store.get('va_notes', []); n.push(m[1].trim()); store.set('va_notes', n); drawNotes(); return `Saved your note: ${m[1].trim()}.`; }
+  if (/\b(read|show|what are)\b.*\bnotes?\b|\bmy notes\b/.test(l)) { const n = store.get('va_notes', []); return n.length ? `You have ${n.length} note${n.length > 1 ? 's' : ''}. ` + n.map((x, i) => `${i + 1}. ${x}`).join('. ') : 'You have no notes yet.'; }
+  if (/\b(delete|clear|erase)\b.*\bnotes?\b/.test(l)) { store.set('va_notes', []); drawNotes(); return 'All notes deleted.'; }
+  if (/\bweather|temperature|how (hot|cold)|is it (raining|sunny)\b/.test(l)) { const p = /\b(?:in|for|at)\s+([a-z .'-]+)$/.exec(l); if (!p) { awaiting = 'weather'; return 'Which city?'; } return weatherIn(p[1]); }
+  if (/\bwhat('?s| is) (the )?(date|day)|today'?s date|what day is it\b/.test(l)) return 'Today is ' + new Intl.DateTimeFormat('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date()) + '.';
+  if (/\btime\b/.test(l) && /\b(what|tell|current)\b/.test(l)) { const p = /\b(?:in|for|at)\s+([a-z .'-]+)$/.exec(l); if (!p) return 'It is ' + new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date()) + ' where you are.'; return timeIn(p[1]); }
+  const ms = mathOf(l); if (ms) { try { const v = calc(ms); return `That is ${+v.toFixed(6)}.`; } catch (e) { return `Sorry, ${e.message}.`; } }
+  m = /^(?:who (?:is|was)|what (?:is|are|was)|tell me about|explain)\s+(?:an? |the )?(.+)$/.exec(l); if (m) return wiki(m[1]);
+  return "Sorry, I didn't understand that, and I'd rather say so than guess. Try asking for the time in a city, the weather, a sum, a timer, or who someone is.";
+}
+/* ---------- speech I/O ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition, synth = window.speechSynthesis;
+let rec = null, listening = false, busy = false, voices = [];
+function setState(s, label) { $('#orb').className = 'orb ' + s; $('#state').textContent = label || ({ '': 'tap to talk', listening: 'listening…', thinking: 'thinking…', speaking: 'speaking…' }[s]); }
+function loadVoices() { voices = synth ? synth.getVoices() : []; $('#voice').innerHTML = voices.length ? voices.map((v, i) => `<option value="${i}">${esc(v.name)} (${esc(v.lang)})</option>`).join('') : '<option>default</option>'; const pref = voices.findIndex(v => /^en/i.test(v.lang)); if (pref >= 0) $('#voice').value = pref; }
+if (synth) { loadVoices(); synth.onvoiceschanged = loadVoices; }
+function say(text) { return new Promise(res => { if (!synth || !$('#speak').checked) return res(); synth.cancel(); const u = new SpeechSynthesisUtterance(text); const v = voices[+$('#voice').value]; if (v) u.voice = v; u.rate = +$('#rate').value; u.onend = u.onerror = () => res(); setState('speaking'); synth.speak(u); }); }
+function log(who, text) { const c = $('#convo'), e = c.querySelector('.small'); if (e) e.remove(); const m = document.createElement('div'); m.className = 'm ' + (who === 'me' ? 'me' : 'ai'); m.innerHTML = esc(text); c.appendChild(m); c.scrollTop = 1e6; }
+async function out(text, fromTimer) { log('ai', text); await say(text); if (!fromTimer) setState(''); else if (!busy) setState(''); }
+async function handleUtterance(q) {
+  if (busy) return; busy = true; log('me', q); setState('thinking'); let a;
+  try { a = await think(q); } catch (e) { a = 'Sorry, something went wrong reaching the internet. Please try again.'; }
+  if (a) await out(a); busy = false; setState('');
+  if ($('#hands').checked && SR && !listening) startListen();
+}
+function startListen() {
+  if (!SR) return; if (synth) synth.cancel(); rec = new SR(); rec.lang = $('#lang').value; rec.interimResults = true; rec.continuous = false; let final = '';
+  rec.onstart = () => { listening = true; setState('listening'); $('#live').textContent = ''; };
+  rec.onresult = e => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) final += e.results[i][0].transcript; else interim += e.results[i][0].transcript; } $('#live').textContent = final + interim; };
+  rec.onerror = e => { listening = false; setState('', e.error === 'not-allowed' ? 'microphone blocked: allow it in the address bar' : e.error === 'no-speech' ? 'did not hear anything' : 'speech error: ' + e.error); };
+  rec.onend = () => { listening = false; const q = final.trim(); $('#live').textContent = ''; if (q) handleUtterance(q); else if (!busy) setState('', $('#state').textContent.startsWith('micro') || $('#state').textContent.startsWith('speech') ? $('#state').textContent : ''); };
+  try { rec.start(); } catch (e) { /* already started */ }
+}
+$('#orb').onclick = () => { if (!SR) { $('#typed').focus(); return; } if (listening) { rec.stop(); return; } if (synth && synth.speaking) { synth.cancel(); setState(''); return; } startListen(); };
+$('#tform').onsubmit = e => { e.preventDefault(); const q = $('#typed').value; $('#typed').value = ''; if (q.trim()) handleUtterance(q); };
+$('#rate').oninput = e => ($('#rO').textContent = (+e.target.value).toFixed(1));
+const CHIPS = ['What time is it in Tokyo', 'Weather in Lahore', 'What is twelve times fifteen', 'Set a timer for 15 seconds', 'Take a note: call the supplier', 'Read my notes', 'Who is Ada Lovelace', 'What is 15 percent of 240'];
+$('#chips').innerHTML = CHIPS.map(c => `<button class="chip" data-q="${esc(c)}">${esc(c)}</button>`).join(''); $('#chips').onclick = e => { const b = e.target.closest('[data-q]'); if (b) handleUtterance(b.dataset.q); };
+if (!SR) { $('#warn').hidden = false; $('#warn').textContent = 'This browser has no speech recognition (Firefox, for example), so the microphone is off. Typing and spoken answers still work. Chrome or Edge give the full voice experience.'; $('#orb').title = 'Speech recognition is not supported here: type instead'; }
+drawNotes(); drawTimers();
+window.__va = { think, mathOf, parseDur, calc };
+</script>
+</body>
+</html>
